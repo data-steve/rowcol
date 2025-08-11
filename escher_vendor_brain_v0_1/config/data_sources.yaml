@@ -1,0 +1,28 @@
+# Configure which sources to fetch. Internet required for live pulls.
+usaspending:
+  enabled: true
+  # API docs: https://api.usaspending.gov/
+  # We'll pull awardees (recipients) to get names + NAICS. Paged fetch.
+  endpoint: "https://api.usaspending.gov/api/v2/references/naics/"
+  # Additional endpoints used in code: /api/v2/recipient/duns/ and /api/v2/recipient/"
+  max_pages: 5          # increase later
+  page_size: 1000
+
+mcc_reference:
+  enabled: true
+  # Prefer an internal CSV (ships in repo) if url is empty.
+  url: ""
+
+naics_reference:
+  enabled: true
+  # Census NAICS reference CSV (fallback to internal seed if empty).
+  url: ""
+
+state_registries:
+  enabled: false
+  states: []  # e.g., ["CA","NY"] after you add plugins in src/plugins/
+
+sam_gov:
+  enabled: false
+  api_key_env: "SAM_API_KEY"
+  # Add endpoint + params in code when enabling.

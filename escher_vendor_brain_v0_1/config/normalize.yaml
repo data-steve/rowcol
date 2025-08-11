@@ -1,0 +1,20 @@
+normalize:
+  uppercase: true
+  collapse_whitespace: true
+  # tokens removed from bank descriptors
+  remove_tokens:
+    - "WEB AUTHORIZED PMT"
+    - "ACH CREDIT"
+    - "ACH DEBIT"
+    - "CCD"
+    - "PPD"
+    - "POS"
+    - "DBT CRD"
+    - "VISA DDA PUR"
+    - "PURCHASE"
+    - "PAYMENT"
+    - "CARDMEMBER"
+    - "TELPHONE TRANSFER"
+    - "MONEY TRANSFER"
+  strip_punctuation: true
+  strip_digits_runs_over: 6  # strip phone-ish numbers

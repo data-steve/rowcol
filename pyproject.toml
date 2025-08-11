@@ -1,0 +1,65 @@
+[tool.poetry]
+name = "rowcol_2"
+version = "0.1.0"
+description = "Accountant-client focused fixed asset management SaaS"
+authors = ["data-steve <steven.troy.simpson@gmail.com>"]
+readme = "README.md"
+packages = [
+  { include = "app" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+sqlalchemy = ">=2.0.40,<3.0.0"
+fastapi = {extras = ["all"], version = ">=0.115.12,<0.116.0"}
+dotenv = ">=0.9.9,<0.10.0"
+psycopg2 = ">=2.9.10,<3.0.0"
+psycopg2-binary = "^2.9.10"
+python-dotenv = ">=1.1.0,<2.0.0"
+alembic = ">=1.15.2,<2.0.0"
+minio = "^7.2.5"
+fire = "^0.7.0"
+pyyaml = "^6.0.2"
+levenshtein = "^0.27.1"
+rapidfuzz = "^3.13.0"
+bcrypt = "4.0.1"
+pytest-asyncio = "^0.26.0"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+python-jose = {extras = ["cryptography"], version = "^3.4.0"}
+httpx = "^0.24.1"
+jq = "^1.4.1"
+numpy = "^2.3.1"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
+pytest = "^8.3.5"
+pytest-cov = "^4.1.0"
+ruff = "^0.12.1"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["app/tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+select = ["E", "F"]  # Focus on errors (E: syntax, type) and fatal (F: undefined names, imports)
+ignore = ["E501", "F401", "F403", "D100", "D104", "D200", "C"]  # Ignore line length, unused imports, star imports, docstrings, complexity
+line-length = 120  # Relax line length for readability
+target-version = "py39"  # Match your Python version (adjust if different)
+
+[tool.ruff.per-file-ignores]
+"app/models/*.py" = ["D100", "D104", "D107"]  # Ignore missing docstrings in models (e.g., app/models/asset.py)
+"app/tests/*.py" = ["S101", "D103"]  # Allow asserts, ignore missing function docstrings in tests
+"app/services/_decorators.py" = ["D"]  # Ignore all docstring rules for audit decorator
+"app/api/v1/workflows.py" = ["D"]  # Ignore docstrings for BFF endpoints
+
+[tool.poetry.scripts]
+lint = "ruff check . --fix"  # Run Ruff with auto-fix
+test = "pytest app/tests/v1/ -v"  # Existing test command

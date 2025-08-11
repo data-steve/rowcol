@@ -1,0 +1,46 @@
+# Standard Chart of Accounts mapping from MCC/NAICS → COA buckets.
+# Adjust names to your COA.
+mcc_to_coa:
+  # Dining / Restaurants
+  "5812": "Meals"
+  "5814": "Meals"
+  "5462": "Meals"           # Bakeries
+  # Rideshare / Local transport
+  "4121": "Travel:Local Transport"
+  # Airlines
+  "4511": "Travel:Airfare"
+  # Lodging
+  "7011": "Travel:Lodging"
+  # Utilities / Telecom
+  "4812": "Utilities:Internet & Phone"
+  "4814": "Utilities:Internet & Phone"
+  # Fuel
+  "5541": "Auto:Fuel"
+  # Office & Supplies
+  "5943": "Office Supplies"
+  "5111": "Supplies"
+  # Software / Online services (approx; MCCs are messy here)
+  "5734": "Software Subscriptions"
+  "7399": "Software Subscriptions"
+  # Shipping
+  "4215": "Shipping & Postage"
+  "4789": "Shipping & Postage"
+  # Government services (fees)
+  "9399": "Licenses & Permits"
+
+naics_to_coa:
+  # Selected NAICS examples; expand over time.
+  "445110": "Meals"                       # Supermarkets and grocery stores (if used for food)
+  "722511": "Meals"                       # Full-Service Restaurants
+  "722513": "Meals"                       # Limited-Service Restaurants
+  "485320": "Travel:Local Transport"      # Limousine Service (proxy for rideshare)
+  "517111": "Utilities:Internet & Phone"  # Telecom
+  "517112": "Utilities:Internet & Phone"
+  "484110": "Shipping & Postage"          # General Freight Trucking
+  "454110": "Software Subscriptions"      # Electronic Shopping (coarse)
+  "511210": "Software Subscriptions"      # Software Publishers
+  "541511": "Software Subscriptions"      # Custom Computer Programming
+  "541512": "Software Subscriptions"      # Systems Design
+  "541613": "Advertising"
+  "524114": "Insurance:Health (Employer)"
+  "524126": "Insurance:Property & Casualty"
