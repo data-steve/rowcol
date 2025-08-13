@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+</head>
+<body>
+    <div id="root" class="container mx-auto p-4"></div>
+    <script>
+        const TaskDashboard = () => {
+            const [tasks, setTasks] = React.useState([
+                { task_id: 1, type: "intake", status: "pending", priority: "high" },
+                { task_id: 2, type: "review", status: "in_progress", priority: "medium" },
+                { task_id: 3, type: "approval", status: "completed", priority: "low" }
+            ]);
+
+            const renderTasks = () => {
+                return tasks.map(t => 
+                    '<div class="mb-2 p-2 bg-white rounded border">' +
+                        '<p><strong>Type:</strong> ' + t.type + '</p>' +
+                        '<p><strong>Status:</strong> ' + t.status + '</p>' +
+                        '<p><strong>Priority:</strong> ' + t.priority + '</p>' +
+                    '</div>'
+                ).join('');
+            };
+
+            const renderComponent = () => {
+                const root = document.getElementById('root');
+                root.innerHTML = `
+                    <div class="flex space-x-4">
+                        <div class="w-1/3 p-4 bg-blue-100 rounded">
+                            <h3 class="font-bold mb-2">Tasks:</h3>
+                            <div id="tasks-list">
+                                ${renderTasks()}
+                            </div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-yellow-100 rounded">
+                            <h3 class="font-bold mb-2">Details:</h3>
+                            <p>Select a task to view details</p>
+                            <div class="mt-2 p-4 bg-gray-200 rounded text-center">
+                                <p class="text-gray-500">Task Details</p>
+                                <p class="text-sm">Click on a task to see more information</p>
+                            </div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-green-100 rounded">
+                            <h3 class="font-bold mb-2">Actions:</h3>
+                            <button class="bg-blue-500 text-white px-4 py-2 rounded mr-2 mb-2">
+                                Assign Task
+                            </button>
+                            <button class="bg-green-500 text-white px-4 py-2 rounded mr-2 mb-2">
+                                Mark Complete
+                            </button>
+                            <button class="bg-yellow-500 text-white px-4 py-2 rounded">
+                                Update Priority
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // Initial render
+            renderComponent();
+
+            // Re-render when state changes
+            React.useEffect(() => {
+                renderComponent();
+            }, [tasks]);
+
+            return null; // This component doesn't return JSX
+        };
+
+        ReactDOM.render(React.createElement(TaskDashboard), document.getElementById("root"));
+    </script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+</head>
+<body>
+    <div id="root" class="container mx-auto p-4"></div>
+    <script>
+        const DocumentManager = () => {
+            const [documents, setDocuments] = React.useState([
+                { doc_id: 1, file_ref: "invoice_001.pdf", status: "pending" },
+                { doc_id: 2, file_ref: "receipt_002.pdf", status: "processed" }
+            ]);
+
+            const renderDocuments = () => {
+                return documents.map(d => 
+                    '<div class="mb-2 p-2 bg-white rounded">' +
+                        '<p><strong>File:</strong> ' + d.file_ref + '</p>' +
+                        '<p><strong>Status:</strong> ' + d.status + '</p>' +
+                    '</div>'
+                ).join('');
+            };
+
+            const renderComponent = () => {
+                const root = document.getElementById('root');
+                root.innerHTML = `
+                    <div class="flex space-x-4">
+                        <div class="w-1/3 p-4 bg-blue-100 rounded">
+                            <h3 class="font-bold mb-2">Documents:</h3>
+                            <div id="documents-list">
+                                ${renderDocuments()}
+                            </div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-yellow-100 rounded">
+                            <h3 class="font-bold mb-2">Preview:</h3>
+                            <p>Document preview will appear here</p>
+                            <div class="mt-2 p-4 bg-gray-200 rounded text-center">
+                                <p class="text-gray-500">PDF Preview</p>
+                            </div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-green-100 rounded">
+                            <h3 class="font-bold mb-2">Actions:</h3>
+                            <button class="bg-blue-500 text-white px-4 py-2 rounded mr-2 mb-2">
+                                Categorize
+                            </button>
+                            <button class="bg-green-500 text-white px-4 py-2 rounded mr-2 mb-2">
+                                Archive
+                            </button>
+                            <button class="bg-red-500 text-white px-4 py-2 rounded">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // Initial render
+            renderComponent();
+
+            // Re-render when state changes
+            React.useEffect(() => {
+                renderComponent();
+            }, [documents]);
+
+            return null; // This component doesn't return JSX
+        };
+
+        ReactDOM.render(React.createElement(DocumentManager), document.getElementById("root"));
+    </script>
+</body>
+</html>

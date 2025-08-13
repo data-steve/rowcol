@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+</head>
+<body>
+    <div id="root" class="container mx-auto p-4"></div>
+    <script>
+        const DocumentReview = () => {
+            const [documents, setDocuments] = React.useState([
+                { doc_id: 1, file_ref: "invoice_001.pdf", status: "review", fields: { vendor: "Starbucks", amount: "$10.50" } },
+                { doc_id: 2, file_ref: "receipt_002.pdf", status: "review", fields: { vendor: "Amazon", amount: "$25.99" } }
+            ]);
+
+            const renderDocuments = () => {
+                return documents.map(d => 
+                    '<div class="mb-3 p-3 bg-white rounded border">' +
+                        '<p><strong>File:</strong> ' + d.file_ref + '</p>' +
+                        '<p><strong>Vendor:</strong> ' + d.fields.vendor + '</p>' +
+                        '<p><strong>Amount:</strong> ' + d.fields.amount + '</p>' +
+                        '<div class="mt-2">' +
+                            '<input class="border p-1 mr-2" placeholder="Edit vendor" value="' + d.fields.vendor + '">' +
+                            '<input class="border p-1 mr-2" placeholder="Edit amount" value="' + d.fields.amount + '">' +
+                        '</div>' +
+                    '</div>'
+                ).join('');
+            };
+
+            const renderComponent = () => {
+                const root = document.getElementById('root');
+                root.innerHTML = `
+                    <div class="flex space-x-4">
+                        <div class="w-1/3 p-4 bg-blue-100 rounded">
+                            <h3 class="font-bold mb-2">Documents:</h3>
+                            <div id="documents-list">
+                                ${renderDocuments()}
+                            </div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-yellow-100 rounded">
+                            <h3 class="font-bold mb-2">Preview:</h3>
+                            <p>Document preview with editable fields</p>
+                            <div class="mt-2 p-4 bg-gray-200 rounded text-center">
+                                <p class="text-gray-500">Document Preview</p>
+                                <p class="text-sm">Fields can be edited here</p>
+                            </div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-green-100 rounded">
+                            <h3 class="font-bold mb-2">Actions:</h3>
+                            <button class="bg-green-500 text-white px-4 py-2 rounded mr-2 mb-2">
+                                Approve
+                            </button>
+                            <button class="bg-yellow-500 text-white px-4 py-2 rounded mr-2 mb-2">
+                                Request Changes
+                            </button>
+                            <button class="bg-red-500 text-white px-4 py-2 rounded">
+                                Reject
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // Initial render
+            renderComponent();
+
+            // Re-render when state changes
+            React.useEffect(() => {
+                renderComponent();
+            }, [documents]);
+
+            return null; // This component doesn't return JSX
+        };
+
+        ReactDOM.render(React.createElement(DocumentReview), document.getElementById("root"));
+    </script>
+</body>
+</html>

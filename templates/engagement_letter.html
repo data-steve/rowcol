@@ -1,0 +1,130 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html>
+<head>
+    <title>Engagement Letter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="p-8">
+    <div id="root"></div>
+    <script type="text/babel">
+        const EngagementLetter = ({ engagement, services, total_price, date, compliance_clauses }) => {
+            const [signature, setSignature] = React.useState('');
+
+            const handleSign = () => {
+                if (signature) {
+                    fetch(`/api/engagements/${engagement.engagement_id}/sign`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ signer_id: 1, signature_data: signature })
+                    })
+                        .then(res => res.json())
+                        .then(() => alert('Engagement signed!'));
+                }
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto">
+                    <h1 className="text-3xl font-bold mb-4">Engagement Letter</h1>
+                    <p className="mb-4">Date: {date}</p>
+                    <p className="mb-4">Engagement ID: {engagement.engagement_id}</p>
+                    <h2 className="text-xl font-bold mb-2">Services</h2>
+                    <ul className="list-disc pl-5 mb-4">
+                        {services.map(service => (
+                            <li key={service.service_id}>
+                                {service.name} - ${service.price}
+                                <span className="text-gray-500 cursor-help" title={service.client_instructions || service.description}>
+                                    {' '}
+                                    (Hover for details)
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                    <p className="mb-4">Total Price: ${total_price}</p>
+                    <p className="mb-4">Due Date: {new Date(engagement.due_date).toLocaleDateString()}</p>
+                    <h2 className="text-xl font-bold mb-2">Compliance Requirements</h2>
+                    <ul className="list-disc pl-5 mb-4">
+                        {compliance_clauses.map((clause, i) => (
+                            <li key={i}>{clause}</li>
+                        ))}
+                    </ul>
+                    <div className="border-t pt-4">
+                        <p className="font-bold">Terms and Conditions</p>
+                        <p>This agreement outlines bookkeeping services by BookClose. Client must provide all data by {new Date(engagement.due_date).toLocaleDateString()}. Overage fees: ${engagement.allowance_overage}.</p>
+                    </div>
+                    <div className="mt-4">
+                        <p className="font-bold">Client Signature</p>
+                        <input
+                            type="text"
+                            value={signature}
+                            onChange={e => setSignature(e.target.value)}
+                            placeholder="Enter signature (e.g., /s/John Doe)"
+                            className="border p-2 mb-2 w-full"
+                        />
+                        <button onClick={handleSign} className="bg-blue-500 text-white px-4 py-2 rounded">Sign</button>
+                    </div>
+                </div>
+            );
+        };
+
+        // Use raw JavaScript to avoid Jinja2 parsing issues
+        const engagementData = {
+            engagement_id: 1,
+            due_date: '2025-12-31T23:59:59',
+            allowance_overage: 0.0
+        };
+        
+        ReactDOM.render(
+            <EngagementLetter
+                engagement={engagementData}
+                services={[]}
+                total_price={0}
+                date='2025-01-01'
+                compliance_clauses={["Client must provide accurate QBO account details.", "Financial data must be submitted by due date."]}
+            />,
+            document.getElementById('root')
+        );
+    </script>
+</body>
+</html>

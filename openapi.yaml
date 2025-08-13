@@ -1,0 +1,356 @@
+openapi: 3.0.3
+info:
+  title: BookClose API
+  version: 1.0.0
+paths:
+  /api/engagements:
+    get:
+      summary: Get engagements
+      tags: [Engagements]
+      responses:
+        '200':
+          description: List of engagements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Engagement'
+    post:
+      summary: Create an engagement
+      tags: [Engagements]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EngagementCreate'
+      responses:
+        '200':
+          description: Created engagement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Engagement'
+  /api/engagements/{engagement_id}:
+    patch:
+      summary: Update engagement status
+      tags: [Engagements]
+      parameters:
+        - name: engagement_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Updated engagement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Engagement'
+  /api/engagements/{engagement_id}/letter:
+    get:
+      summary: Get engagement letter
+      tags: [Engagements]
+      parameters:
+        - name: engagement_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [pdf, html]
+      responses:
+        '200':
+          description: Engagement letter
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/engagements/{engagement_id}/sign:
+    post:
+      summary: Sign engagement letter
+      tags: [Engagements]
+      parameters:
+        - name: engagement_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signer_id:
+                  type: integer
+                signature_data:
+                  type: string
+      responses:
+        '200':
+          description: Signed engagement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Engagement'
+  /api/engagements/{engagement_id}/qbo-sync:
+    post:
+      summary: Sync engagement with QBO
+      tags: [Engagements]
+      parameters:
+        - name: engagement_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sync status
+          content:
+            application/json:
+              schema:
+                type: string
+  /api/services:
+    get:
+      summary: Get services
+      tags: [Services]
+      parameters:
+        - name: tier
+          in: query
+          schema:
+            type: string
+        - name: preview
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of services or previews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/Service'
+                    - $ref: '#/components/schemas/ServicePreview'
+    post:
+      summary: Create a service
+      tags: [Services]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCreate'
+      responses:
+        '200':
+          description: Created service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+  /api/services/{service_id}/preview:
+    get:
+      summary: Preview service details
+      tags: [Services]
+      parameters:
+        - name: service_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicePreview'
+  /api/tasks/{task_id}/assign:
+    patch:
+      summary: Assign task to user
+      tags: [Tasks]
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskAssignment'
+      responses:
+        '200':
+          description: Assigned task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+components:
+  schemas:
+    Engagement:
+      type: object
+      properties:
+        engagement_id:
+          type: integer
+        entity_id:
+          type: integer
+        service_ids:
+          type: array
+          items:
+            type: integer
+        status:
+          type: string
+        due_date:
+          type: string
+          format: date-time
+        triage_level:
+          type: string
+        user_input:
+          type: object
+        allowance_overage:
+          type: number
+        agreed_at:
+          type: string
+          format: date-time
+        health_status:
+          type: string
+        compliance_status:
+          type: string
+        e_signature:
+          type: object
+        qbo_sync_status:
+          type: string
+    EngagementCreate:
+      type: object
+      properties:
+        entity_id:
+          type: integer
+        service_ids:
+          type: array
+          items:
+            type: integer
+        due_date:
+          type: string
+          format: date-time
+        triage_level:
+          type: string
+        user_input:
+          type: object
+        allowance_overage:
+          type: number
+    Service:
+      type: object
+      properties:
+        service_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        complexity_score:
+          type: number
+        task_sequence:
+          type: array
+          items:
+            type: object
+        tier:
+          type: string
+        automation_score:
+          type: number
+        client_instructions:
+          type: string
+    ServiceCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        complexity_score:
+          type: number
+        task_sequence:
+          type: array
+          items:
+            type: object
+        tier:
+          type: string
+        automation_score:
+          type: number
+        client_instructions:
+          type: string
+    ServicePreview:
+      type: object
+      properties:
+        service_id:
+          type: integer
+        name:
+          type: string
+        task_sequence:
+          type: array
+          items:
+            type: object
+        compliance_requirements:
+          type: array
+          items:
+            type: object
+    Task:
+      type: object
+      properties:
+        task_id:
+          type: integer
+        engagement_id:
+          type: integer
+        service_id:
+          type: integer
+        step_type:
+          type: string
+        status:
+          type: string
+        assigned_user_id:
+          type: integer
+        completion_level:
+          type: number
+        micro_tasks:
+          type: array
+          items:
+            type: object
+        blockers:
+          type: array
+          items:
+            type: object
+        priority_score:
+          type: number
+        estimated_hours:
+          type: number
+        automation_eligibility:
+          type: string
+        validation_errors:
+          type: array
+          items:
+            type: object
+    TaskAssignment:
+      type: object
+      properties:
+        task_id:
+          type: integer
+        assigned_user_id:
+          type: integer

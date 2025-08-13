@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+</head>
+<body>
+    <div id="root" class="container mx-auto p-4"></div>
+    <script>
+        const OnboardingQueue = () => {
+            const [clients, setClients] = React.useState([
+                { client_id: 1, name: "Acme Corp", status: "pending" },
+                { client_id: 2, name: "TechStart Inc", status: "in_progress" }
+            ]);
+
+            const renderClients = () => {
+                return clients.map(c => 
+                    '<div class="mb-2 p-2 bg-white rounded">' +
+                        '<p><strong>Name:</strong> ' + c.name + '</p>' +
+                        '<p><strong>Status:</strong> ' + c.status + '</p>' +
+                    '</div>'
+                ).join('');
+            };
+
+            const renderComponent = () => {
+                const root = document.getElementById('root');
+                root.innerHTML = `
+                    <div class="flex space-x-4">
+                        <div class="w-1/3 p-4 bg-blue-100 rounded">
+                            <h3 class="font-bold mb-2">Clients:</h3>
+                            <div id="clients-list">
+                                ${renderClients()}
+                            </div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-yellow-100 rounded">
+                            <h3 class="font-bold mb-2">Policy Profile:</h3>
+                            <p>Default settings for new clients</p>
+                            <ul class="mt-2 text-sm">
+                                <li>• Basic automation rules</li>
+                                <li>• Standard GL accounts</li>
+                                <li>• Review thresholds</li>
+                            </ul>
+                        </div>
+                        <div class="w-1/3 p-4 bg-green-100 rounded">
+                            <h3 class="font-bold mb-2">Rule Creation:</h3>
+                            <p>Client-specific rules</p>
+                            <button class="bg-blue-500 text-white px-4 py-2 rounded mt-2">
+                                Create Rules
+                            </button>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // Initial render
+            renderComponent();
+
+            // Re-render when state changes
+            React.useEffect(() => {
+                renderComponent();
+            }, [clients]);
+
+            return null; // This component doesn't return JSX
+        };
+
+        ReactDOM.render(React.createElement(OnboardingQueue), document.getElementById("root"));
+    </script>
+</body>
+</html>

@@ -21,6 +21,145 @@
 - **Deliverables**: Excel/PDF binders (Cover, Index, Tickmark Legend, Bank, AR, AP, Prepaids, JEs, Exceptions, Close Summary, Snapshots), JE exports, close readiness score, AP/AR snapshots, narratives.
 - **Constraints**: No payroll processing (only reconciliation), no tax prep, no CRM/ERP integrations in MVP.
 
+## Development Patterns & Anti-Patterns (Lessons Learned)
+*Based on Stage 0 implementation experience - critical for avoiding common pitfalls*
+
+### 🚫 **ANTI-PATTERNS TO AVOID**
+
+#### **File Naming & Import Chaos**
+- ❌ **Don't:** Use folder names as prefixes in filenames (`models_service.py`, `routes_engagement.py`)
+- ❌ **Don't:** Bulk rename files without updating ALL imports across the codebase
+- ❌ **Don't:** Assume imports will "just work" after file moves
+- ✅ **Do:** Use descriptive, unique filenames (`service.py`, `engagement.py`)
+- ✅ **Do:** Update imports systematically after any file reorganization
+
+#### **Schema vs. Model Confusion**
+- ❌ **Don't:** Use SQLAlchemy models as `response_model` in FastAPI routes
+- ❌ **Don't:** Mix Pydantic schemas and SQLAlchemy models in API responses
+- ❌ **Don't:** Assume `from_attributes = True` fixes all serialization issues
+- ✅ **Do:** Create separate Pydantic schemas (`*Base`, `*Create`, full models)
+- ✅ **Do:** Use Pydantic schemas for `response_model`, SQLAlchemy models for database operations
+- ✅ **Do:** Alias SQLAlchemy models in routes: `from models import Service as ServiceModel`
+
+#### **Database Schema Mismatches**
+- ❌ **Don't:** Create seed data that doesn't match your SQLAlchemy models
+- ❌ **Don't:** Assume database columns exist without checking the actual model definitions
+- ❌ **Don't:** Use hardcoded field names that don't match the database schema
+- ✅ **Do:** Ensure seed data exactly matches your model definitions
+- ✅ **Do:** Use consistent field names across models, schemas, and seed data
+- ✅ **Do:** Test database seeding before building frontend features
+
+#### **Missing Required Fields**
+- ❌ **Don't:** Forget to add required fields like `firm_id` when implementing multi-tenancy
+- ❌ **Don't:** Create models that inherit from mixins but don't implement required fields
+- ❌ **Don't:** Assume optional fields are truly optional without checking business logic
+- ✅ **Do:** Explicitly add all required fields when implementing new features
+- ✅ **Do:** Use database constraints to enforce required fields
+- ✅ **Do:** Validate that seed data includes all required fields
+
+#### **Complex Dependencies in Templates**
+- ❌ **Don't:** Load heavy third-party libraries (drag-and-drop, tour libraries) in basic templates
+- ❌ **Don't:** Assume CDN libraries will load correctly or have the expected global variables
+- ❌ **Don't:** Mix complex JavaScript with Jinja2 template syntax
+- ✅ **Do:** Start with basic React components and add complexity incrementally
+- ✅ **Do:** Test external library loading before building complex features
+- ✅ **Do:** Use raw JavaScript blocks or escape Jinja2 syntax conflicts
+
+#### **Database Seeding Issues**
+- ❌ **Don't:** Call seeding functions multiple times without checking if data already exists
+- ❌ **Don't:** Use SQLAlchemy queries to check if tables exist before seeding
+- ❌ **Don't:** Assume seeding will work after table creation without proper error handling
+- ✅ **Do:** Use raw SQL to check table existence and data counts
+- ✅ **Do:** Implement proper error handling in seeding functions
+- ✅ **Do:** Test seeding with fresh databases
+
+### ✅ **GOOD PATTERNS TO REPLICATE**
+
+#### **Systematic Problem Solving**
+- ✅ **Do:** Fix one issue at a time, test, then move to the next
+- ✅ **Do:** Use error messages to guide fixes rather than guessing
+- ✅ **Do:** Test APIs directly with `curl` before testing frontend
+- ✅ **Do:** Check server logs for detailed error information
+
+#### **Incremental Template Development**
+- ✅ **Do:** Start with simple templates that just display data
+- ✅ **Do:** Add interactive features only after basic functionality works
+- ✅ **Do:** Use console logging to debug frontend data flow
+- ✅ **Do:** Test templates in isolation before integrating with complex features
+
+#### **Proper Test Structure**
+- ✅ **Do:** Use fixtures for reusable test data
+- ✅ **Do:** Mock external API calls to prevent test hangs
+- ✅ **Do:** Test database operations with proper setup/teardown
+- ✅ **Do:** Use descriptive test names and organize tests logically
+
+#### **Multi-Tenant Architecture**
+- ✅ **Do:** Implement `TenantMixin` consistently across all models
+- ✅ **Do:** Add `firm_id` filtering to all list endpoints
+- ✅ **Do:** Use proper foreign key relationships with explicit constraints
+- ✅ **Do:** Test tenant isolation thoroughly
+
+### 🔧 **SPECIFIC TECHNICAL FIXES TO REMEMBER**
+
+#### **FastAPI Response Models**
+```python
+# ❌ WRONG - Using SQLAlchemy model directly
+@router.get("/services", response_model=list[Service])  # Service is SQLAlchemy model
+
+# ✅ CORRECT - Using Pydantic schema
+from models import Service as ServiceModel
+from schemas import Service as ServiceSchema
+
+@router.get("/services", response_model=list[ServiceSchema])
+async def list_services(firm_id: str = None, db: Session = Depends(get_db)):
+    query = db.query(ServiceModel)  # Use SQLAlchemy model for queries
+    # ... return ServiceSchema objects
+```
+
+#### **Database Seeding**
+```python
+# ❌ WRONG - Using SQLAlchemy to check tables that don't exist yet
+def seed_database():
+    db = SessionLocal()
+    count = db.query(Engagement).count()  # Fails if table doesn't exist
+
+# ✅ CORRECT - Using raw SQL to check table existence
+def seed_database():
+    conn = sqlite3.connect("bookclose.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='engagements'")
+    if cursor.fetchone():
+        # Table exists, check data
+        cursor.execute("SELECT COUNT(*) FROM engagements")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            # Seed data
+```
+
+#### **Template JavaScript Conflicts**
+```python
+# ❌ WRONG - Jinja2 tries to parse JavaScript object literals
+engagement={{ engagement_id: 1, due_date: '2025-12-31T23:59:59' }}
+
+# ✅ CORRECT - Use JavaScript variables to avoid Jinja2 conflicts
+const engagementData = {
+    engagement_id: 1,
+    due_date: '2025-12-31T23:59:59'
+};
+engagement={engagementData}
+```
+
+### 🎯 **KEY TAKEAWAYS FOR FUTURE DEVELOPMENT**
+
+1. **Start Simple:** Build basic CRUD functionality before adding complex business logic
+2. **Test Incrementally:** Test each component in isolation before integration
+3. **Use Consistent Patterns:** Apply the same architectural patterns across all models/APIs
+4. **Validate Data Flow:** Ensure data flows correctly from database → API → frontend
+5. **Handle Errors Gracefully:** Implement proper error handling at each layer
+6. **Document Assumptions:** Write down what you expect to work before implementing
+
+**Bottom Line:** The foundation is now solid. Future development should focus on building business logic services incrementally, testing each piece thoroughly before moving to the next.
+
 ## Close Management Scope
 - **What We Do**:
   - **Bookkeeping**: Categorize transactions (80% automation), reconcile bank/CC (90%), manage AP/AR (80%), normalize vendors (Stages 0, 1A, 1B, 1C).
@@ -35,27 +174,23 @@
   - **Non-Standard JEs**: Complex accruals, intercompany transfers, or manual adjustments beyond automation limits (upcharge in Tier 3).
 - **Technical Limits**: 60-75% close automation due to manual review (complex JEs, OCR errors, missing PBCs). 95% of SC clients (non-API) need CSV/OCR.
 
-## Pre-Stage 0: Competitive Analysis
-*Goal*: Analyze Keeper, ClientHub, Karbon, Financial Cents for CSV/OCR support, pricing, review queues, and task management to inform UI and workflow design. *Effort: 5h, Dependencies: None*
-- [ ] **Deliverable**: Competitive teardown doc (features, CSV/OCR, pricing, UX flows, task routing). *Effort: 5h*
-
 ## Stage 0: Automation and Document Engine
 *Goal*: Bootstrap vendor normalization, transaction categorization, QBO sync, document processing (CSV/OCR, storage), and OCR/tagging review for single-partner firms. *Effort: ~80h, Dependencies: None*
 
 ### Models
-- [ ] **Rule** (rule_id, tenant_id, client_id, priority, match_type=’exact|regex|contains|amount|transfer’, pattern, output{account, class, memo, confidence}, scope=’global|client’): Stores rules from `rules.yaml`. *Effort: 2h*
-- [ ] **VendorCanonical** (vendor_id, tenant_id, client_id, raw_name, canonical_name, mcc, naics, default_gl_account, confidence): From `vendor_canonical.csv`. *Effort: 2h*
-- [ ] **Correction** (correction_id, tenant_id, client_id, txn_id, raw_descriptor, suggested{account, class, confidence}, final{account, class, memo}, rationale, created_by, scope=’client|global’): Human fixes for rule generation. *Effort: 2h*
-- [ ] **Suggestion** (suggestion_id, tenant_id, client_id, txn_id, top_k[{account, class, confidence}], chosen_idx): Rules-based suggestions. *Effort: 2h*
-- [ ] **PolicyProfile** (profile_id, tenant_id, client_id, thresholds{posting, variance, capitalization, manual_jes, ocr_review}, revenue_policy, cutoff_rules, tickmark_map, deliverable_prefs, pricing_tier, doc_volume): Client configs, including tier and OCR review limits. *Effort: 3h*
-- [ ] **Document** (doc_id, tenant_id, client_id, period, type=’invoice|statement|receipt|payroll’, file_ref, hash, upload_date, status=’pending|processed|archived|review’, extracted_fields{vendor, amount, date, address, confidence}, review_status): Store documents with OCR outputs. *Effort: 3h*
-- [ ] **DocumentType** (type_id, name, fields[], required=’y|n’, validation_rules): Define document formats (e.g., invoice: vendor, amount, date, address). *Effort: 2h*
-- [ ] **User** (user_id, tenant_id, role=’admin|staff|client’, email, permissions, training_level=’junior|senior|manager’): Manage access and task routing. *Effort: 2h*
-- [ ] **Firm** (tenant_id, name, qbo_id, pricing_tier, doc_volume): Firm settings. *Effort: 2h*
-- [ ] **Client** (client_id, tenant_id, name, qbo_id, industry=’retail|pro_services|nonprofit’, policy_profile_id): Client configs. *Effort: 2h*
-- [ ] **Staff** (staff_id, tenant_id, user_id, role=’bookkeeper|manager’, training_level=’junior|senior’): Firm staff roles for task routing. *Effort: 2h*
-- [ ] **Engagement** (engagement_id, tenant_id, client_id, period, service_type=’bookkeeping|close|pbc_collection’, status, due_date, task_ids[]): Lightweight engagement for PBC and review tasks. *Effort: 3h, Dep: Client*
-- [ ] **Task** (task_id, engagement_id, client_id, type=’pbc_collection|ocr_review|tagging|je_approval’, assigned_staff_id, status, due_date, priority): Task for PBC or review. *Effort: 3h, Dep: Engagement, Staff*
+- [X] **Rule** (rule_id, tenant_id, client_id, priority, match_type=’exact|regex|contains|amount|transfer’, pattern, output{account, class, memo, confidence}, scope=’global|client’): Stores rules from `rules.yaml`. *Effort: 2h*
+- [X] **VendorCanonical** (vendor_id, tenant_id, client_id, raw_name, canonical_name, mcc, naics, default_gl_account, confidence): From `vendor_canonical.csv`. *Effort: 2h*
+- [X] **Correction** (correction_id, tenant_id, client_id, txn_id, raw_descriptor, suggested{account, class, confidence}, final{account, class, memo}, rationale, created_by, scope=’client|global’): Human fixes for rule generation. *Effort: 2h*
+- [X] **Suggestion** (suggestion_id, tenant_id, client_id, txn_id, top_k[{account, class, confidence}], chosen_idx): Rules-based suggestions. *Effort: 2h*
+- [X] **PolicyProfile** (profile_id, tenant_id, client_id, thresholds{posting, variance, capitalization, manual_jes, ocr_review}, revenue_policy, cutoff_rules, tickmark_map, deliverable_prefs, pricing_tier, doc_volume): Client configs, including tier and OCR review limits. *Effort: 3h*
+- [X] **Document** (doc_id, tenant_id, client_id, period, type=’invoice|statement|receipt|payroll’, file_ref, hash, upload_date, status=’pending|processed|archived|review’, extracted_fields{vendor, amount, date, address, confidence}, review_status): Store documents with OCR outputs. *Effort: 3h*
+- [X] **DocumentType** (type_id, name, fields[], required=’y|n’, validation_rules): Define document formats (e.g., invoice: vendor, amount, date, address). *Effort: 2h*
+- [X] **User** (user_id, tenant_id, role=’admin|staff|client’, email, permissions, training_level=’junior|senior|manager’): Manage access and task routing. *Effort: 2h*
+- [X] **Firm** (tenant_id, name, qbo_id, pricing_tier, doc_volume): Firm settings. *Effort: 2h*
+- [X] **Client** (client_id, tenant_id, name, qbo_id, industry=’retail|pro_services|nonprofit’, policy_profile_id): Client configs. *Effort: 2h*
+- [X] **Staff** (staff_id, tenant_id, user_id, role=’bookkeeper|manager’, training_level=’junior|senior’): Firm staff roles for task routing. *Effort: 2h*
+- [X] **Engagement** (engagement_id, tenant_id, client_id, period, service_type=’bookkeeping|close|pbc_collection’, status, due_date, task_ids[]): Lightweight engagement for PBC and review tasks. *Effort: 3h, Dep: Client*
+- [X] **Task** (task_id, engagement_id, client_id, type=’pbc_collection|ocr_review|tagging|je_approval’, assigned_staff_id, status, due_date, priority): Task for PBC or review. *Effort: 3h, Dep: Engagement, Staff*
 
 ### Services
 - [ ] **PolicyEngineService**: Apply layered rules; compute confidence (vendor prior 0.4, MCC 0.2, amount cadence 0.2, weekday 0.1, history 0.1); flag low-confidence (0.6-0.89) for review; persist corrections. *Effort: 6h, Dep: Rule, Correction, PolicyProfile*
