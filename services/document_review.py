@@ -14,7 +14,7 @@ class DocumentReviewService:
         elif batch_by == "client":
             query = query.order_by(DocumentModel.client_id)
         documents = query.all()
-        return [Document.from_orm(doc) for doc in documents]
+        return documents
 
     def review_document(self, doc_id: int, firm_id: str, review_data: dict) -> Document:
         document = self.db.query(DocumentModel).filter(DocumentModel.doc_id == doc_id, DocumentModel.firm_id == firm_id).first()
@@ -25,4 +25,4 @@ class DocumentReviewService:
         document.status = "processed"
         self.db.commit()
         self.db.refresh(document)
-        return Document.from_orm(document)
+        return document

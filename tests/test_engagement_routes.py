@@ -1,9 +1,6 @@
-from fastapi.testclient import TestClient
-from main import app
+import pytest
 
-client = TestClient(app)
-
-def test_create_engagement(test_firm, test_client, test_service):
+def test_create_engagement(client, test_firm, test_client, test_service):
     engagement_data = {
         "firm_id": test_firm.firm_id,
         "client_id": test_client.client_id,
@@ -15,10 +12,12 @@ def test_create_engagement(test_firm, test_client, test_service):
     assert response.status_code == 200
     assert response.json()["engagement_id"] is not None
 
-def test_sign_engagement(test_engagement):
+def test_sign_engagement(mock_qbo, client, test_engagement):
     response = client.post(
         f"/api/engagements/{test_engagement.engagement_id}/sign?firm_id={test_engagement.firm_id}",
         json={"signer_id": 1, "signature_data": "/s/John Doe"}
     )
     assert response.status_code == 200
-    assert response.json()["e_signature"]["signature_data"] == "/s/John Doe"
+    # The response structure is the full engagement object
+    data = response.json()
+    assert data["e_signature"]["signature_data"] == "/s/John Doe"

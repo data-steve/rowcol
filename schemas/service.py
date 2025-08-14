@@ -5,6 +5,7 @@ class ServiceBase(BaseModel):
     firm_id: str
     name: str
     description: Optional[str] = None
+    service_type: str = "bookkeeping"
     price: float
     complexity_score: float = 1.0
     task_sequence: List[Dict]

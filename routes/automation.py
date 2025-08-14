@@ -14,22 +14,16 @@ router = APIRouter(prefix="/api/automation", tags=["Automation"])
 
 @router.get("/rules", response_model=List[Rule])
 async def list_rules(firm_id: str, client_id: int = None, db: Session = Depends(get_db)):
-    from models.rule import Rule as RuleModel
-    query = db.query(RuleModel).filter(RuleModel.firm_id == firm_id)
-    if client_id:
-        query = query.filter(RuleModel.client_id == client_id)
-    rules = query.all()
-    return [Rule.from_orm(rule) for rule in rules]
+    from services.rule import RuleService
+    service = RuleService(db)
+    return service.list_rules(firm_id, client_id)
 
 @router.post("/rules", response_model=Rule)
 async def create_rule(rule: Rule, db: Session = Depends(get_db)):
     """Create a new rule."""
-    from models.rule import Rule as RuleModel
-    db_rule = RuleModel(**rule.dict())
-    db.add(db_rule)
-    db.commit()
-    db.refresh(db_rule)
-    return Rule.from_orm(db_rule)
+    from services.rule import RuleService
+    service = RuleService(db)
+    return service.create_rule(rule)
 
 @router.post("/vendors/normalize", response_model=VendorCanonical)
 async def normalize_vendor(input: VendorNormalizeInput, db: Session = Depends(get_db)):

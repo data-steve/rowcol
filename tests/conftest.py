@@ -5,6 +5,8 @@ import os
 import sys
 from datetime import datetime, timedelta
 import uuid
+from unittest.mock import Mock, patch
+from fastapi.testclient import TestClient
 
 # Ensure project root is on sys.path so 'models' is importable
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -20,6 +22,58 @@ from models.firm import Firm
 from models.client import Client
 from models.staff import Staff
 from models.user import User
+from models.bill import Bill
+from models.vendor import Vendor
+from models.customer import Customer
+from models.invoice import Invoice
+
+# QBO Mock Fixture
+@pytest.fixture(scope="session")
+def mock_qbo():
+    """Centralized QBO mock fixture for consistent testing."""
+    with patch('quickbooks.QuickBooks') as mock_qbo_class:
+        # Create mock QBO client instance
+        mock_qbo_instance = Mock()
+        mock_qbo_class.return_value = mock_qbo_instance
+        
+        # Configure mock responses for common operations
+        mock_qbo_instance.sandbox = True
+        
+        # Mock successful API responses
+        mock_qbo_instance.company_info = Mock()
+        mock_qbo_instance.company_info.CompanyName = "Test Company"
+        
+        # Mock invoice creation
+        mock_invoice = Mock()
+        mock_invoice.Id = "qbo_inv_123"
+        mock_invoice.save.return_value = mock_invoice
+        mock_qbo_instance.objects.Invoice.return_value = mock_invoice
+        
+        # Mock credit memo creation
+        mock_credit_memo = Mock()
+        mock_credit_memo.Id = "qbo_cm_456"
+        mock_credit_memo.save.return_value = mock_credit_memo
+        mock_qbo_instance.objects.CreditMemo.return_value = mock_credit_memo
+        
+        # Mock payment creation
+        mock_payment = Mock()
+        mock_payment.Id = "qbo_pay_789"
+        mock_payment.save.return_value = mock_payment
+        mock_qbo_instance.objects.Payment.return_value = mock_payment
+        
+        # Mock bill creation
+        mock_bill = Mock()
+        mock_bill.Id = "qbo_bill_101"
+        mock_bill.save.return_value = mock_bill
+        mock_qbo_instance.objects.Bill.return_value = mock_bill
+        
+        # Mock vendor creation
+        mock_vendor = Mock()
+        mock_vendor.Id = "qbo_vendor_202"
+        mock_vendor.save.return_value = mock_vendor
+        mock_qbo_instance.objects.Vendor.return_value = mock_vendor
+        
+        yield mock_qbo_instance
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -49,6 +103,19 @@ def db():
         session.close()
         transaction.rollback()
         connection.close()
+
+@pytest.fixture
+def client(db):
+    """Test client fixture with database dependency override."""
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            pass
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
 
 @pytest.fixture
 def test_firm(db):
@@ -141,3 +208,76 @@ def test_task(db, test_firm, test_client, test_service, test_engagement):
     db.add(task)
     db.commit()
     return task
+
+@pytest.fixture
+def test_bill(db, test_firm, test_client):
+    from models.bill import Bill as BillModel
+    bill = Bill(
+        firm_id=test_firm.firm_id,
+        client_id=test_client.client_id,
+        vendor_id=None,
+        qbo_bill_id="mock_bill_001",
+        amount=150.0,
+        due_date=datetime.utcnow() + timedelta(days=30),
+        status="pending",
+        extracted_fields={"vendor_name": "Starbucks", "amount": "150.00", "date": "2025-01-15"},
+        gl_account="6000-Expenses",
+        confidence=0.9
+    )
+    db.add(bill)
+    db.commit()
+    db.refresh(bill)
+    return bill
+
+@pytest.fixture
+def test_vendor(db, test_firm, test_client):
+    from models.vendor import Vendor as VendorModel
+    vendor = Vendor(
+        firm_id=test_firm.firm_id,
+        client_id=test_client.client_id,
+        canonical_id=None,
+        qbo_id="mock_vendor_001",
+        w9_status="pending",
+        default_gl_account="6000-Expenses",
+        terms="Net 30",
+        fingerprint_hash="mock_hash_123"
+    )
+    db.add(vendor)
+    db.commit()
+    db.refresh(vendor)
+    return vendor
+
+@pytest.fixture
+def test_customer(db, test_firm, test_client):
+    customer = Customer(
+        firm_id=test_firm.firm_id,
+        client_id=test_client.client_id,
+        qbo_id="mock_customer_001",
+        name="Test Customer",
+        email="customer@example.com",
+        terms="Net 30",
+        fingerprint_hash="mock_hash_456"
+    )
+    db.add(customer)
+    db.commit()
+    db.refresh(customer)
+    return customer
+
+@pytest.fixture
+def test_invoice(db, test_firm, test_client, test_customer):
+    invoice = Invoice(
+        firm_id=test_firm.firm_id,
+        client_id=test_client.client_id,
+        customer_id=test_customer.customer_id,
+        qbo_id="mock_invoice_001",
+        issue_date=datetime.utcnow(),
+        due_date=datetime.utcnow() + timedelta(days=30),
+        total=500.0,
+        lines=[{"item": "Service", "amount": 500.0}],
+        status="sent",
+        attachment_refs=[]
+    )
+    db.add(invoice)
+    db.commit()
+    db.refresh(invoice)
+    return invoice

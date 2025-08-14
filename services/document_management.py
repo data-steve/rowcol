@@ -14,7 +14,7 @@ class DocumentManagementService:
         document.status = "review" if document.extracted_fields["confidence"] < 0.9 else "processed"
         self.db.commit()
         self.db.refresh(document)
-        return Document.from_orm(document)
+        return document
 
     def archive_document(self, doc_id: int, firm_id: str) -> Document:
         document = self.db.query(DocumentModel).filter(DocumentModel.doc_id == doc_id, DocumentModel.firm_id == firm_id).first()
@@ -23,4 +23,4 @@ class DocumentManagementService:
         document.status = "archived"
         self.db.commit()
         self.db.refresh(document)
-        return Document.from_orm(document)
+        return document

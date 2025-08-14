@@ -13,4 +13,4 @@ class COASyncService:
         profile.tickmark_map = {"6000": "Expenses", "7000": "Revenue"}
         self.db.commit()
         self.db.refresh(profile)
-        return PolicyProfile.from_orm(profile)
+        return profile

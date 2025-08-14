@@ -1,0 +1,129 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+</head>
+<body>
+    <div id="root" class="container mx-auto p-4"></div>
+    <script>
+        const StatementRecon = () => {
+            const [statements, setStatements] = React.useState([]);
+            const [selectedStatement, setSelectedStatement] = React.useState(null);
+
+            React.useEffect(() => {
+                // Fetch statements
+                fetch('/api/ingest/ap/statements/reconcile?firm_id=550e8400-e29b-41d4-a716-446655440000')
+                    .then(res => res.json())
+                    .then(data => setStatements(data.statements || []));
+            }, []);
+
+            const handleSelect = (statementId) => {
+                const statement = statements.find(s => s.statement_id === statementId);
+                setSelectedStatement(statement);
+            };
+
+            const handleResolve = (statementId) => {
+                // Mock resolution
+                setStatements(statements.map(s => s.statement_id === statementId ? { ...s, mismatches: [] } : s));
+            };
+
+            const renderStatements = () => {
+                return statements.map(statement => `
+                    <div class="mb-2 p-2 bg-white rounded cursor-pointer" onclick="handleSelect(${statement.statement_id})">
+                        <p><strong>ID:</strong> ${statement.statement_id}</p>
+                        <p><strong>Vendor:</strong> ${statement.vendor_id}</p>
+                        <p><strong>Period:</strong> ${statement.period}</p>
+                    </div>
+                `).join('');
+            };
+
+            const renderMismatches = () => {
+                if (!selectedStatement) return '<p>Select a statement</p>';
+                return `
+                    <p><strong>ID:</strong> ${selectedStatement.statement_id}</p>
+                    <p><strong>Mismatches:</strong> ${JSON.stringify(selectedStatement.mismatches)}</p>
+                    <a href="/templates/document_review.html?doc_id=${selectedStatement.file_ref}" class="text-blue-500">Edit Document</a>
+                `;
+            };
+
+            const renderActions = () => {
+                if (!selectedStatement) return '<p>No actions available</p>';
+                return `
+                    <button class="bg-green-500 text-white p-2 rounded w-full mb-2" onclick="handleResolve(${selectedStatement.statement_id})">Resolve</button>
+                `;
+            };
+
+            const renderComponent = () => {
+                document.getElementById('root').innerHTML = `
+                    <div class="flex space-x-4">
+                        <div class="w-1/3 p-4 bg-gray-100 rounded">
+                            <h3 class="font-bold mb-2">Statements</h3>
+                            <div>${renderStatements()}</div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-gray-100 rounded">
+                            <h3 class="font-bold mb-2">Mismatches</h3>
+                            <div>${renderMismatches()}</div>
+                        </div>
+                        <div class="w-1/3 p-4 bg-gray-100 rounded">
+                            <h3 class="font-bold mb-2">Actions</h3>
+                            <div>${renderActions()}</div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            window.handleSelect = handleSelect;
+            window.handleResolve = handleResolve;
+
+            React.useEffect(() => {
+                renderComponent();
+            }, [statements, selectedStatement]);
+
+            return null;
+        };
+
+        ReactDOM.render(React.createElement(StatementRecon), document.getElementById("root"));
+    </script>
+</body>
+</html>

@@ -48,7 +48,7 @@ class CsvIngestionService:
         self.db.add(document)
         self.db.commit()
         self.db.refresh(document)
-        return Document.from_orm(document)
+        return document
 
     def validate_csv(self, file: UploadFile) -> dict:
         content = file.file.read().decode("utf-8")

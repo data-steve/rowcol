@@ -27,4 +27,14 @@ class DocumentStorageService:
         self.db.add(document)
         self.db.commit()
         self.db.refresh(document)
-        return Document.from_orm(document)
+        return document
+    
+    def get_document(self, doc_id: int, firm_id: str) -> Document:
+        """Retrieve a document by ID with firm_id filtering."""
+        document = self.db.query(DocumentModel).filter(
+            DocumentModel.doc_id == doc_id, 
+            DocumentModel.firm_id == firm_id
+        ).first()
+        if not document:
+            raise ValueError("Document not found")
+        return document

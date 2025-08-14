@@ -193,50 +193,50 @@ engagement={engagementData}
 - [X] **Task** (task_id, engagement_id, client_id, type=’pbc_collection|ocr_review|tagging|je_approval’, assigned_staff_id, status, due_date, priority): Task for PBC or review. *Effort: 3h, Dep: Engagement, Staff*
 
 ### Services
-- [ ] **PolicyEngineService**: Apply layered rules; compute confidence (vendor prior 0.4, MCC 0.2, amount cadence 0.2, weekday 0.1, history 0.1); flag low-confidence (0.6-0.89) for review; persist corrections. *Effort: 6h, Dep: Rule, Correction, PolicyProfile*
-- [ ] **VendorNormalizationService**: Normalize (strip IDs `/\d{4,}$/`, dates `/\d{1,2}[\/\-]\d{1,2}/`, tokens [POS, ACH, WEB]); map to COA via MCC/NAICS; emit `vendor_canonical.csv`. *Effort: 6h, Dep: VendorCanonical*
-- [ ] **DataIngestionService**: Sync QBO (COA, txns, vendors, reports: TrialBalance, GLDetail); ingest bank CSVs; handle multi-currency, voided txns, locked books, bank feed lags. *Effort: 7h, Dep: VendorCanonical*
-- [ ] **CsvIngestionService**: Parse CSVs (regex-based column mapping); validate (missing fields, duplicates); link to `Document`. *Effort: 10h, Dep: Document, DocumentType*
-- [ ] **DocumentStorageService**: Store documents in S3 (or Postgres BLOBs for MVP); compute SHA-256 hashes; enforce audit trails. *Effort: 5h, Dep: Document*
-- [ ] **DocumentManagementService**: Categorize documents (OCR or manual); link to `Bill`, `BankTransaction`, or `PayrollBatch`; flag for review (confidence <0.9); archive post-close. *Effort: 6h, Dep: Document, DocumentType*
-- [ ] **DocumentReviewService**: Manage OCR/tagging review queue; batch by field (e.g., address), type (AP/AR), or client; persist corrections to `Document.extracted_fields`. *Effort: 8h, Dep: Document, DocumentType, Correction*
-- [ ] **TaskService**: Assign/route PBC collection and review tasks by `Staff.training_level` (junior=simple tagging, senior=complex tagging, manager=JE approval); track status. *Effort: 6h, Dep: Engagement, Task, Staff*
-- [ ] **PolicyProfileService**: Manage client policies (thresholds, COA maps, pricing tier, doc_volume, ocr_review limit); default: posting $250-$1000, variance 10%, cap $1000-$5000, manual_jes 5-10, ocr_review 10-50. *Effort: 3h, Dep: PolicyProfile*
-- [ ] **COASyncService**: Pull QBO COA; validate mappings in PolicyProfile; sync changes. *Effort: 3h, Dep: PolicyProfile*
+- [X] **PolicyEngineService**: Apply layered rules; compute confidence (vendor prior 0.4, MCC 0.2, amount cadence 0.2, weekday 0.1, history 0.1); flag low-confidence (0.6-0.89) for review; persist corrections. *Effort: 6h, Dep: Rule, Correction, PolicyProfile*
+- [X] **VendorNormalizationService**: Normalize (strip IDs `/\d{4,}$/`, dates `/\d{1,2}[\/\-]\d{1,2}/`, tokens [POS, ACH, WEB]); map to COA via MCC/NAICS; emit `vendor_canonical.csv`. *Effort: 6h, Dep: VendorCanonical*
+- [X] **DataIngestionService**: Sync QBO (COA, txns, vendors, reports: TrialBalance, GLDetail); ingest bank CSVs; handle multi-currency, voided txns, locked books, bank feed lags. *Effort: 7h, Dep: VendorCanonical*
+- [X] **CsvIngestionService**: Parse CSVs (regex-based column mapping); validate (missing fields, duplicates); link to `Document`. *Effort: 10h, Dep: Document, DocumentType*
+- [X] **DocumentStorageService**: Store documents in S3 (or Postgres BLOBs for MVP); compute SHA-256 hashes; enforce audit trails. *Effort: 5h, Dep: Document*
+- [X] **DocumentManagementService**: Categorize documents (OCR or manual); link to `Bill`, `BankTransaction`, or `PayrollBatch`; flag for review (confidence <0.9); archive post-close. *Effort: 6h, Dep: Document, DocumentType*
+- [X] **DocumentReviewService**: Manage OCR/tagging review queue; batch by field (e.g., address), type (AP/AR), or client; persist corrections to `Document.extracted_fields`. *Effort: 8h, Dep: Document, DocumentType, Correction*
+- [X] **TaskService**: Assign/route PBC collection and review tasks by `Staff.training_level` (junior=simple tagging, senior=complex tagging, manager=JE approval); track status. *Effort: 6h, Dep: Engagement, Task, Staff*
+- [X] **PolicyProfileService**: Manage client policies (thresholds, COA maps, pricing tier, doc_volume, ocr_review limit); default: posting $250-$1000, variance 10%, cap $1000-$5000, manual_jes 5-10, ocr_review 10-50. *Effort: 3h, Dep: PolicyProfile*
+- [X] **COASyncService**: Pull QBO COA; validate mappings in PolicyProfile; sync changes. *Effort: 3h, Dep: PolicyProfile*
 
 ### Routes
-- [ ] **/api/automation/rules** (GET, POST): Manage rules. *Effort: 2h, Dep: PolicyEngineService*
-- [ ] **/api/automation/vendors/normalize** (POST): Normalize vendor. *Effort: 2h, Dep: VendorNormalizationService*
-- [ ] **/api/automation/categorize** (POST): Categorize txns; return suggestions. *Effort: 2h, Dep: PolicyEngineService*
-- [ ] **/api/automation/corrections** (POST): Submit correction; update rules. *Effort: 2h, Dep: PolicyEngineService*
-- [ ] **/api/ingest/qbo** (POST): Trigger QBO sync (full/delta). *Effort: 2h, Dep: DataIngestionService, COASyncService*
-- [ ] **/api/csv/upload** (POST): Ingest CSV with auto-mapping. *Effort: 3h, Dep: CsvIngestionService*
-- [ ] **/api/csv/validate** (POST): Validate CSV; flag errors. *Effort: 2h, Dep: CsvIngestionService*
-- [ ] **/api/documents/upload** (POST): Upload documents (PDF, CSV, images). *Effort: 3h, Dep: DocumentStorageService*
-- [ ] **/api/documents/{id}** (GET, PATCH): View/edit document metadata and extracted fields. *Effort: 3h, Dep: DocumentManagementService, DocumentReviewService*
-- [ ] **/api/review/documents** (GET, POST): Manage review queue; batch by field/type/client. *Effort: 3h, Dep: DocumentReviewService*
-- [ ] **/api/tasks** (GET, POST, PATCH): Assign/track PBC and review tasks. *Effort: 3h, Dep: TaskService*
+- [X] **/api/automation/rules** (GET, POST): Manage rules. *Effort: 2h, Dep: PolicyEngineService*
+- [X] **/api/automation/vendors/normalize** (POST): Normalize vendor. *Effort: 2h, Dep: VendorNormalizationService*
+- [X] **/api/automation/categorize** (POST): Categorize txns; return suggestions. *Effort: 2h, Dep: PolicyEngineService*
+- [X] **/api/automation/corrections** (POST): Submit correction; update rules. *Effort: 2h, Dep: PolicyEngineService*
+- [X] **/api/ingest/qbo** (POST): Trigger QBO sync (full/delta). *Effort: 2h, Dep: DataIngestionService, COASyncService*
+- [X] **/api/csv/upload** (POST): Ingest CSV with auto-mapping. *Effort: 3h, Dep: CsvIngestionService*
+- [X] **/api/csv/validate** (POST): Validate CSV; flag errors. *Effort: 2h, Dep: CsvIngestionService*
+- [X] **/api/documents/upload** (POST): Upload documents (PDF, CSV, images). *Effort: 3h, Dep: DocumentStorageService*
+- [X] **/api/documents/{id}** (GET, PATCH): View/edit document metadata and extracted fields. *Effort: 3h, Dep: DocumentManagementService, DocumentReviewService*
+- [X] **/api/review/documents** (GET, POST): Manage review queue; batch by field/type/client. *Effort: 3h, Dep: DocumentReviewService*
+- [X] **/api/tasks** (GET, POST, PATCH): Assign/track PBC and review tasks. *Effort: 3h, Dep: TaskService*
 
 ### Templates (React/Tailwind CSS)
-- [ ] **rule_editor.html**: View/edit rules; three-pane UX (left: rule list, center: form, right: preview). *Effort: 4h, Dep: /api/automation/rules*
-- [ ] **categorization_queue.html**: Review queue for mid-confidence txns (0.6-0.89); Assertion Chips; three-pane UX (left: lanes [Auto-Post, High $, New Vendor], center: txn details, right: actions [A accept, R recur, X exception]). *Effort: 5h, Dep: /api/automation/categorize*
-- [ ] **onboarding_queue.html**: Client onboarding (COA, thresholds, policy profile); three-pane UX (left: client list, center: PolicyProfile/COA, right: rule creation). *Effort: 4h, Dep: /api/automation/policies*
-- [ ] **csv_review.html**: Correct CSV errors (dropdowns for column remapping); three-pane UX (left: CSV list, center: errors, right: actions). *Effort: 5h, Dep: /api/csv/validate*
-- [ ] **document_manager.html**: Upload/tag/view documents; three-pane UX (left: doc list, center: preview, right: actions [tag, archive]). *Effort: 5h, Dep: /api/documents/upload*
-- [ ] **document_review.html**: Review OCR/tagging; batch by field (e.g., address), type (AP/AR), or client; Labelbox-like UI (left: doc list, center: preview with editable fields, right: actions [confirm, edit, flag]); integrates with `categorization_queue.html`. *Effort: 6h, Dep: /api/review/documents*
-- [ ] **task_dashboard.html**: View/assign PBC and review tasks; three-pane UX (left: task list [PBC Collection, OCR Review, Tagging], center: details [due date, staff], right: actions [assign, complete]); Fulcrum-style dragable cards. *Effort: 5h, Dep: /api/tasks*
+- [X] **rule_editor.html**: View/edit rules; three-pane UX (left: rule list, center: form, right: preview). *Effort: 4h, Dep: /api/automation/rules*
+- [X] **categorization_queue.html**: Review queue for mid-confidence txns (0.6-0.89); Assertion Chips; three-pane UX (left: lanes [Auto-Post, High $, New Vendor], center: txn details, right: actions [A accept, R recur, X exception]). *Effort: 5h, Dep: /api/automation/categorize*
+- [X] **onboarding_queue.html**: Client onboarding (COA, thresholds, policy profile); three-pane UX (left: client list, center: PolicyProfile/COA, right: rule creation). *Effort: 4h, Dep: /api/automation/policies*
+- [X] **csv_review.html**: Correct CSV errors (dropdowns for column remapping); three-pane UX (left: CSV list, center: errors, right: actions). *Effort: 5h, Dep: /api/csv/validate*
+- [X] **document_manager.html**: Upload/tag/view documents; three-pane UX (left: doc list, center: preview, right: actions [tag, archive]). *Effort: 5h, Dep: /api/documents/upload*
+- [X] **document_review.html**: Review OCR/tagging; batch by field (e.g., address), type (AP/AR), or client; Labelbox-like UI (left: doc list, center: preview with editable fields, right: actions [confirm, edit, flag]); integrates with `categorization_queue.html`. *Effort: 6h, Dep: /api/review/documents*
+- [X] **task_dashboard.html**: View/assign PBC and review tasks; three-pane UX (left: task list [PBC Collection, OCR Review, Tagging], center: details [due date, staff], right: actions [assign, complete]); Fulcrum-style dragable cards. *Effort: 5h, Dep: /api/tasks*
 
 ### Seed Data
-- [ ] **SQL data**: Rules (100), vendors (200), corrections (10), suggestions (20), PolicyProfile (5 defaults), documents (50), DocumentType (5: invoice, statement, receipt, payroll, bank), engagements (10), tasks (20: PBC collection, OCR review). *Effort: 5h, Dep: Models*
-- [ ] **CSV templates**: `payroll_template.csv` (Date, Employee, GrossPay, Taxes, Deductions), `bank_template.csv` (Date, Description, Amount), `vendor_template.csv` (Vendor, InvoiceNo, Amount, Date), `invoice_template.csv` (Customer, InvoiceNo, Amount, DueDate). *Effort: 5h*
+- [X] **SQL data**: Rules (100), vendors (200), corrections (10), suggestions (20), PolicyProfile (5 defaults), documents (50), DocumentType (5: invoice, statement, receipt, payroll, bank), engagements (10), tasks (20: PBC collection, OCR review). *Effort: 5h, Dep: Models*
+- [X] **CSV templates**: `payroll_template.csv` (Date, Employee, GrossPay, Taxes, Deductions), `bank_template.csv` (Date, Description, Amount), `vendor_template.csv` (Vendor, InvoiceNo, Amount, Date), `invoice_template.csv` (Customer, InvoiceNo, Amount, DueDate). *Effort: 5h*
 
 ### Tests
-- [ ] **Pytest unit tests**: PolicyEngineService, VendorNormalizationService, DataIngestionService, CsvIngestionService, DocumentStorageService, DocumentManagementService, DocumentReviewService (batching), TaskService (routing). *Effort: 10h, Dep: Services*
-- [ ] **Pytest integration tests**: Routes; mock CSVs/QBO; golden dataset (retail, pro_services, nonprofit). *Effort: 8h, Dep: Routes*
+- [X] **Pytest unit tests**: PolicyEngineService, VendorNormalizationService, DataIngestionService, CsvIngestionService, DocumentStorageService, DocumentManagementService, DocumentReviewService (batching), TaskService (routing). *Effort: 10h, Dep: Services*
+- [X] **Pytest integration tests**: Routes; mock CSVs/QBO; golden dataset (retail, pro_services, nonprofit). *Effort: 8h, Dep: Routes*
 
 ### Documentation
-- [ ] **OpenAPI/Swagger**: Automation, CSV, document, review, task endpoints. *Effort: 4h, Dep: Routes*
-- [ ] **README**: Setup for rules, QBO sync, CSV/OCR imports, document storage, review queue, task routing. *Effort: 3h, Dep: None*
+- [X] **OpenAPI/Swagger**: Automation, CSV, document, review, task endpoints. *Effort: 4h, Dep: Routes*
+- [X] **README**: Setup for rules, QBO sync, CSV/OCR imports, document storage, review queue, task routing. *Effort: 3h, Dep: None*
 
 ### KPIs
 - % txns with canonical vendor, % auto-posted (≥0.9 confidence), override rate, false-merge rate (<1%), doc processing time, CSV error rate, OCR review completion time, task completion rate.
@@ -246,13 +246,13 @@ engagement={engagementData}
 
 ### Models
 - [ ] **Vendor** (vendor_id, tenant_id, client_id, canonical_name, qbo_id, w9_status, default_gl_account, terms, fingerprint_hash, canonical_id): Vendor master. *Effort: 2h, Dep: VendorCanonical*
-- [ ] **Bill** (bill_id, tenant_id, client_id, qbo_id, vendor_id, invoice_no, issue_date, due_date, total, lines[], attachment_refs[], status, rule_id, confidence, suggestion_id): Bill details. *Effort: 3h, Dep: Vendor, Rule, Suggestion, Document*
+- [X] **Bill** (bill_id, tenant_id, client_id, qbo_id, vendor_id, invoice_no, issue_date, due_date, total, lines[], attachment_refs[], status, rule_id, confidence, suggestion_id): Bill details. *Effort: 3h, Dep: Vendor, Rule, Suggestion, Document*
 - [ ] **PaymentIntent** (intent_id, tenant_id, client_id, bill_ids[], provider, total_amount, funding_account, status, issued_at, cleared_at, fees): Payment orchestration. *Effort: 2h, Dep: Bill*
 - [ ] **VendorStatement** (statement_id, tenant_id, client_id, vendor_id, period, file_ref, parsed_invoices[], mismatches[]): Statement reconciliation. *Effort: 3h, Dep: Vendor, Document*
 
 ### Services
-- [ ] **BillIngestionService**: Parse email/OCR/CSVs via Tesseract (simple) and Google Cloud Document AI (complex); categorize via PolicyEngineService (80%); store in `Document`; flag for review (confidence <0.9). *Effort: 8h, Dep: Bill, PolicyEngineService, DocumentManagementService, DocumentReviewService*
-- [ ] **APIngestionService**: Extract bills from QBO/Bill.com; link to `Document`. *Effort: 4h, Dep: Bill, VendorCanonical, Document*
+- [X] **BillIngestionService**: Parse email/OCR/CSVs via Tesseract (simple) and Google Cloud Document AI (complex); categorize via PolicyEngineService (80%); store in `Document`; flag for review (confidence <0.9). *Effort: 8h, Dep: Bill, PolicyEngineService, DocumentManagementService, DocumentReviewService*
+- [X] **APIngestionService**: Extract bills from QBO/Bill.com; link to `Document`. *Effort: 4h, Dep: Bill, VendorCanonical, Document*
 - [ ] **APPaymentService**: Schedule payments via QBO/Bill.com; handle webhook updates (50-70%). *Effort: 4h, Dep: PaymentIntent*
 - [ ] **VendorMasteringService**: Dedup via VendorNormalizationService; sync QBO; flag new vendors (confidence <0.6). *Effort: 4h, Dep: Vendor, VendorNormalizationService*
 - [ ] **StatementReconciliationService**: Parse statements (CSV/OCR); compare QBO aging (60%); flag for review. *Effort: 5h, Dep: VendorStatement, DocumentManagementService, DocumentReviewService*
@@ -360,7 +360,7 @@ engagement={engagementData}
 ### KPIs
 - % txns auto-categorized, % auto-cleared, stale item reduction, QBO sync accuracy, OCR correction rate, doc processing time.
 
-## Stage 1E: Payroll Reconciliation
+## Stage 1D: Payroll Reconciliation
 *Goal*: Automate payroll JE posting and liability reconciliation via CSV/QBO Payroll, with review queue integration. *Effort: ~20h, Dependencies: Stage 0*
 
 ### Models
@@ -559,6 +559,9 @@ engagement={engagementData}
 
 ## Backlog (Stage 5 or Later)
 - **Gusto Integration** (~12h): `PayrollService`, `RemittanceService`, `/api/payroll/batches`, `/api/payroll/remittances`, `payroll_review.html` for payroll processing.
+- Bill.com Integration
+- Google Document AI Integration
+- Veryfi Integration
 - **Plaid Integration** (~10h): `BankFeedService` standalone Plaid sync, `/api/bank/transactions/sync`.
 - **NetSuite/SAP Integration** (~45h): Full ERP support for GL, AP, AR, close workflows.
 - **Inventory Management** (~20h): `InventoryService`, `Item`, `InventoryAdjustment`, `/api/inventory/items`, `/api/inventory/adjustments`, `inventory_adjust.html`.

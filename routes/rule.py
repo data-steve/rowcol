@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from models.rule import Rule as RuleModel
+from services.rule import RuleService
 from schemas.rule import Rule
 from database import get_db
 
@@ -8,15 +8,13 @@ router = APIRouter(prefix="/api", tags=["Rules"])
 
 @router.post("/rules", response_model=Rule)
 async def create_rule(rule: Rule, db: Session = Depends(get_db)):
-    db_rule = RuleModel(**rule.dict())
-    db.add(db_rule)
-    db.commit()
-    db.refresh(db_rule)
-    return db_rule
+    service = RuleService(db)
+    return service.create_rule(rule)
 
 @router.get("/rules/{rule_id}", response_model=Rule)
 async def get_rule(rule_id: int, firm_id: str, db: Session = Depends(get_db)):
-    rule = db.query(RuleModel).filter(RuleModel.rule_id == rule_id, RuleModel.firm_id == firm_id).first()
-    if not rule:
-        raise HTTPException(status_code=404, detail="Rule not found")
-    return rule
+    service = RuleService(db)
+    try:
+        return service.get_rule(rule_id, firm_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: BookClose API
   version: 1.0.0
@@ -200,6 +200,310 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Task'
+  # AP Ingest Endpoints
+  /api/ingest/ap/bills:
+    post:
+      summary: Sync AP bills from QBO
+      tags: [Ingest]
+      parameters:
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+        - name: full_sync
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        200: { content: { application/json: { schema: { type: object } } } }
+  /api/ingest/ap/bills/upload:
+    post:
+      summary: Ingest a bill via OCR/CSV
+      tags: [Ingest]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file_path: { type: string }
+      parameters:
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Bill' } } } }
+  /api/ingest/ap/bills/{id}:
+    get:
+      summary: Get bill details
+      tags: [Ingest]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Bill' } } } }
+    patch:
+      summary: Update bill (e.g., GL account)
+      tags: [Ingest]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: gl_account
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Bill' } } } }
+  /api/ingest/ap/bills/categorize:
+    post:
+      summary: Categorize a bill
+      tags: [Ingest]
+      parameters:
+        - name: bill_id
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Bill' } } } }
+  /api/ingest/ap/payments:
+    post:
+      summary: Schedule a payment
+      tags: [Ingest]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bill_ids: { type: array, items: { type: integer } }
+                funding_account: { type: string }
+      parameters:
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/PaymentIntent' } } } }
+  /api/ingest/ap/statements/reconcile:
+    post:
+      summary: Reconcile a vendor statement
+      tags: [Ingest]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vendor_id: { type: integer }
+                file_ref: { type: string }
+                period: { type: string, format: date }
+      parameters:
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/VendorStatement' } } } }
+  /api/ingest/ap/vendors/{id}:
+    get:
+      summary: Get vendor details
+      tags: [Ingest]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Vendor' } } } }
+    patch:
+      summary: Update vendor details
+      tags: [Ingest]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: w9_status
+          in: query
+          schema: { type: string }
+        - name: terms
+          in: query
+          schema: { type: string }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Bill' } } } }
+  /api/ingest/ap/document:
+    post:
+      summary: Ingest a document (mock OCR)
+      tags: [Ingest]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file_path: { type: string }
+      parameters:
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Bill' } } } }
+  /api/ar/invoices:
+    post:
+      summary: Create an invoice
+      tags: [AR]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id: { type: integer }
+                issue_date: { type: string, format: date-time }
+                due_date: { type: string, format: date-time }
+                total: { type: number }
+                lines: { type: array, items: { type: object } }
+      parameters:
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } } }
+  /api/ar/invoices/{id}:
+    get:
+      summary: Get invoice details
+      tags: [AR]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } } }
+    patch:
+      summary: Update invoice status
+      tags: [AR]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } } }
+  /api/ar/collections/remind:
+    post:
+      summary: Send reminder for overdue invoice
+      tags: [AR]
+      parameters:
+        - name: invoice_id
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Invoice' } } } }
+  /api/ar/payments/apply:
+    post:
+      summary: Apply payment to invoices
+      tags: [AR]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreate'
+      parameters:
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/Payment' } } } }
+  /api/ar/credits:
+    post:
+      summary: Create a credit memo
+      tags: [AR]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditMemoCreate'
+      parameters:
+        - name: firm_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: client_id
+          in: query
+          schema: { type: integer }
+      responses:
+        200: { content: { application/json: { schema: { $ref: '#/components/schemas/CreditMemo' } } } }
 components:
   schemas:
     Engagement:
@@ -354,3 +658,101 @@ components:
           type: integer
         assigned_user_id:
           type: integer
+    # AP Ingest Schemas
+    Bill:
+      type: object
+      properties:
+        bill_id: { type: integer }
+        firm_id: { type: string }
+        client_id: { type: integer, nullable: true }
+        vendor_id: { type: integer, nullable: true }
+        qbo_bill_id: { type: string }
+        amount: { type: number }
+        due_date: { type: string, format: date-time, nullable: true }
+        status: { type: string }
+        extracted_fields: { type: object, nullable: true }
+        gl_account: { type: string, nullable: true }
+        confidence: { type: number }
+    PaymentIntent:
+      type: object
+      properties:
+        intent_id: { type: integer }
+        firm_id: { type: string }
+        client_id: { type: integer, nullable: true }
+        bill_ids: { type: array, items: { type: integer } }
+        provider: { type: string }
+        total_amount: { type: number }
+        funding_account: { type: string, nullable: true }
+        status: { type: string }
+        issued_at: { type: string, format: date-time, nullable: true }
+        cleared_at: { type: string, format: date-time, nullable: true }
+        fees: { type: number }
+    Vendor:
+      type: object
+      properties:
+        vendor_id: { type: integer }
+        firm_id: { type: string }
+        client_id: { type: integer, nullable: true }
+        canonical_id: { type: integer, nullable: true }
+        qbo_id: { type: string, nullable: true }
+        w9_status: { type: string }
+        default_gl_account: { type: string, nullable: true }
+        terms: { type: string, nullable: true }
+        fingerprint_hash: { type: string, nullable: true }
+    VendorStatement:
+      type: object
+      properties:
+        statement_id: { type: integer }
+        firm_id: { type: string }
+        client_id: { type: integer, nullable: true }
+        vendor_id: { type: integer }
+        period: { type: string, format: date }
+        file_ref: { type: string, nullable: true }
+        parsed_invoices: { type: object, nullable: true }
+        mismatches: { type: object, nullable: true }
+    Customer:
+      type: object
+      properties:
+        customer_id: { type: integer }
+        firm_id: { type: string }
+        client_id: { type: integer, nullable: true }
+        qbo_id: { type: string, nullable: true }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        terms: { type: string, nullable: true }
+        fingerprint_hash: { type: string, nullable: true }
+    Invoice:
+      type: object
+      properties:
+        invoice_id: { type: integer }
+        firm_id: { type: string }
+        client_id: { type: integer, nullable: true }
+        customer_id: { type: integer }
+        qbo_id: { type: string, nullable: true }
+        issue_date: { type: string, format: date-time }
+        due_date: { type: string, format: date-time }
+        total: { type: number }
+        lines: { type: array, items: { type: object }, nullable: true }
+        status: { type: string }
+        attachment_refs: { type: array, items: { type: string }, nullable: true }
+    Payment:
+      type: object
+      properties:
+        payment_id: { type: integer }
+        firm_id: { type: string }
+        client_id: { type: integer, nullable: true }
+        qbo_id: { type: string, nullable: true }
+        invoice_ids: { type: array, items: { type: integer }, nullable: true }
+        amount: { type: number }
+        date: { type: string, format: date-time }
+        method: { type: string, nullable: true }
+    CreditMemo:
+      type: object
+      properties:
+        memo_id: { type: integer }
+        firm_id: { type: string }
+        client_id: { type: integer, nullable: true }
+        qbo_id: { type: string, nullable: true }
+        invoice_id: { type: integer }
+        amount: { type: number }
+        reason: { type: string, nullable: true }
