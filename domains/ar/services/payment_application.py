@@ -1,0 +1,51 @@
+"""
+Payment Application Service for AR domain.
+Handles payment application to invoices with tenant isolation.
+"""
+from sqlalchemy.orm import Session
+from domains.ap.models.payment import Payment as PaymentModel
+from domains.ar.models.invoice import Invoice as InvoiceModel
+from datetime import datetime
+from typing import Optional
+
+class PaymentApplicationService:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def apply_payment(self, firm_id: str, amount: float, date: datetime, method: str, customer_id: Optional[int] = None) -> PaymentModel:
+        """
+        Apply a payment to invoices with tenant isolation.
+        """
+        try:
+            # Create payment record
+            payment = PaymentModel(
+                firm_id=firm_id,
+                customer_id=customer_id,
+                amount=amount,
+                date=date,
+                method=method,
+                status="applied"
+            )
+            
+            self.db.add(payment)
+            self.db.commit()
+            self.db.refresh(payment)
+            return payment
+            
+        except Exception as e:
+            self.db.rollback()
+            raise ValueError(f"Payment application failed: {str(e)}")
+
+    def get_payment(self, payment_id: int, firm_id: str) -> PaymentModel:
+        """
+        Get payment by ID with tenant isolation.
+        """
+        payment = self.db.query(PaymentModel).filter(
+            PaymentModel.payment_id == payment_id,
+            PaymentModel.firm_id == firm_id
+        ).first()
+        
+        if not payment:
+            raise ValueError("Payment not found or does not belong to firm")
+        
+        return payment

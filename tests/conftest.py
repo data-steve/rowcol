@@ -11,21 +11,15 @@ from fastapi.testclient import TestClient
 # Ensure project root is on sys.path so 'models' is importable
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from models.base import Base
-import models  # noqa: F401 - register mappers
+from domains.core.models.base import Base
+# Import all models to register mappers
+from domains.core.models import *
+from domains.ap.models import *
+from domains.ar.models import *
+from domains.bank.models import *
+from domains.payroll.models import *
 from main import app
 from database import get_db
-from models.service import Service
-from models.engagement import Engagement
-from models.task import Task
-from models.firm import Firm
-from models.client import Client
-from models.staff import Staff
-from models.user import User
-from models.bill import Bill
-from models.vendor import Vendor
-from models.customer import Customer
-from models.invoice import Invoice
 
 # QBO Mock Fixture
 @pytest.fixture(scope="session")
@@ -211,7 +205,7 @@ def test_task(db, test_firm, test_client, test_service, test_engagement):
 
 @pytest.fixture
 def test_bill(db, test_firm, test_client):
-    from models.bill import Bill as BillModel
+    from domains.ap.models.bill import Bill as BillModel
     bill = Bill(
         firm_id=test_firm.firm_id,
         client_id=test_client.client_id,
@@ -231,7 +225,7 @@ def test_bill(db, test_firm, test_client):
 
 @pytest.fixture
 def test_vendor(db, test_firm, test_client):
-    from models.vendor import Vendor as VendorModel
+    from domains.ap.models.vendor import Vendor as VendorModel
     vendor = Vendor(
         firm_id=test_firm.firm_id,
         client_id=test_client.client_id,

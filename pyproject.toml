@@ -49,6 +49,7 @@ paddleocr = "^3.1.0"
 python-quickbooks = "^0.9.12"
 python-dateutil = "^2.9.0.post0"
 apscheduler = "^3.11.0"
+isort = "^6.0.1"
 
 
 [tool.poetry.group.dev.dependencies]

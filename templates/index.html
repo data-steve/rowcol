@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookClose Template Index - Testing & Validation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">BookClose Template Index</h1>
+            <p class="text-xl text-gray-600">Template Testing & Validation Dashboard</p>
+            <div class="mt-4 p-4 bg-blue-100 rounded-lg">
+                <p class="text-blue-800">
+                    <strong>Current Stage:</strong> 1D (Bank Transactions & Payroll) | 
+                    <strong>Total Templates:</strong> <span id="templateCount">0</span>
+                </p>
+            </div>
+        </header>
+
+        <!-- Template Categories -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <!-- Stage 0: Core Automation -->
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Stage 0: Core Automation</h2>
+                <div class="space-y-3">
+                    <a href="rule_editor.html" class="block p-3 bg-gray-50 rounded hover:bg-blue-50 transition-colors">
+                        <span class="font-medium">📋 Rule Editor</span>
+                        <p class="text-sm text-gray-600">View/edit automation rules</p>
+                    </a>
+                    <a href="categorization_queue.html" class="block p-3 bg-gray-50 rounded hover:bg-blue-50 transition-colors">
+                        <span class="font-medium">🎯 Categorization Queue</span>
+                        <p class="text-sm text-gray-600">Review mid-confidence transactions</p>
+                    </a>
+                    <a href="onboarding_queue.html" class="block p-3 bg-gray-50 rounded hover:bg-blue-50 transition-colors">
+                        <span class="font-medium">🚀 Client Onboarding</span>
+                        <p class="text-sm text-gray-600">COA and policy profile setup</p>
+                    </a>
+                    <a href="csv_review.html" class="block p-3 bg-gray-50 rounded hover:bg-blue-50 transition-colors">
+                        <span class="font-medium">📊 CSV Review</span>
+                        <p class="text-sm text-gray-600">Correct CSV import errors</p>
+                    </a>
+                    <a href="document_manager.html" class="block p-3 bg-gray-50 rounded hover:bg-blue-50 transition-colors">
+                        <span class="font-medium">📁 Document Manager</span>
+                        <p class="text-sm text-gray-600">Upload/tag/view documents</p>
+                    </a>
+                    <a href="document_review.html" class="block p-3 bg-gray-50 rounded hover:bg-blue-50 transition-colors">
+                        <span class="font-medium">🔍 Document Review</span>
+                        <p class="text-sm text-gray-600">Review OCR/tagging outputs</p>
+                    </a>
+                    <a href="task_dashboard.html" class="block p-3 bg-gray-50 rounded hover:bg-blue-50 transition-colors">
+                        <span class="font-medium">✅ Task Dashboard</span>
+                        <p class="text-sm text-gray-600">PBC and review task management</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stage 1A: AP Automation -->
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Stage 1A: AP Automation</h2>
+                <div class="space-y-3">
+                    <a href="bill_review.html" class="block p-3 bg-gray-50 rounded hover:bg-green-50 transition-colors">
+                        <span class="font-medium">📄 Bill Review</span>
+                        <p class="text-sm text-gray-600">Review and categorize bills</p>
+                    </a>
+                    <a href="payment_schedule.html" class="block p-3 bg-gray-50 rounded hover:bg-green-50 transition-colors">
+                        <span class="font-medium">💰 Payment Schedule</span>
+                        <p class="text-sm text-gray-600">Approve and schedule payments</p>
+                    </a>
+                    <a href="statement_recon.html" class="block p-3 bg-gray-50 rounded hover:bg-green-50 transition-colors">
+                        <span class="font-medium">📊 Statement Reconciliation</span>
+                        <p class="text-sm text-gray-600">Reconcile vendor statements</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stage 1B: AR Automation -->
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Stage 1B: AR Automation</h2>
+                <div class="space-y-3">
+                    <a href="invoice_review.html" class="block p-3 bg-gray-50 rounded hover:bg-purple-50 transition-colors">
+                        <span class="font-medium">📋 Invoice Review</span>
+                        <p class="text-sm text-gray-600">Review and validate invoices</p>
+                    </a>
+                    <a href="collections_dashboard.html" class="block p-3 bg-gray-50 rounded hover:bg-purple-50 transition-colors">
+                        <span class="font-medium">💳 Collections Dashboard</span>
+                        <p class="text-sm text-gray-600">Track overdue invoices</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stage 1C: Bank Transactions -->
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-yellow-500">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Stage 1C: Bank Transactions</h2>
+                <div class="space-y-3">
+                    <a href="bank_matching.html" class="block p-3 bg-gray-50 rounded hover:bg-yellow-50 transition-colors">
+                        <span class="font-medium">🏦 Bank Matching</span>
+                        <p class="text-sm text-gray-600">Review bank transactions</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stage 1D: Payroll -->
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Stage 1D: Payroll</h2>
+                <div class="space-y-3">
+                    <a href="payroll_review.html" class="block p-3 bg-gray-50 rounded hover:bg-red-50 transition-colors">
+                        <span class="font-medium">👥 Payroll Review</span>
+                        <p class="text-sm text-gray-600">Review payroll batches</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stage 2+: Future Templates -->
+            <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-gray-400">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Stage 2+: Future Templates</h2>
+                <div class="space-y-3">
+                    <div class="p-3 bg-gray-100 rounded text-gray-500">
+                        <span class="font-medium">🔮 Pre-Close Dashboard</span>
+                        <p class="text-sm">Close readiness & PBC tracking</p>
+                    </div>
+                    <div class="p-3 bg-gray-100 rounded text-gray-500">
+                        <span class="font-medium">📊 Close Management</span>
+                        <p class="text-sm">JE automation & reconciliations</p>
+                    </div>
+                    <div class="p-3 bg-gray-100 rounded text-gray-500">
+                        <span class="font-medium">📚 Binder Assembly</span>
+                        <p class="text-sm">Auto-generated audit binders</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-12 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="testAllTemplates()" class="p-3 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                    🧪 Test All Templates
+                </button>
+                <button onclick="showTemplateStatus()" class="p-3 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+                    📊 Template Status
+                </button>
+                <button onclick="exportTemplateList()" class="p-3 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors">
+                    📋 Export Template List
+                </button>
+            </div>
+        </div>
+
+        <!-- Template Status Summary -->
+        <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Template Status Summary</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div class="p-4 bg-green-100 rounded">
+                    <div class="text-2xl font-bold text-green-800" id="completedCount">0</div>
+                    <div class="text-sm text-green-600">Completed</div>
+                </div>
+                <div class="p-4 bg-yellow-100 rounded">
+                    <div class="text-2xl font-bold text-yellow-800" id="inProgressCount">0</div>
+                    <div class="text-sm text-yellow-600">In Progress</div>
+                </div>
+                <div class="p-4 bg-red-100 rounded">
+                    <div class="text-2xl font-bold text-red-800" id="missingCount">0</div>
+                    <div class="text-sm text-red-600">Missing</div>
+                </div>
+                <div class="p-4 bg-blue-100 rounded">
+                    <div class="text-2xl font-bold text-blue-800" id="totalCount">0</div>
+                    <div class="text-sm text-blue-600">Total</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Template inventory
+        const templates = {
+            'Stage 0': [
+                'rule_editor.html',
+                'categorization_queue.html', 
+                'onboarding_queue.html',
+                'csv_review.html',
+                'document_manager.html',
+                'document_review.html',
+                'task_dashboard.html'
+            ],
+            'Stage 1A': [
+                'bill_review.html',
+                'payment_schedule.html',
+                'statement_recon.html'
+            ],
+            'Stage 1B': [
+                'invoice_review.html',
+                'collections_dashboard.html'
+            ],
+            'Stage 1C': [
+                'bank_matching.html'
+            ],
+            'Stage 1D': [
+                'payroll_review.html'
+            ]
+        };
+
+        // Count templates
+        function updateCounts() {
+            let completed = 0;
+            let inProgress = 0;
+            let missing = 0;
+            let total = 0;
+
+            Object.values(templates).flat().forEach(template => {
+                total++;
+                // Check if template exists (you could make this dynamic)
+                if (template.includes('html')) {
+                    completed++;
+                } else {
+                    missing++;
+                }
+            });
+
+            document.getElementById('templateCount').textContent = total;
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('inProgressCount').textContent = inProgress;
+            document.getElementById('missingCount').textContent = missing;
+            document.getElementById('totalCount').textContent = total;
+        }
+
+        // Test all templates
+        function testAllTemplates() {
+            const allTemplates = Object.values(templates).flat();
+            const results = [];
+            
+            allTemplates.forEach(template => {
+                try {
+                    const link = document.createElement('a');
+                    link.href = template;
+                    link.target = '_blank';
+                    link.click();
+                    results.push(`${template}: ✅ Opened`);
+                } catch (error) {
+                    results.push(`${template}: ❌ Error - ${error.message}`);
+                }
+            });
+
+            alert('Template test results:\n' + results.join('\n'));
+        }
+
+        // Show template status
+        function showTemplateStatus() {
+            const status = Object.entries(templates).map(([stage, templateList]) => {
+                return `${stage}: ${templateList.length} templates`;
+            }).join('\n');
+            
+            alert('Template Status by Stage:\n' + status);
+        }
+
+        // Export template list
+        function exportTemplateList() {
+            const allTemplates = Object.values(templates).flat();
+            const csv = 'Template,Stage\n' + 
+                allTemplates.map(template => {
+                    const stage = Object.keys(templates).find(s => 
+                        templates[s].includes(template)
+                    );
+                    return `${template},${stage}`;
+                }).join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bookclose_templates.csv';
+            a.click();
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', updateCounts);
+    </script>
+</body>
+</html>

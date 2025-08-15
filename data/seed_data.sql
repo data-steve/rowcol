@@ -100,184 +100,262 @@ CREATE TABLE IF NOT EXISTS policy_rule_templates (
 );
 
 INSERT INTO policy_rule_templates (rule_name, rule_type, service_type, conditions, actions, priority) VALUES
-('High Amount Review', 'categorization', 'bookkeeping', '{"amount_greater_than": 10000, "category": "expense"}', '["flag_for_review", "require_approval", "send_notification"]', 1),
-('Vendor W-9 Required', 'compliance', 'bookkeeping', '{"amount_greater_than": 600, "vendor_type": "individual"}', '["collect_w9", "flag_incomplete", "send_reminder"]', 1),
-('Unusual Transaction', 'fraud_detection', 'bookkeeping', '{"amount_deviation": "2_std", "category": "any"}', '["flag_suspicious", "require_documentation", "notify_manager"]', 2),
-('Tax Filing Deadline', 'compliance', 'tax_preparation', '{"deadline_approaching": 30, "form_type": "1099"}', '["send_reminder", "escalate_priority", "notify_client"]', 1);
+('Vendor Categorization', 'categorization', 'bookkeeping', '{"description_contains": ["office", "supplies", "staples"]}', '["assign_account": "5000-Office Supplies", "flag_for_review": false]', 1),
+('Travel Expense Rule', 'categorization', 'bookkeeping', '{"description_contains": ["uber", "lyft", "hotel", "airline"]}', '["assign_account": "6000-Travel & Entertainment", "require_receipt": true]', 2),
+('Meal Expense Rule', 'categorization', 'bookkeeping', '{"description_contains": ["restaurant", "lunch", "dinner", "coffee"]}', '["assign_account": "6050-Meals & Entertainment", "limit_amount": 50]', 3),
+('Software Subscription Rule', 'categorization', 'bookkeeping', '{"description_contains": ["subscription", "software", "saas"]}', '["assign_account": "7000-Software & Technology", "flag_for_review": true]', 4),
+('Payroll Rule', 'categorization', 'payroll', '{"description_contains": ["payroll", "salary", "wages"]}', '["assign_account": "6090-Payroll Services", "require_approval": true]', 1),
+('Tax Payment Rule', 'categorization', 'tax_preparation', '{"description_contains": ["tax", "irs", "state"]}', '["assign_account": "6100-Tax Services", "flag_for_review": true]', 1);
 
 -- Vendor Categories
 CREATE TABLE IF NOT EXISTS vendor_categories (
     category_id INTEGER PRIMARY KEY AUTOINCREMENT,
     category_name TEXT NOT NULL,
     description TEXT,
-    default_gl_account TEXT,
+    default_account TEXT,
     risk_level TEXT DEFAULT 'low',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO vendor_categories (category_name, description, default_gl_account, risk_level) VALUES
-('Office Supplies', 'Office supplies and equipment', '6000-Office Supplies', 'low'),
+INSERT INTO vendor_categories (category_name, description, default_account, risk_level) VALUES
+('Office Supplies', 'General office supplies and stationery', '5000-Office Supplies', 'low'),
 ('Professional Services', 'Legal, accounting, consulting services', '6000-Professional Services', 'medium'),
-('Technology', 'Software, hardware, IT services', '6000-Technology', 'medium'),
-('Travel & Entertainment', 'Travel expenses and client entertainment', '6000-Travel & Entertainment', 'medium'),
-('Marketing & Advertising', 'Marketing materials and advertising', '6000-Marketing & Advertising', 'medium'),
-('Insurance', 'Business insurance policies', '6000-Insurance', 'low'),
-('Utilities', 'Electric, water, internet, phone', '6000-Utilities', 'low'),
-('Rent & Leasing', 'Office rent and equipment leasing', '6000-Rent & Leasing', 'low'),
-('Payroll Services', 'Payroll processing and HR services', '6000-Payroll Services', 'low'),
-('Tax Services', 'Tax preparation and filing services', '6000-Tax Services', 'low');
+('Technology', 'Software, hardware, IT services', '7000-Software & Technology', 'medium'),
+('Travel & Entertainment', 'Travel expenses, meals, entertainment', '6050-Meals & Entertainment', 'high'),
+('Payroll Services', 'Payroll processing and tax services', '6090-Payroll Services', 'low'),
+('Tax Services', 'Tax preparation and filing services', '6100-Tax Services', 'low'),
+('Insurance', 'Business insurance policies', '8000-Insurance', 'medium'),
+('Utilities', 'Electric, water, internet, phone', '4000-Utilities', 'low');
 
 -- Chart of Accounts Templates
 CREATE TABLE IF NOT EXISTS coa_templates (
-    template_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    template_name TEXT NOT NULL,
-    industry TEXT NOT NULL,
+    account_id INTEGER PRIMARY KEY AUTOINCREMENT,
     account_number TEXT NOT NULL,
     account_name TEXT NOT NULL,
     account_type TEXT NOT NULL,
     parent_account TEXT,
+    description TEXT,
     is_active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO coa_templates (template_name, industry, account_number, account_name, account_type, parent_account) VALUES
--- Standard Chart of Accounts
-('standard', 'general', '1000', 'Assets', 'header', NULL),
-('standard', 'general', '1100', 'Current Assets', 'header', '1000'),
-('standard', 'general', '1110', 'Cash and Cash Equivalents', 'asset', '1100'),
-('standard', 'general', '1120', 'Accounts Receivable', 'asset', '1100'),
-('standard', 'general', '1130', 'Inventory', 'asset', '1100'),
-('standard', 'general', '1200', 'Fixed Assets', 'header', '1000'),
-('standard', 'general', '1210', 'Equipment', 'asset', '1200'),
-('standard', 'general', '1220', 'Furniture and Fixtures', 'asset', '1200'),
-('standard', 'general', '2000', 'Liabilities', 'header', NULL),
-('standard', 'general', '2100', 'Current Liabilities', 'header', '2000'),
-('standard', 'general', '2110', 'Accounts Payable', 'liability', '2100'),
-('standard', 'general', '2120', 'Accrued Expenses', 'liability', '2100'),
-('standard', 'general', '3000', 'Equity', 'header', NULL),
-('standard', 'general', '3100', 'Owner Equity', 'equity', '3000'),
-('standard', 'general', '4000', 'Revenue', 'header', NULL),
-('standard', 'general', '4100', 'Service Revenue', 'revenue', '4000'),
-('standard', 'general', '5000', 'Cost of Goods Sold', 'header', NULL),
-('standard', 'general', '6000', 'Expenses', 'header', NULL),
-('standard', 'general', '6010', 'Office Supplies', 'expense', '6000'),
-('standard', 'general', '6020', 'Professional Services', 'expense', '6000'),
-('standard', 'general', '6030', 'Technology', 'expense', '6000'),
-('standard', 'general', '6040', 'Travel & Entertainment', 'expense', '6000'),
-('standard', 'general', '6050', 'Marketing & Advertising', 'expense', '6000'),
-('standard', 'general', '6060', 'Insurance', 'expense', '6000'),
-('standard', 'general', '6070', 'Utilities', 'expense', '6000'),
-('standard', 'general', '6080', 'Rent & Leasing', 'expense', '6000'),
-('standard', 'general', '6090', 'Payroll Services', 'expense', '6000'),
-('standard', 'general', '6100', 'Tax Services', 'expense', '6000');
+INSERT INTO coa_templates (account_number, account_name, account_type, parent_account, description) VALUES
+-- Assets
+('1000', 'Cash & Cash Equivalents', 'asset', NULL, 'Bank accounts and petty cash'),
+('1100', 'Accounts Receivable', 'asset', NULL, 'Money owed by customers'),
+('1200', 'Inventory', 'asset', NULL, 'Product inventory'),
+('1300', 'Prepaid Expenses', 'asset', NULL, 'Prepaid insurance, rent, etc.'),
 
+-- Liabilities
+('2000', 'Accounts Payable', 'liability', NULL, 'Money owed to vendors'),
+('2100', 'Credit Cards', 'liability', NULL, 'Credit card balances'),
+('2200', 'Loans Payable', 'liability', NULL, 'Business loans and lines of credit'),
+('2300', 'Accrued Expenses', 'liability', NULL, 'Accrued payroll, taxes, etc.'),
 
+-- Equity
+('3000', 'Owner Equity', 'equity', NULL, 'Owner investments and retained earnings'),
+('3100', 'Retained Earnings', 'equity', NULL, 'Cumulative net income/loss'),
+
+-- Revenue
+('4000', 'Service Revenue', 'revenue', NULL, 'Revenue from services provided'),
+('4100', 'Product Revenue', 'revenue', NULL, 'Revenue from product sales'),
+('4200', 'Other Income', 'revenue', NULL, 'Interest, refunds, other income'),
+
+-- Expenses
+('5000', 'Office Supplies', 'expense', NULL, 'Office supplies and stationery'),
+('6000', 'Professional Services', 'expense', NULL, 'Legal, accounting, consulting'),
+('6050', 'Meals & Entertainment', 'expense', NULL, 'Business meals and entertainment'),
+('6090', 'Payroll Services', 'expense', NULL, 'Payroll processing and tax services'),
+('6100', 'Tax Services', 'expense', NULL, 'Tax preparation and filing'),
+('7000', 'Software & Technology', 'expense', NULL, 'Software subscriptions and IT services'),
+('8000', 'Insurance', 'expense', NULL, 'Business insurance policies'),
+('9000', 'Other Expenses', 'expense', NULL, 'Miscellaneous business expenses');
+
+-- Bank Transactions
 CREATE TABLE IF NOT EXISTS bank_transactions (
     transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
     firm_id TEXT NOT NULL,
     client_id INTEGER,
-    external_id TEXT,
     amount REAL NOT NULL,
-    date TIMESTAMP NOT NULL,
-    description TEXT NOT NULL,
+    date DATE NOT NULL,
+    description TEXT,
     account_id TEXT,
-    source TEXT NOT NULL,
+    source TEXT,
     status TEXT DEFAULT 'pending',
-    rule_id INTEGER,
-    confidence REAL DEFAULT 0.0,
     suggestion_id INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (firm_id) REFERENCES firms(firm_id),
-    FOREIGN KEY (client_id) REFERENCES clients(client_id),
-    FOREIGN KEY (rule_id) REFERENCES rules(rule_id),
-    FOREIGN KEY (suggestion_id) REFERENCES suggestions(suggestion_id)
+    confidence REAL DEFAULT 0.0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO bank_transactions (
-    firm_id, client_id, external_id, amount, date, description, account_id, source, status, confidence
-) VALUES (
-    '550e8400-e29b-41d4-a716-446655440000',
-    1,
-    'qbo_txn_001',
-    150.0,
-    '2025-01-15 10:00:00',
-    'Starbucks Purchase',
-    '6000-Expenses',
-    'qbo_feed',
-    'pending',
-    0.9
-), (
-    '550e8400-e29b-41d4-a716-446655440000',
-    1,
-    'qbo_txn_002',
-    500.0,
-    '2025-01-16 12:00:00',
-    'Amazon Purchase',
-    '6000-Expenses',
-    'qbo_feed',
-    'pending',
-    0.8
-), (
-    '550e8400-e29b-41d4-a716-446655440000',
-    1,
-    'qbo_txn_003',
-    1000.0,
-    '2025-01-17 09:00:00',
-    'Transfer Out to Savings',
-    '1110-Cash',
-    'qbo_feed',
-    'pending',
-    0.7
-), (
-    '550e8400-e29b-41d4-a716-446655440000',
-    1,
-    'qbo_txn_004',
-    -1000.0,
-    '2025-01-17 09:05:00',
-    'Transfer In from Checking',
-    '1110-Cash',
-    'qbo_feed',
-    'pending',
-    0.7
-);
+INSERT INTO bank_transactions (firm_id, client_id, amount, date, description, account_id, source, status) VALUES
+('550e8400-e29b-41d4-a716-446655440000', 1, 150.00, '2025-01-15', 'Starbucks Purchase', '6050-Meals & Entertainment', 'qbo_feed', 'categorized'),
+('550e8400-e29b-41d4-a716-446655440000', 1, -2500.00, '2025-01-15', 'Client Payment - ABC Corp', '4000-Service Revenue', 'qbo_feed', 'categorized'),
+('550e8400-e29b-41d4-a716-446655440000', 1, 89.99, '2025-01-16', 'Office Depot', '5000-Office Supplies', 'qbo_feed', 'categorized'),
+('550e8400-e29b-41d4-a716-446655440000', 1, -150.00, '2025-01-16', 'Starbucks Refund', '6050-Meals & Entertainment', 'qbo_feed', 'categorized'),
+('550e8400-e29b-41d4-a716-446655440000', 1, 299.99, '2025-01-17', 'QuickBooks Subscription', '7000-Software & Technology', 'qbo_feed', 'categorized'),
+('550e8400-e29b-41d4-a716-446655440000', 1, -5000.00, '2025-01-17', 'Payroll Processing', '6090-Payroll Services', 'qbo_feed', 'categorized'),
+('550e8400-e29b-41d4-a716-446655440000', 1, 1500.00, '2025-01-18', 'Tax Preparation Services', '6100-Tax Services', 'qbo_feed', 'categorized');
 
+-- Transfers
 CREATE TABLE IF NOT EXISTS transfers (
     transfer_id INTEGER PRIMARY KEY AUTOINCREMENT,
     firm_id TEXT NOT NULL,
-    source_transaction_id INTEGER NOT NULL,
-    destination_transaction_id INTEGER NOT NULL,
+    source_transaction_id INTEGER,
+    destination_transaction_id INTEGER,
     amount REAL NOT NULL,
-    date TIMESTAMP NOT NULL,
+    date DATE NOT NULL,
     description TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Firms
+CREATE TABLE IF NOT EXISTS firms (
+    firm_id TEXT PRIMARY KEY,
+    firm_name TEXT NOT NULL,
+    tax_id TEXT,
+    address TEXT,
+    phone TEXT,
+    email TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO firms (firm_id, firm_name, tax_id, address, phone, email) VALUES
+('550e8400-e29b-41d4-a716-446655440000', 'Escher Accounting', '12-3456789', '123 Main St, Anytown, USA', '555-0123', 'info@escheraccounting.com');
+
+-- Clients
+CREATE TABLE IF NOT EXISTS clients (
+    client_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firm_id TEXT NOT NULL,
+    client_name TEXT NOT NULL,
+    tax_id TEXT,
+    address TEXT,
+    phone TEXT,
+    email TEXT,
+    industry TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES firms(firm_id)
+);
+
+INSERT INTO clients (client_id, firm_id, client_name, tax_id, address, phone, email, industry) VALUES
+(1, '550e8400-e29b-41d4-a716-446655440000', 'ABC Corporation', '98-7654321', '456 Business Ave, Anytown, USA', '555-9876', 'contact@abccorp.com', 'Technology'),
+(2, '550e8400-e29b-41d4-a716-446655440000', 'XYZ Manufacturing', '87-6543210', '789 Industrial Blvd, Anytown, USA', '555-8765', 'info@xyzmanufacturing.com', 'Manufacturing');
+
+-- Payroll Batches
+CREATE TABLE IF NOT EXISTS payroll_batches (
+    batch_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firm_id TEXT NOT NULL,
+    client_id INTEGER,
+    total_amount REAL NOT NULL,
+    payroll_date DATE NOT NULL,
+    period_start DATE,
+    period_end DATE,
+    description TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (firm_id) REFERENCES firms(firm_id),
-    FOREIGN KEY (source_transaction_id) REFERENCES bank_transactions(transaction_id),
-    FOREIGN KEY (destination_transaction_id) REFERENCES bank_transactions(transaction_id)
+    FOREIGN KEY (client_id) REFERENCES clients(client_id)
 );
 
-INSERT INTO transfers (
-    firm_id, source_transaction_id, destination_transaction_id, amount, date, description
-) VALUES (
-    '550e8400-e29b-41d4-a716-446655440000',
-    3,
-    4,
-    1000.0,
-    '2025-01-17 09:00:00',
-    'Transfer between Checking and Savings'
+INSERT INTO payroll_batches (firm_id, client_id, total_amount, payroll_date, period_start, period_end, description, status) VALUES
+('550e8400-e29b-41d4-a716-446655440000', 1, 5000.00, '2025-01-15', '2025-01-01', '2025-01-15', 'Bi-weekly payroll', 'processed'),
+('550e8400-e29b-41d4-a716-446655440000', 2, 7500.00, '2025-01-15', '2025-01-01', '2025-01-15', 'Bi-weekly payroll', 'pending');
+
+-- Payroll Remittances
+CREATE TABLE IF NOT EXISTS payroll_remittances (
+    remittance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firm_id TEXT NOT NULL,
+    batch_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    tax_agency TEXT NOT NULL,
+    remittance_date DATE NOT NULL,
+    status TEXT DEFAULT 'pending',
+    transaction_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES firms(firm_id),
+    FOREIGN KEY (batch_id) REFERENCES payroll_batches(batch_id)
 );
 
-INSERT INTO rules (
-    firm_id, client_id, priority, match_type, pattern, output, scope
-) VALUES (
-    '550e8400-e29b-41d4-a716-446655440000',
-    NULL,
-    5,
-    'contains',
-    'Transfer',
-    '{"account": "1110-Cash", "class": "Transfer", "confidence": 0.95}',
-    'global'
+INSERT INTO payroll_remittances (firm_id, batch_id, amount, tax_agency, remittance_date, status) VALUES
+('550e8400-e29b-41d4-a716-446655440000', 1, 1500.00, 'IRS', '2025-01-15', 'pending'),
+('550e8400-e29b-41d4-a716-446655440000', 1, 500.00, 'State', '2025-01-15', 'pending');
+
+-- CRITICAL MISSING TABLES FOR AR/AP SERVICES
+
+-- Invoices (AR)
+CREATE TABLE IF NOT EXISTS invoices (
+    invoice_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firm_id TEXT NOT NULL,
+    customer_id INTEGER NOT NULL,
+    issue_date DATE NOT NULL,
+    due_date DATE NOT NULL,
+    total REAL NOT NULL,
+    lines TEXT, -- JSON array of line items
+    status TEXT DEFAULT 'open',
+    attachment_refs TEXT, -- JSON array of document references
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES firms(firm_id),
+    FOREIGN KEY (customer_id) REFERENCES clients(client_id)
+);
+
+INSERT INTO invoices (firm_id, customer_id, issue_date, due_date, total, lines, status) VALUES
+('550e8400-e29b-41d4-a716-446655440000', 1, '2025-01-01', '2025-01-31', 2500.00, '[{"description": "Bookkeeping Services", "amount": 2000.00}, {"description": "Tax Preparation", "amount": 500.00}]', 'open'),
+('550e8400-e29b-41d4-a716-446655440000', 2, '2025-01-05', '2025-02-05', 1500.00, '[{"description": "Monthly Reconciliation", "amount": 1500.00}]', 'open');
+
+-- Credit Memos (AR)
+CREATE TABLE IF NOT EXISTS credit_memos (
+    credit_memo_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firm_id TEXT NOT NULL,
+    invoice_id INTEGER,
+    amount REAL NOT NULL,
+    reason TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES firms(firm_id),
+    FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id)
+);
+
+-- Bills (AP)
+CREATE TABLE IF NOT EXISTS bills (
+    bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firm_id TEXT NOT NULL,
+    vendor_id INTEGER,
+    amount REAL NOT NULL,
+    due_date DATE NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES firms(firm_id)
+);
+
+INSERT INTO bills (firm_id, vendor_id, amount, due_date, description, status) VALUES
+('550e8400-e29b-41d4-a716-446655440000', 1, 500.00, '2025-01-31', 'Office Supplies', 'pending'),
+('550e8400-e29b-41d4-a716-446655440000', 2, 1000.00, '2025-02-15', 'Software Subscription', 'pending');
+
+-- Payments (AP)
+CREATE TABLE IF NOT EXISTS payments (
+    payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firm_id TEXT NOT NULL,
+    bill_id INTEGER,
+    amount REAL NOT NULL,
+    payment_date DATE NOT NULL,
+    payment_method TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES firms(firm_id),
+    FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+);
+
+-- Suggestions
+CREATE TABLE IF NOT EXISTS suggestions (
+    suggestion_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firm_id TEXT NOT NULL,
+    client_id INTEGER,
+    txn_id TEXT,
+    top_k TEXT NOT NULL, -- JSON array of top suggestions
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (firm_id) REFERENCES firms(firm_id),
+    FOREIGN KEY (client_id) REFERENCES clients(client_id)
 );
 
 INSERT INTO suggestions (
@@ -285,11 +363,11 @@ INSERT INTO suggestions (
 ) VALUES (
     '550e8400-e29b-41d4-a716-446655440000',
     1,
-    'qbo_txn_003',
-    '[{"account": "1110-Cash", "confidence": 0.95, "rule_id": "5", "rule_name": "Transfer Rule"}]'
+    'qbo_txn_005',
+    '[{"account": "6090-Payroll Services", "confidence": 0.95, "rule_id": "6", "rule_name": "Payroll Rule"}]'
 ), (
     '550e8400-e29b-41d4-a716-446655440000',
     1,
-    'qbo_txn_004',
-    '[{"account": "1110-Cash", "confidence": 0.95, "rule_id": "5", "rule_name": "Transfer Rule"}]'
+    'qbo_txn_006',
+    '[{"account": "6100-Tax Services", "confidence": 0.90, "rule_id": "7", "rule_name": "Tax Payment Rule"}]'
 );

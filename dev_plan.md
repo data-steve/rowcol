@@ -393,7 +393,7 @@ engagement={engagementData}
 - % payroll JEs auto-posted, remittance accuracy, OCR correction rate, doc processing time.
 
 ## Stage 2: Pre-Close Review and Client Portal
-*Goal*: Automate completeness checks, exceptions, PBC tracking, close readiness score, client PBC uploads, and task management. *Effort: ~45h, Dependencies: Stages 0, 1A, 1B, 1C, 1E*
+*Goal*: Automate completeness checks, exceptions, PBC tracking, close readiness score, client PBC uploads, and task management. *Effort: ~45h, Dependencies: Stages 0, 1A, 1B, 1C, 1D*
 
 ### Models
 - [ ] **PreCloseCheck** (check_id, tenant_id, client_id, period, type, status, evidence_refs[]): Completeness checks. *Effort: 2h, Dep: Document*
@@ -436,7 +436,7 @@ engagement={engagementData}
 - % PBC items on time, close delay days, exception resolution time, readiness score, client upload rate, task completion rate.
 
 ## Stage 3: Month-End Close
-*Goal*: Automate reconciliations, adjustments, prepaids, cutoffs, approvals; write to QBO; integrate with review queue. *Effort: ~40h, Dependencies: Stages 0, 1A, 1B, 1C, 1E, 2*
+*Goal*: Automate reconciliations, adjustments, prepaids, cutoffs, approvals; write to QBO; integrate with review queue. *Effort: ~40h, Dependencies: Stages 0, 1A, 1B, 1C, 1D, 2*
 
 ### Models
 - [ ] **Reconciliation** (recon_id, tenant_id, client_id, period, account_id, gl_end, stmt_end, difference, outstanding[], evidence_refs[], exception_id): Reconciliation data. *Effort: 3h, Dep: Exception, Document*
