@@ -17,3 +17,4 @@ class Client(Base, TimestampMixin, TenantMixin):
     exceptions = relationship("Exception", back_populates="client")
     pbc_requests = relationship("PBCRequest", back_populates="client")
     close_checklists = relationship("CloseChecklist", back_populates="client")
+    integrations = relationship("Integration", back_populates="client")

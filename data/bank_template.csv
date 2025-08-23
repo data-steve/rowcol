@@ -1,0 +1,5 @@
+txn_id,platform_txn_id,date,amount,type,vendor_id,job_id
+TXN001,QBO_DEP_001,2025-08-01,1000.00,deposit,,JOB_001
+TXN002,QBO_EXP_001,2025-08-02,200.00,expense,VEND_001,JOB_002
+TXN003,STR_CHG_001,2025-08-03,1500.00,deposit,,JOB_003
+TXN004,JOB_INV_001,2025-08-04,800.00,deposit,,JOB_004

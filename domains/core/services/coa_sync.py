@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from domains.core.models.policy_profile import PolicyProfile as PolicyProfileModel
-from domains.core.schemas.policy_profile import PolicyProfile
+from domains.policy.models.policy_profile import PolicyProfile as PolicyProfileModel
+from domains.policy.schemas.policy_profile import PolicyProfile
 
 class COASyncService:
     def __init__(self, db: Session):

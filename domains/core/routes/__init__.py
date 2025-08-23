@@ -8,9 +8,8 @@ from fastapi import APIRouter
 
 from ...ap.routes import ingest
 from . import (
-    engagements, services, tasks, correction, suggestion, 
-    policy_profile, document_type, user, firm, client, staff, 
-    business_entity, engagement_entities, automation, csv, documents, review, kpi
+    engagements, services, tasks, document_type, user, firm, client, staff, 
+    business_entity, engagement_entities, automation, csv, documents, review, kpi, sync
 )
 
 # Create main router
@@ -20,9 +19,6 @@ router = APIRouter()
 router.include_router(engagements.router)
 router.include_router(services.router)
 router.include_router(tasks.router)
-router.include_router(correction.router)
-router.include_router(suggestion.router)
-router.include_router(policy_profile.router)
 router.include_router(document_type.router)
 router.include_router(user.router)
 router.include_router(firm.router)
@@ -36,4 +32,5 @@ router.include_router(csv.router)
 router.include_router(documents.router)
 router.include_router(review.router)
 router.include_router(kpi.router)
+router.include_router(sync.router)
 # AR, Bank, and Payroll routes are now handled by their respective domains

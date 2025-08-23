@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from domains.core.models.suggestion import Suggestion as SuggestionModel
+from domains.policy.models.suggestion import Suggestion as SuggestionModel
 from domains.core.models.document import Document as DocumentModel
 from domains.core.models.task import Task as TaskModel
 

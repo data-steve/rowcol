@@ -15,3 +15,4 @@ class Firm(Base, TimestampMixin):
     users = relationship("User", back_populates="firm")
     clients = relationship("Client", back_populates="firm")
     engagements = relationship("Engagement", back_populates="firm")
+    integrations = relationship("Integration", back_populates="firm")

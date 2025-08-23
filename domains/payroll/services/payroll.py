@@ -9,7 +9,7 @@ from domains.payroll.models.payroll import PayrollBatch as PayrollBatchModel, Pa
 from domains.bank.models.bank_transaction import BankTransaction as BankTransactionModel
 from domains.payroll.schemas.payroll import PayrollBatchCreate, PayrollBatch, PayrollRemittanceCreate, PayrollRemittance
 from domains.bank.services.bank_transaction import BankTransactionService
-from domains.core.services.policy_engine import PolicyEngineService
+from domains.policy.services.policy_engine import PolicyEngineService
 from typing import List, Optional
 from datetime import timedelta
 

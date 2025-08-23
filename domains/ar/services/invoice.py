@@ -4,7 +4,7 @@ from quickbooks import QuickBooks
 from quickbooks.objects import Invoice as QBOInvoice
 from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice
-from domains.core.services.policy_engine import PolicyEngineService
+from domains.policy.services.policy_engine import PolicyEngineService
 from datetime import datetime
 import os
 from dotenv import load_dotenv

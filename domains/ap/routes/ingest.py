@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from domains.core.services.data_ingestion import DataIngestionService
 from domains.ap.services.ingestion import APIngestionService
 from domains.ap.services.vendor_normalization import VendorNormalizationService
-from domains.core.services.policy_engine import PolicyEngineService
+from domains.policy.services.policy_engine import PolicyEngineService
 from domains.ap.schemas.bill import Bill
 from domains.ap.schemas.payment_intent import PaymentIntent
 from domains.ap.schemas.vendor import Vendor
 from domains.ap.schemas.vendor_statement import VendorStatement
-from domains.core.schemas.correction import Correction
+from domains.policy.schemas.correction import Correction
 from domains.ap.models.bill import Bill as BillModel
 from domains.ap.models.vendor import Vendor as VendorModel
 from domains.ap.models.payment_intent import PaymentIntent as PaymentIntentModel
@@ -17,6 +17,12 @@ from pydantic import BaseModel
 from datetime import date
 from database import get_db
 from typing import Dict, List
+import os
+
+from domains.core.models.integration import Integration
+
+# Minimal allowlist for external writes (extend via config later)
+ALLOWED_TENANTS = set()
 
 class DocumentIngestRequest(BaseModel):
     file_path: str
@@ -54,6 +60,101 @@ async def upload_bill(request: DocumentIngestRequest, firm_id: str, client_id: i
     try:
         return service.ingest_document(request.file_path, firm_id, client_id)
     except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# --- Safe Jobber/Stripe ingest endpoints (dry-run by default) ---
+
+def _external_writes_enabled() -> bool:
+    return os.getenv("EXTERNAL_WRITE_ENABLED", "false").lower() == "true"
+
+
+def _allowed_tenant(firm_id: str, client_id: int) -> bool:
+    return (firm_id, client_id) in ALLOWED_TENANTS
+
+
+@router.post("/jobber", response_model=Dict)
+async def ingest_jobber(
+    firm_id: str,
+    client_id: int,
+    mode: str = "mock",  # "mock" | "live"
+    commit: bool = False,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+):
+    """Safely ingest Jobber data. Dry-run by default; returns preview without writes.
+
+    - mode=mock (default): returns generated preview data, no external calls
+    - mode=live and commit=true requires EXTERNAL_WRITE_ENABLED=true and an Integration(platform="jobber")
+    """
+    service = DataIngestionService(db)
+
+    # Always use preview unless explicitly allowed
+    if mode != "live" or not commit or not _external_writes_enabled() or os.getenv("TESTING"):
+        integration = db.query(Integration).filter_by(platform="jobber").first()
+        # Generate safe mock preview
+        if integration is None:
+            class _I:
+                pass
+            integration = _I()
+            integration.firm_id = firm_id
+            integration.client_id = client_id
+            integration.integration_id = "mock"
+        preview = service._generate_simple_jobber_mock_data(integration)
+        return {"status": "preview", "platform": "jobber", "result": preview}
+
+    # Live path (guarded)
+    if not _allowed_tenant(firm_id, client_id):
+        raise HTTPException(status_code=403, detail="Tenant not allowlisted for external writes")
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key required")
+    try:
+        result = service.fetch_platform_data("jobber", credentials={})
+        return {"status": "success", "platform": "jobber", "result": result}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/stripe", response_model=Dict)
+async def ingest_stripe(
+    firm_id: str,
+    client_id: int,
+    mode: str = "mock",  # "mock" | "live"
+    commit: bool = False,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+):
+    """Safely ingest Stripe data. Dry-run by default; returns preview without writes.
+
+    - Validates that only test keys are used; refuses live keys unless gated
+    - mode=mock: returns generated preview data, no external calls
+    - mode=live and commit=true requires EXTERNAL_WRITE_ENABLED=true and test-mode keys
+    """
+    service = DataIngestionService(db)
+
+    # If not explicitly allowed, return safe preview
+    if mode != "live" or not commit or not _external_writes_enabled() or os.getenv("TESTING"):
+        integration = db.query(Integration).filter_by(platform="stripe").first()
+        # Provide safe empty preview (no external call); shape matches service output
+        return {"status": "preview", "platform": "stripe", "result": {"charges": [], "payouts": []}}
+
+    # Live path with additional safety: enforce test key
+    if not _allowed_tenant(firm_id, client_id):
+        raise HTTPException(status_code=403, detail="Tenant not allowlisted for external writes")
+    if not idempotency_key:
+        raise HTTPException(status_code=400, detail="Idempotency-Key required")
+    integration = db.query(Integration).filter_by(platform="stripe").first()
+    if not integration or not integration.access_token or not integration.access_token.startswith("sk_test_"):
+        raise HTTPException(status_code=400, detail="Stripe test key required for live ingest")
+
+    try:
+        result = service.fetch_platform_data("stripe", credentials={})
+        return {"status": "success", "platform": "stripe", "result": result}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/ap/bills/{id}", response_model=Bill)

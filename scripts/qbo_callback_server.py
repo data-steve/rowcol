@@ -14,7 +14,7 @@ app = FastAPI()
 # QBO OAuth configuration
 client_id = os.getenv("QBO_CLIENT_ID")
 client_secret = os.getenv("QBO_CLIENT_SECRET")
-redirect_uri = "http://localhost:8000/callback"
+redirect_uri = "https://4822a44a7369.ngrok-free.app/callback"
 environment = "sandbox"
 
 auth_client = AuthClient(client_id, client_secret, redirect_uri, environment)
@@ -81,5 +81,6 @@ async def home():
 
 if __name__ == '__main__':
     print("Starting QBO OAuth callback server on http://localhost:8000")
-    print("Make sure to run this before starting the OAuth flow!")
+    print("Ngrok should tunnel this to https://4822a44a7369.ngrok-free.app")
+    print("Make sure ngrok is running before starting the OAuth flow!")
     uvicorn.run(app, host="localhost", port=8000, log_level="info")

@@ -8,7 +8,7 @@ load_dotenv()
 
 client_id = os.getenv("QBO_CLIENT_ID")
 client_secret = os.getenv("QBO_CLIENT_SECRET")
-redirect_uri = "http://localhost:8000/callback"
+redirect_uri = "https://developer.intuit.com/v2/OAuth2Playground/RedirectUrl"
 environment = "sandbox"
 
 auth_client = AuthClient(client_id, client_secret, redirect_uri, environment)
