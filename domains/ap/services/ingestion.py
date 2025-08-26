@@ -87,7 +87,8 @@ class APIngestionService:
         
         # Check if QBO client has a valid session
         if not hasattr(self.qbo_client, 'session') or self.qbo_client.session is None:
-            return {"status": "error", "message": "QBO client session not properly configured"}
+            # Normalize message to what tests expect
+            return {"status": "error", "message": "QBO client not configured"}
             
         try:
             # Fetch bills from QBO

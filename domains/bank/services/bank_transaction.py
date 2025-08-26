@@ -8,7 +8,7 @@ References: Stage 1C requirements, services/policy_engine.py, models/bank_transa
 from sqlalchemy.orm import Session
 from domains.bank.models.bank_transaction import BankTransaction as BankTransactionModel
 from domains.bank.schemas.bank_transaction import BankTransactionCreate, BankTransaction, BankTransactionCategorize
-from domains.core.services.policy_engine import PolicyEngineService
+from domains.policy.services.policy_engine import PolicyEngineService
 from typing import List, Optional
 
 class BankTransactionService:

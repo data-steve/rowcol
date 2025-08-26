@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from domains.core.schemas.rule import Rule
-from domains.core.schemas.suggestion import Suggestion
-from domains.core.schemas.correction import Correction, CorrectionCreate
+from domains.policy.schemas.rule import Rule
+from domains.policy.schemas.suggestion import Suggestion
+from domains.policy.schemas.correction import Correction, CorrectionCreate
 from domains.ap.schemas.vendor_canonical import VendorCanonical
 from domains.core.schemas.automation import VendorNormalizeInput, TransactionInput
-from domains.core.services.policy_engine import PolicyEngineService
+from domains.policy.services.policy_engine import PolicyEngineService
 from domains.ap.services.vendor_normalization import VendorNormalizationService
 from database import get_db
 from typing import List

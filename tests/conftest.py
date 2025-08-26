@@ -18,6 +18,7 @@ from domains.ap.models import *
 from domains.ar.models import *
 from domains.bank.models import *
 from domains.payroll.models import *
+from domains.policy.models import *
 from main import app
 from database import get_db
 

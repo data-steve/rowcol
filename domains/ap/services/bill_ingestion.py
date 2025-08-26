@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from domains.ap.models.bill import Bill as BillModel
 from domains.ap.schemas.bill import Bill
 from domains.ap.services.ocr_adapter import get_ocr_adapter
-from domains.core.services.policy_engine import PolicyEngineService
+from domains.policy.services.policy_engine import PolicyEngineService
 from docs.normalization_tagging.escher_vendor_brain_v0_1.src.cleaners import normalize_descriptor, load_normalize_cfg
 from datetime import datetime
 import dateutil.parser

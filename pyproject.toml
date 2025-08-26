@@ -50,6 +50,11 @@ python-quickbooks = "^0.9.12"
 python-dateutil = "^2.9.0.post0"
 apscheduler = "^3.11.0"
 isort = "^6.0.1"
+stripe = "^12.4.0"
+streamlit = "^1.48.1"
+watchdog = "^6.0.0"
+ortools = "^9.14.6206"
+plotly = "^6.3.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -66,8 +71,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["app/tests"]
+testpaths = ["tests", "domains"]
 python_files = ["test_*.py"]
+pythonpath = ["."]
 
 [tool.ruff]
 select = ["E", "F"]  # Focus on errors (E: syntax, type) and fatal (F: undefined names, imports)

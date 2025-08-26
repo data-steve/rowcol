@@ -145,3 +145,14 @@ google-docs-ai-bookclose-467315-83691dfd1266.json
 bundle.json
 grok_bundle.json
 keys/qbo_tokens.json
+
+# secrets
+*_tokens.json
+keys/*.json
+
+# local db
+*.db
+
+# secrets
+*_tokens.json
+keys/*.json
