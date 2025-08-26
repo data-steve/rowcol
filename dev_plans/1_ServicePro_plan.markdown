@@ -17,6 +17,11 @@
 - **Pricing**: Free Shadow Scan, $99/mo (basic, <50 docs/mo), $199/mo (advanced, 50-200 docs/mo, human review).
 - **KPIs**: Auto-matched % (70-80%), override rate (<20%), doc processing time (<5s/doc), report generation time (<10 mins).
 
+### Clarification: Revenue Recognition vs Bundled AR Reconciliation
+- We explicitly prioritize **Bundled AR Deposit Reconciliation** for ServicePro MVP. Revenue Recognition (RevRec) is out-of-scope for MVP and should not block AR automation.
+- Bundled AR Recon objective: Given Jobber invoices and Stripe lump-sum deposits (with fees and timing differences), match deposits to one or more invoices using date windows and fee-aware tolerance, producing high-confidence matches and HITL for low-confidence cases.
+- RevRec objective (future): Determine when to recognize revenue independent of cash timing (percentage of completion, milestones, deferrals/accruals). Useful for advisors, but separate from AR matching.
+
 ## MVP Phase (4-6 Weeks, ~90-110h)
 Focus on Tier 1 (Bundled AR Deposit Reconciliation, Uncat-style Expense Categorization) and Tier 2 (Job-Cost Reporting, Expense/PO → Job Matching, Payroll → Job Sync, Field Reimbursements) with Jobber/Stripe/QBO integrations. Build a mostly abstract schema for future extensibility.
 
@@ -58,6 +63,56 @@ Focus on Tier 1 (Bundled AR Deposit Reconciliation, Uncat-style Expense Categori
   - Schema (`Integration`, `Transaction`, `Job`) uses `platform`, `platform_txn_id`, `metadata` fields for Housecall Pro, ServiceTitan, Salesforce, ServiceM8, Zoho CRM, JobberPay, Square. Refactor post-MVP for complex mappings (e.g., Salesforce `Invoice__c`).
   - `DataIngestionService` abstracts API calls (`fetch_platform_data(platform, credentials)`), reusable for new platforms.
 - **KPIs**: Auto-matched % (70-80%), override rate (<20%), doc processing time (<5s/doc).
+
+### Uncat-Style Categorization & Vendor Normalization (Detailed Requirements)
+**Goal**: Automate 70-80% of expense categorization with clear, reviewable rules and learning from corrections.
+
+- **Inputs**:
+  - QBO expenses and bank transactions (description, amount, date, vendor, memo)
+  - Canonical vendor master and categories (seeded in `data/seed_data.sql`)
+  - External sources (USASpending/SAM.gov, NAICS) for vendor patterns (future enhancement)
+
+- **Rules & Signals (weights target)**:
+  - Vendor canonical match (0.40)
+  - MCC/NAICS and vendor patterns (0.20)
+  - Amount and historical category frequency (0.20)
+  - Date/text proximity to jobs (0.10)
+  - Memo patterns (0.10)
+  - Threshold: ≥0.65 suggest; ≥0.90 auto-apply; below threshold → HITL
+
+- **Vendor Normalization**:
+  - Normalize raw vendor strings to canonical vendors and default GL accounts
+  - Examples: "Home Depot" → Materials; fuel patterns → Reimbursements; insurance → Insurance & Permits
+  - Maintain confidence and provenance; rules data-driven from seed + learned corrections
+
+- **Learning from Corrections**:
+  - Every human correction generates a runtime rule (scoped to firm/client) with idempotent storage
+  - Conflict resolution by priority and specificity; audit trail retained
+
+- **Outputs**:
+  - Suggestion payload with `top_k`, confidence, selected account, rationale
+  - HITL queue entries for <0.90 confidence
+
+### HITL “Cockpit” UX for Bookkeepers (Workflow Spec)
+**Goal**: Minimize handle-time for cleanup; accelerate to analysis.
+
+- **Core Views**:
+  - Reconciliation queue: deposits ↔ invoices matches with confidence, fee allocation preview, approve/review actions
+  - Categorization queue: expense rows with suggested account, confidence, vendor, job hints, one-click accept/override
+  - Exceptions view: unmatched deposits/expenses, aging, reason codes
+
+- **Interactions**:
+  - Keyboard-first triage (J/K to navigate, A to approve, R to route to review)
+  - Inline edits (GL account, job tag), sticky idempotency
+  - Bulk actions for repeated vendors/time windows
+
+- **Guidance & Rationale**:
+  - Explain match: show components (date diff, amount variance, vendor match, prior history)
+  - Confidence bars, fee allocation details, bundled composition
+
+- **Guardrails**:
+  - Everything preview-first; commits require explicit confirm and audit log
+  - Multi-tenant isolation by `firm_id`/`client_id`
 
 ### Stage 1: Job-Cost Reporting & Sync (Tier 2)
 *Goal*: Generate job-cost reports (labor, materials, reimbursements) and sync payroll/timesheets to jobs. Output mock QBO payloads. *Effort: ~20h*
