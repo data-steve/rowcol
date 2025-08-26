@@ -149,3 +149,10 @@ keys/qbo_tokens.json
 # secrets
 *_tokens.json
 keys/*.json
+
+# local db
+*.db
+
+# secrets
+*_tokens.json
+keys/*.json
