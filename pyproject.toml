@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "bookclose"
+name = "oodaloo"
 version = "0.1.0"
-description = "BookClose is an automation-first platform designed to streamline the book-to-close process for accounting firms, achieving 70-80% automation of transaction categorization, reconciliation, and audit-ready binder generation."
+description = "One-liner: Jobber helps make revenue. Oodaloo helps make profit.Core wedge: Weekly cash-basis job profitability + payroll runway, fixed fast by a dispatcher exceptions tray."
 authors = ["data-steve <steven.troy.simpson@gmail.com>"]
 readme = "README.md"
 packages = [
@@ -83,4 +83,4 @@ target-version = "py39"  # Match your Python version (adjust if different)
 
 [tool.poetry.scripts]
 lint = "ruff check . --fix"  # Run Ruff with auto-fix
-test = "pytest app/tests/v1/ -v"  # Existing test command
+test = "pytest tests/ -v"  # Existing test command
