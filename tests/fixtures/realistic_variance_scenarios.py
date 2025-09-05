@@ -25,7 +25,9 @@ def generate_realistic_variance_scenario():
         "name": "Precision Contractors LLC",
         "business_type": "General Contractor", 
         "complexity": "Realistic Variance",
-        "owner": "Maria Rodriguez"
+        "owner": "Maria Rodriguez",
+        "employees": 12,
+        "annual_revenue": 3000000.0
     }
     
     jobs = [
@@ -35,7 +37,7 @@ def generate_realistic_variance_scenario():
             "estimated_revenue": 20000.00,
             "start_date": "2025-01-01",
             "end_date": "2025-01-31",
-            "completion_percentage": 75,  # 75% complete
+            "completion_percentage": 75,
             "line_items": [
                 {"date": "2025-01-05", "description": "Demo work", "amount": 3000.00},
                 {"date": "2025-01-12", "description": "Plumbing rough-in", "amount": 4000.00},
@@ -226,7 +228,6 @@ def generate_realistic_variance_scenario():
         }
     }
 
-
 def generate_simple_balanced_scenario():
     """
     A simple scenario where work and payments are perfectly balanced.
@@ -296,3 +297,4 @@ def generate_simple_balanced_scenario():
             }
         }
     }
+

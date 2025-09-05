@@ -192,6 +192,3 @@ Secondary AP metrics: **late fees avoided**, **duplicates caught**, **delay-OK c
 * Median **exception time <60s**; **% deposits reconciled ≥95%**.
 * Early case: **DSO −15–25%** and **runway +0.5–1.5 weeks** within 60–90 days.
 
----
-
-If you want, I’ll now generate the **Marketing/Positioning doc** (site copy, marketplace listing, outreach scripts, ad headlines) and then the **Dev Plan** (epics, accept-criteria, endpoint lists, data model, sync cadence)—ready to paste into your tracker.

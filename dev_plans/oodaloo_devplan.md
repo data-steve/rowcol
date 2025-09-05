@@ -113,7 +113,7 @@ All tables include `company_id`. Index `company_id, updated_at`.
 
 1. Classify deposit `processor` by descriptor.
 2. Window Jobber **payments** ±k days.
-3. Exact net→gross match else **subset** (DP/greedy) → score (closeness × cadence prior × client overlap).
+3. Exact net→gross match else **sum of subset** (DP/greedy) → score (closeness × cadence prior × client overlap). Sum of subset written at @domains/services/cash_reconciliation.py based on @dev_plans/chatgpt_pseudo_code_bookclose.py
 4. Result: `auto` | `needs_confirm` (candidates + confidence) | `off_platform`. Persist to `unbundle_meta` and links.
 
 **C) Exceptions tray (dispatcher)**

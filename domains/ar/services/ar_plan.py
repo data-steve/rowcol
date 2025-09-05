@@ -5,7 +5,7 @@ from domains.ar.schemas.invoice import Invoice
 from datetime import datetime
 import logging
 
-class CollectionsService:
+class ARPlanService:
     def __init__(self, db: Session):
         self.db = db
         self.logger = logging.getLogger(__name__)

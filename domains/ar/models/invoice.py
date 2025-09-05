@@ -8,6 +8,7 @@ class Invoice(Base, TimestampMixin, TenantMixin):
     firm_id = Column(String(36), ForeignKey("firms.firm_id"), nullable=False)
     client_id = Column(Integer, ForeignKey("clients.client_id"), nullable=True)
     customer_id = Column(Integer, ForeignKey("customers.customer_id"), nullable=False)
+    job_id = Column(String, ForeignKey("jobs.job_id"), nullable=True)  # Link to Jobber job
     qbo_id = Column(String, nullable=True)  # QBO invoice ID
     issue_date = Column(DateTime, nullable=False)
     due_date = Column(DateTime, nullable=False)
