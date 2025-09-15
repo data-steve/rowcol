@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Form, Depends
 from sqlalchemy.orm import Session
-from ..services.onboarding import qualify_onboarding
+from runway.services.onboarding import qualify_onboarding
 from database import get_db
 
 router = APIRouter(prefix="/onboard", tags=["Onboarding"])
