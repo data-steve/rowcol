@@ -14,3 +14,4 @@ class Business(Base, TimestampMixin, TenantMixin):
     policy_profile = relationship("PolicyProfile")
     balances = relationship("Balance", back_populates="business")
     notifications = relationship("Notification", back_populates="business")
+    tray_items = relationship("TrayItem", back_populates="business")

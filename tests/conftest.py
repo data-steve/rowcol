@@ -4,18 +4,18 @@ from sqlalchemy.orm import sessionmaker
 import os
 import sys
 from datetime import datetime, timedelta
-import uuid
 from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
+
 from domains.core.models.base import Base
-from domains.core.models import *
-from domains.ap.models import *
-from domains.ar.models import *
-from domains.bank.models import *
-from domains.policy.models import *
+from domains.core.models import Business, Balance, Notification
+from domains.ap.models import Bill, Vendor
+from domains.ar.models import Invoice, Customer
+from runway.tray.models.tray_item import TrayItem
+
 from main import app
 from database import get_db
-from tests.fixtures.realistic_variance_scenarios import generate_realistic_variance_scenario
+
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -28,18 +28,9 @@ def db():
     Base.metadata.drop_all(bind=connection)
     Base.metadata.create_all(bind=connection)
     session = TestingSessionLocal(bind=connection)
-
-    def override_get_db():
-        try:
-            yield session
-        finally:
-            pass
-    app.dependency_overrides[get_db] = override_get_db
-
     try:
         yield session
     finally:
-        app.dependency_overrides.pop(get_db, None)
         session.close()
         transaction.rollback()
         connection.close()
@@ -57,59 +48,71 @@ def client(db):
     app.dependency_overrides.clear()
 
 @pytest.fixture
-def test_firm(db):
-    firm = Firm(
-        firm_id=str(uuid.uuid4()),
-        name="Test Firm",
-        pricing_tier="basic",
-        doc_volume=0,
-        settings={}
+def test_business(db):
+    business = Business(
+        client_id=1,
+        name="Test Agency",
+        qbo_id="test123",
+        industry="agency"
     )
-    db.add(firm)
+    db.add(business)
     db.commit()
-    return firm
+    db.refresh(business)
+    return business
 
 @pytest.fixture
-def test_client(db, test_firm):
-    client = Client(
-        firm_id=test_firm.firm_id,
-        name="Test Client",
-        industry="retail"
+def test_balance(db, test_business):
+    balance = Balance(
+        business_id=test_business.client_id,
+        qbo_account_id="123",
+        current_balance=6000.0,
+        available_balance=5500.0,
+        snapshot_date=datetime.utcnow(),
+        account_type="checking"
     )
-    db.add(client)
+    db.add(balance)
     db.commit()
-    return client
+    db.refresh(balance)
+    return balance
 
 @pytest.fixture
-def test_customer(db, test_firm, test_client):
+def test_bill(db, test_business):
+    vendor = Vendor(
+        vendor_id=1,
+        business_id=test_business.client_id,
+        qbo_id="vendor_001",
+        name="Rent LLC"
+    )
+    db.add(vendor)
+    bill = Bill(
+        business_id=test_business.client_id,
+        qbo_id="bill_001",
+        vendor_id=1,
+        amount=5000.0,
+        due_date=datetime.utcnow() + timedelta(days=14),
+        status="open"
+    )
+    db.add(bill)
+    db.commit()
+    db.refresh(bill)
+    return bill
+
+@pytest.fixture
+def test_invoice(db, test_business):
     customer = Customer(
-        firm_id=test_firm.firm_id,
-        client_id=test_client.client_id,
-        qbo_id="mock_customer_001",
-        name="Test Customer",
-        email="customer@example.com",
-        terms="Net 30",
-        fingerprint_hash="mock_hash_456"
+        business_id=test_business.client_id,
+        qbo_id="customer_001",
+        name="Pine Valley HOA",
+        email="hoa@example.com"
     )
     db.add(customer)
-    db.commit()
-    db.refresh(customer)
-    return customer
-
-@pytest.fixture
-def test_invoice(db, test_firm, test_client, test_customer):
     invoice = Invoice(
-        firm_id=test_firm.firm_id,
-        client_id=test_client.client_id,
-        customer_id=test_customer.customer_id,
-        qbo_id="mock_invoice_001",
-        job_id="JOB_A001",
-        issue_date=datetime.utcnow(),
-        due_date=datetime.utcnow() + timedelta(days=30),
-        total=500.0,
-        lines=[{"item": "Service", "amount": 500.0}],
-        status="sent",
-        attachment_refs=[]
+        business_id=test_business.client_id,
+        qbo_id="inv_009",
+        customer_id="customer_001",
+        total=1983.34,
+        due_date=datetime.utcnow() - timedelta(days=42),
+        status="open"
     )
     db.add(invoice)
     db.commit()
@@ -117,99 +120,16 @@ def test_invoice(db, test_firm, test_client, test_customer):
     return invoice
 
 @pytest.fixture
-def test_bank_transaction(db, test_firm, test_client):
-    transaction = BankTransaction(
-        firm_id=test_firm.firm_id,
-        client_id=test_client.client_id,
-        external_id="tx_001",
-        amount=500.0,
-        date=datetime.utcnow(),
-        description="Test Transaction",
-        account_id="acc_001",
-        source="plaid",
-        processor=ProcessorType.ACH,
+def test_tray_item(db, test_business):
+    tray_item = TrayItem(
+        business_id=test_business.client_id,
+        type="bill",
+        qbo_id="bill_001",
         status="pending",
-        confidence=0.5
+        priority="high",
+        due_date=datetime.utcnow()
     )
-    db.add(transaction)
-    db.commit()
-    db.refresh(transaction)
-    return transaction
-
-@pytest.fixture
-def test_jobber_integration(db, test_firm):
-    integration = Integration(
-        firm_id=test_firm.firm_id,
-        integration_id=str(uuid.uuid4()),
-        platform="jobber",
-        access_token="mock_jobber_token",
-        refresh_token="mock_jobber_refresh",
-        status="active"
-    )
-    db.add(integration)
-    db.commit()
-    return integration
-
-@pytest.fixture
-def test_plaid_integration(db, test_firm):
-    integration = Integration(
-        firm_id=test_firm.firm_id,
-        integration_id=str(uuid.uuid4()),
-        platform="plaid",
-        access_token="mock_plaid_token",
-        refresh_token="mock_plaid_refresh",
-        status="active"
-    )
-    db.add(integration)
-    db.commit()
-    return integration
-
-@pytest.fixture
-def test_sync_cursor(db, test_firm):
-    cursor = SyncCursor(
-        id=str(uuid.uuid4()),
-        firm_id=test_firm.firm_id,
-        source="jobber",
-        cursor="mock_cursor"
-    )
-    db.add(cursor)
-    db.commit()
-    return cursor
-
-@pytest.fixture
-def test_realistic_data(db, test_firm, test_client):
-    data = generate_realistic_variance_scenario()
-    for invoice in data["jobber_invoices"]:
-        db_invoice = Invoice(
-            firm_id=test_firm.firm_id,
-            client_id=test_client.client_id,
-            customer_id=f"CUST_{invoice['id']}",
-            qbo_id=invoice["id"],
-            job_id=invoice["job_id"],
-            issue_date=datetime.strptime("2025-01-01", "%Y-%m-%d"),
-            due_date=datetime.strptime("2025-01-31", "%Y-%m-%d"),
-            total=invoice["amount"],
-            status=invoice["status"],
-            lines=[],
-            confidence=1.0
-        )
-        db.add(db_invoice)
-
-    for tx in data["plaid_transactions"]:
-        db_tx = BankTransaction(
-            firm_id=test_firm.firm_id,
-            client_id=test_client.client_id,
-            external_id=tx["transaction_id"],
-            amount=tx["amount"],
-            date=datetime.strptime(tx["date"], "%Y-%m-%d"),
-            description=tx["name"],
-            account_id=tx["account_id"],
-            source="plaid",
-            processor=ProcessorType[tx["payment_channel"].upper()],
-            status="pending",
-            confidence=0.5 if "personal" in tx["name"].lower() else 1.0
-        )
-        db.add(db_tx)
-
-    db.commit()
-    return data
+    db.add(tray_item)
+    db.commit() 
+    db.refresh(tray_item)
+    return tray_item

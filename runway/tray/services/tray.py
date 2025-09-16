@@ -34,7 +34,8 @@ class TrayService:
             raise ValueError("Tray item not found")
         if action == "confirm":
             item.status = "resolved"
-            # Link to invoices if provided
+            if invoice_ids:
+                item.invoice_ids = invoice_ids
         elif action == "split":
             pass
         self.db.commit()

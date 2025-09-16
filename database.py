@@ -24,28 +24,32 @@ def get_db():
         
 
 def seed_database():
-    """Seed database if empty."""           
+    """Seed database if empty."""
     try:
-        conn = sqlite3.connect("bookclose.db")
-        # Check if tables exist and have data
+        conn = sqlite3.connect("oodaloo.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='engagements'")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='clients'")
         if cursor.fetchone():
-            # Table exists, check if it has data
-            cursor.execute("SELECT COUNT(*) FROM engagements")
+            cursor.execute("SELECT COUNT(*) FROM clients")
             count = cursor.fetchone()[0]
-            if count == 0:  # Only seed if empty
-                with open("data/seed_data.sql", "r") as f:
-                    conn.executescript(f.read())
+            if count == 0:
+                cursor.executescript("""
+                    INSERT INTO clients (client_id, name, qbo_id, industry)
+                    VALUES (1, 'Test Agency', 'test123', 'agency');
+                    INSERT INTO balances (business_id, qbo_account_id, current_balance, available_balance, snapshot_date, account_type)
+                    VALUES (1, '123', 6000.0, 5500.0, '2025-09-15T00:00:00', 'checking');
+                    INSERT INTO bills (business_id, qbo_id, vendor_id, amount, due_date, status)
+                    VALUES (1, 'bill_001', 'vendor_001', 5000.0, '2025-09-22', 'open');
+                    INSERT INTO invoices (business_id, qbo_id, customer_id, total, due_date, status)
+                    VALUES (1, 'inv_009', 'customer_001', 1983.34, '2025-08-01', 'open');
+                """)
                 conn.commit()
                 logger.info("Database seeded successfully.")
         else:
-            # Table doesn't exist, seed it
-            with open("data/seed_data.sql", "r") as f:
-                conn.executescript(f.read())
-            conn.commit()
-            logger.info("Database seeded successfully.")
+            Base.metadata.create_all(bind=engine)
+            seed_database()
         conn.close()
     except Exception as e:
         logger.error(f"Error seeding database: {e}")
-        conn.close()
+        if 'conn' in locals():
+            conn.close()

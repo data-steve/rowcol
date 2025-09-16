@@ -12,4 +12,4 @@ class TrayItem(Base, TimestampMixin):
     priority = Column(String(50), default="medium")
     due_date = Column(DateTime)
     allowed_roles = Column(String(50), default="owner")
-    business = relationship("Business")
+    business = relationship("Business", back_populates="tray_items")

@@ -1,7 +1,7 @@
 from fastapi import Form, Depends
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
-from domains.core.models.audit_log import AuditLog
+from domains.core.services.audit_log import AuditLogService
 from database import get_db
 from domains.integrations.qbo_auth import qbo_auth
 
@@ -12,13 +12,12 @@ def qualify_onboarding(email: str, weekly_review: bool = Form(False), db: Sessio
     db.add(business)
     db.commit()
     access, refresh = qbo_auth.exchange_tokens("mock_code", business.client_id)
-    audit = AuditLog(
+    audit_service = AuditLogService(db)
+    audit_service.log_event(
         business_id=business.client_id,
         action_type="onboard_qualify",
         entity_type="business",
         entity_id=str(business.client_id),
         details={"qualified": True}
     )
-    db.add(audit)
-    db.commit()
     return {"success": True, "business_id": business.client_id, "next": "Connect QBO"}

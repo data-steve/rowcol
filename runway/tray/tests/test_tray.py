@@ -1,16 +1,23 @@
 import pytest
-from domains.tray.services.tray import TrayService
-from domains.bank.models.bank_transaction import BankTransaction
+from sqlalchemy.orm import Session
+from runway.tray.services.tray import TrayService
+from runway.tray.models.tray_item import TrayItem
+from datetime import datetime
 
-def test_get_tray_items(db, test_firm, test_bank_transaction):
-    service = TrayService(db)
-    items = service.get_tray_items(test_firm.firm_id)
+def test_get_tray_items(db: Session, test_tray_item):
+    tray_service = TrayService(db)
+    items = tray_service.get_tray_items(business_id=test_tray_item.business_id)
     assert len(items) == 1
-    assert items[0]["id"] == test_bank_transaction.transaction_id
-    assert items[0]["suggested_action"] == "manual_investigation"
+    assert items[0]["type"] == "bill"
+    assert items[0]["qbo_id"] == "bill_001"
 
-def test_confirm_action(db, test_firm, test_bank_transaction):
-    service = TrayService(db)
-    transaction = service.confirm_action(test_firm.firm_id, test_bank_transaction.transaction_id, "confirm", [1])
-    assert transaction.status == "matched"
-    assert transaction.invoice_ids == [1]
+def test_confirm_action(db: Session, test_tray_item):
+    tray_service = TrayService(db)
+    item = tray_service.confirm_action(
+        business_id=test_tray_item.business_id,
+        tray_item_id=test_tray_item.id,
+        action="confirm",
+        invoice_ids=[1]
+    )
+    assert item.status == "resolved"
+    assert item.invoice_ids == [1]

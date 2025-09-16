@@ -1,1 +1,0 @@
-from domains.tray import router as tray_router

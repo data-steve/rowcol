@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from domains.core.models.balance import Balance
 from datetime import datetime
 
-def test_create_balance(db: Session):
+def test_create_balance(db: Session, test_business):
     balance = Balance(
-        business_id=1,
+        business_id=test_business.client_id,
         qbo_account_id="123",
         current_balance=6000.0,
         available_balance=5500.0,

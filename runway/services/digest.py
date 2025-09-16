@@ -1,12 +1,13 @@
 from sqlalchemy.orm import Session
 from domains.core.models.balance import Balance
+from domains.core.models.business import Business
 from domains.ap.models.bill import Bill
 from domains.ar.models.invoice import Invoice
 from domains.integrations.qbo_integration import QBOIntegration
 from datetime import datetime, timedelta
 from typing import Dict
 
-def calculate_runway(db: Session, business_id: str) -> Dict[str, float]:
+def calculate_runway(db: Session, business_id: int) -> Dict[str, float]:
     business = db.query(Business).filter(Business.client_id == business_id).first()
     if not business:
         raise ValueError("Business not found")

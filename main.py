@@ -9,8 +9,8 @@ from domains.core.models.base import Base
 import asyncio
 
 app = FastAPI(
-    title="BookClose API",
-    description="Automation and document engine for bookkeeping firms",
+    title="Oodaloo Runway API",
+    description="Cash runway management for single-business agencies",
     version="0.1.0"
 )
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -34,16 +34,16 @@ SUBSCRIBERS = []
 async def serve_template(template_name: str):
     return templates.TemplateResponse(f"{template_name}", {"request": {}})
 
-@app.websocket("/ws/engagements")
-async def websocket_engagements(websocket: WebSocket):
-    await websocket.accept()
-    SUBSCRIBERS.append([])
-    subscriber_id = len(SUBSCRIBERS) - 1
-    try:
-        while True:
-            if SUBSCRIBERS[subscriber_id]:
-                message = SUBSCRIBERS[subscriber_id].pop(0)
-                await websocket.send_text(message)
-            await asyncio.sleep(0.1)
-    finally:
-        SUBSCRIBERS.pop(subscriber_id)
+# @app.websocket("/ws/engagements")
+# async def websocket_engagements(websocket: WebSocket):
+#     await websocket.accept()
+#     SUBSCRIBERS.append([])
+#     subscriber_id = len(SUBSCRIBERS) - 1
+#     try:
+#         while True:
+#             if SUBSCRIBERS[subscriber_id]:
+#                 message = SUBSCRIBERS[subscriber_id].pop(0)
+#                 await websocket.send_text(message)
+#             await asyncio.sleep(0.1)
+#     finally:
+#         SUBSCRIBERS.pop(subscriber_id)
