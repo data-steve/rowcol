@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 from sqlalchemy.orm import Session
 try:
-    from plaid import Configuration, ApiClient
+    from plaid import Configuration, ApiBusiness
     from plaid.api import plaid_api
     PLAID_AVAILABLE = True
 except ImportError:
@@ -20,20 +20,20 @@ class PlaidSyncService:
                 host="https://sandbox.plaid.com",
                 api_key={"clientId": os.getenv("PLAID_CLIENT_ID"), "secret": os.getenv("PLAID_SECRET")}
             )
-            self.client = plaid_api.PlaidApi(ApiClient(configuration))
+            self.client = plaid_api.PlaidApi(ApiBusiness(configuration))
         else:
             self.client = None
 
-    async def sync(self, firm_id: str, commit: bool = False) -> Dict:
+    async def sync(self, business_id: int, commit: bool = False) -> Dict:
         if not PLAID_AVAILABLE or not self.client:
             return {"added": [], "has_more": False, "next_cursor": None}
             
         cursor = self.db.query(SyncCursor).filter(
-            SyncCursor.firm_id == firm_id,
+            SyncCursor.business_id == business_id,
             SyncCursor.source == "plaid"
         ).first()
         integration = self.db.query(Integration).filter(
-            Integration.firm_id == firm_id,
+            Integration.business_id == business_id,
             Integration.platform == "plaid"
         ).first()
 
@@ -55,7 +55,7 @@ class PlaidSyncService:
                 # Deduplicate using (source, external_id, day_bucket)
                 day_bucket = tx["date"]
                 existing = self.db.query(BankTransaction).filter(
-                    BankTransaction.firm_id == firm_id,
+                    BankTransaction.business_id == business_id,
                     BankTransaction.source == "plaid",
                     BankTransaction.external_id == tx["transaction_id"],
                     BankTransaction.date.startswith(day_bucket)
@@ -70,7 +70,7 @@ class PlaidSyncService:
                         status = "pending"
 
                     transaction = BankTransaction(
-                        firm_id=firm_id,
+                        business_id=business_id,
                         external_id=tx["transaction_id"],
                         amount=tx["amount"],
                         date=datetime.strptime(tx["date"], "%Y-%m-%d"),
@@ -85,7 +85,7 @@ class PlaidSyncService:
 
                 if result["has_more"]:
                     if not cursor:
-                        cursor = SyncCursor(firm_id=firm_id, source="plaid")
+                        cursor = SyncCursor(business_id=business_id, source="plaid")
                         self.db.add(cursor)
                     cursor.cursor = result["next_cursor"]
 

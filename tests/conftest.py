@@ -1,21 +1,18 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import os
-import sys
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
-
+from datetime import datetime, timedelta
 from domains.core.models.base import Base
-from domains.core.models import Business, Balance, Notification
+from domains.core.models import Business, Balance, Notification, Integration, Transaction, User
 from domains.ap.models import Bill, Vendor
+from domains.ap.models.payment import Payment as APPayment
 from domains.ar.models import Invoice, Customer
+from domains.ar.models.payment import Payment as ARPayment
 from runway.tray.models.tray_item import TrayItem
 
 from main import app
-from database import get_db
-
+from db.session import SessionLocal, engine, get_db
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -25,15 +22,18 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 def db():
     connection = engine.connect()
     transaction = connection.begin()
+    
+    # Clean up and create tables
     Base.metadata.drop_all(bind=connection)
     Base.metadata.create_all(bind=connection)
-    session = TestingSessionLocal(bind=connection)
-    try:
-        yield session
-    finally:
-        session.close()
-        transaction.rollback()
-        connection.close()
+    
+    db_session = SessionLocal(bind=connection)
+
+    yield db_session
+
+    db_session.close()
+    transaction.rollback()
+    connection.close()
 
 @pytest.fixture
 def client(db):
@@ -50,7 +50,7 @@ def client(db):
 @pytest.fixture
 def test_business(db):
     business = Business(
-        client_id=1,
+        business_id="biz_123",
         name="Test Agency",
         qbo_id="test123",
         industry="agency"
@@ -63,7 +63,7 @@ def test_business(db):
 @pytest.fixture
 def test_balance(db, test_business):
     balance = Balance(
-        business_id=test_business.client_id,
+        business_id=test_business.business_id,
         qbo_account_id="123",
         current_balance=6000.0,
         available_balance=5500.0,
@@ -78,16 +78,15 @@ def test_balance(db, test_business):
 @pytest.fixture
 def test_bill(db, test_business):
     vendor = Vendor(
-        vendor_id=1,
-        business_id=test_business.client_id,
+        business_id=test_business.business_id,
         qbo_id="vendor_001",
         name="Rent LLC"
     )
     db.add(vendor)
     bill = Bill(
-        business_id=test_business.client_id,
+        business_id=test_business.business_id,
         qbo_id="bill_001",
-        vendor_id=1,
+        vendor_id="vendor_001",
         amount=5000.0,
         due_date=datetime.utcnow() + timedelta(days=14),
         status="open"
@@ -100,14 +99,14 @@ def test_bill(db, test_business):
 @pytest.fixture
 def test_invoice(db, test_business):
     customer = Customer(
-        business_id=test_business.client_id,
+        business_id=test_business.business_id,
         qbo_id="customer_001",
         name="Pine Valley HOA",
         email="hoa@example.com"
     )
     db.add(customer)
     invoice = Invoice(
-        business_id=test_business.client_id,
+        business_id=test_business.business_id,
         qbo_id="inv_009",
         customer_id="customer_001",
         total=1983.34,
@@ -122,7 +121,7 @@ def test_invoice(db, test_business):
 @pytest.fixture
 def test_tray_item(db, test_business):
     tray_item = TrayItem(
-        business_id=test_business.client_id,
+        business_id=test_business.business_id,
         type="bill",
         qbo_id="bill_001",
         status="pending",
@@ -130,6 +129,53 @@ def test_tray_item(db, test_business):
         due_date=datetime.utcnow()
     )
     db.add(tray_item)
-    db.commit() 
+    db.commit()
     db.refresh(tray_item)
     return tray_item
+
+@pytest.fixture
+def test_integration(db, test_business):
+    integration = Integration(
+        business_id=test_business.business_id,
+        integration_id="int_001",
+        platform="qbo",
+        access_token="mock_qbo_token",
+        refresh_token="mock_qbo_refresh",
+        status="active"
+    )
+    db.add(integration)
+    db.commit()
+    db.refresh(integration)
+    return integration
+
+@pytest.fixture
+def test_ap_payment(db, test_business, test_bill):
+    payment = APPayment(
+        business_id=test_business.business_id,
+        qbo_id="pay_001",
+        vendor_id="vendor_001",
+        bill_id="bill_001",
+        amount=5000.0,
+        payment_date=datetime.utcnow(),
+        status="pending"
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+@pytest.fixture
+def test_ar_payment(db, test_business, test_invoice):
+    payment = ARPayment(
+        business_id=test_business.business_id,
+        qbo_id="ar_pay_001",
+        customer_id="customer_001",
+        invoice_id="inv_009",
+        amount=1983.34,
+        payment_date=datetime.utcnow(),
+        status="pending"
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+    return payment

@@ -4,6 +4,7 @@ from quickbooks import QuickBooks
 from quickbooks.objects import CreditMemo as QBOCreditMemo
 from domains.ar.models.credit_memo import CreditMemo as CreditMemoModel
 from domains.ar.schemas.credit_memo import CreditMemo
+from config.business_rules import AdjustmentSettings
 import os
 from dotenv import load_dotenv
 
@@ -30,7 +31,7 @@ class AdjustmentService:
                 invoice_id=invoice_id,
                 amount=amount,
                 reason=reason,
-                status="review" if amount > 1000 else "applied"
+                status="review" if amount > AdjustmentSettings.REVIEW_THRESHOLD_AMOUNT else "applied"
             )
             self.db.add(credit_memo)
             

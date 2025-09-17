@@ -4,11 +4,11 @@ from domains.core.models.base import Base, TimestampMixin
 
 class Balance(Base, TimestampMixin):
     __tablename__ = "balances"
-    balance_id = Column(Integer, primary_key=True, index=True)
-    business_id = Column(Integer, ForeignKey("clients.client_id"), nullable=False, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    business_id = Column(String(36), ForeignKey("businesses.business_id"), nullable=False, index=True)
     qbo_account_id = Column(String(50), nullable=False, index=True)
     current_balance = Column(Float, nullable=False)
     available_balance = Column(Float, nullable=False)
     snapshot_date = Column(DateTime, nullable=False)
     account_type = Column(String(50), nullable=False)  # checking, savings, credit
-    business = relationship("Business")
+    business = relationship("Business", back_populates="balances")

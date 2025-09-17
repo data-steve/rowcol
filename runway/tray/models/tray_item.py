@@ -5,7 +5,7 @@ from domains.core.models.base import Base, TimestampMixin
 class TrayItem(Base, TimestampMixin):
     __tablename__ = "tray_item"
     id = Column(Integer, primary_key=True, index=True)
-    business_id = Column(Integer, ForeignKey("clients.client_id"), nullable=False)
+    business_id = Column(String(36), ForeignKey("businesses.business_id"), nullable=False)
     type = Column(String(50))
     qbo_id = Column(String(50))
     status = Column(String(50), default="pending")

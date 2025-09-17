@@ -1,31 +1,19 @@
 """
-Top-level domains module that consolidates all domain routers.
-This allows main.py to import a single router that includes all domains.
+Top-level domains module for domain organization.
 """
 from fastapi import APIRouter
-
-# Import routers from each domain
 from .core.routes import router as core_router
 from .ap.routes import router as ap_router
 from .ar.routes import router as ar_router
 from .bank.routes import router as bank_router
-from .tray import router as tray_router
-from .webhooks.routes import router as webhook_router
+from .vendor_normalization.routes import router as vendor_normalization_router
+from .policy.routes import router as policy_router
 
-# Create main consolidated router
-router = APIRouter()
+router = APIRouter(prefix="/api/v1")
 
-# Include all domain routers
-router.include_router(core_router)
-router.include_router(ap_router)
-router.include_router(ar_router)
-router.include_router(bank_router)
-router.include_router(tray_router)
-router.include_router(webhook_router)
-
-# Import models from each domain (for global access if needed)
-from .core.models import *
-from .ap.models import *
-from .ar.models import *
-from .bank.models import *
-# Note: Payroll and Close domains are parked
+router.include_router(core_router, prefix="/core", tags=["core"])
+router.include_router(ap_router, prefix="/ap", tags=["ap"])
+router.include_router(ar_router, prefix="/ar", tags=["ar"])
+router.include_router(bank_router, prefix="/bank", tags=["bank"])
+router.include_router(vendor_normalization_router, prefix="/vendor_normalization", tags=["vendor_normalization"])
+router.include_router(policy_router, prefix="/policy", tags=["policy"])

@@ -2,8 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 class CreditMemoBase(BaseModel):
-    firm_id: Optional[str] = None
-    client_id: Optional[int] = None
+    business_id: Optional[int] = None
     qbo_id: Optional[str] = None
     invoice_id: int
     amount: float
@@ -17,7 +16,7 @@ class CreditMemoCreate(BaseModel):
 
 class CreditMemo(CreditMemoBase):
     memo_id: Optional[int] = None
-    firm_id: str  # Required in response
+    business_id: int  # Required in response
 
     class Config:
         from_attributes = True

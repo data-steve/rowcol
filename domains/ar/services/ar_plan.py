@@ -10,12 +10,12 @@ class ARPlanService:
         self.db = db
         self.logger = logging.getLogger(__name__)
 
-    def send_reminder(self, firm_id: str, invoice_id: int, client_id: Optional[int] = None) -> Invoice:
+    def send_reminder(self, business_id: int, invoice_id: int) -> Invoice:
         """Send a reminder for an overdue invoice (mocked)."""
         try:
             invoice = self.db.query(InvoiceModel).filter(
                 InvoiceModel.invoice_id == invoice_id,
-                InvoiceModel.firm_id == firm_id
+                InvoiceModel.business_id == business_id
             ).first()
             if not invoice:
                 raise ValueError("Invoice not found")

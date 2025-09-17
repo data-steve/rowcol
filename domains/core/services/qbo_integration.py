@@ -8,34 +8,27 @@ from datetime import datetime, timedelta
 import requests
 import json
 from tenacity import retry, stop_after_attempt, wait_exponential
+from domains.core.models.business import Business
 
 load_dotenv()
 
 class QBOIntegrationService:
     """Production-grade QBO integration service with automatic token refresh."""
     
-    def __init__(self, db: Session):
-        self.db = db
-        self.client_id = os.getenv("QBO_CLIENT_ID")
-        self.client_secret = os.getenv("QBO_CLIENT_SECRET")
-        self.refresh_token = os.getenv("QBO_REFRESH_TOKEN")
-        self.realm_id = os.getenv("QBO_REALM_ID")
-        self.redirect_uri = os.getenv("QBO_REDIRECT_URI", "http://localhost:8000/callback")
-        
-        if not all([self.client_id, self.client_secret, self.refresh_token, self.realm_id]):
-            raise ValueError("Missing required QBO credentials in .env")
-        
-        # Initialize auth client
+    def __init__(self, business: Business):
+        self.business = business
+        self.tenant_id = business.qbo_id
         self.auth_client = AuthClient(
-            client_id=self.client_id,
-            client_secret=self.client_secret,
-            redirect_uri=self.redirect_uri,
+            os.getenv("QBO_CLIENT_ID"),
+            os.getenv("QBO_CLIENT_SECRET"),
+            os.getenv("QBO_REDIRECT_URI"),
             environment="sandbox"
         )
-        self.auth_client.refresh_token = self.refresh_token
+        self.auth_client.refresh_token = os.getenv("QBO_REFRESH_TOKEN")
         
         # Set base URL for QBO API
         self.base_url = "https://sandbox-quickbooks.api.intuit.com/v3/company"
+        self.realm_id = os.getenv("QBO_REALM_ID")
         self.api_url = f"{self.base_url}/{self.realm_id}"
         
         # Current access token (will be refreshed as needed)
@@ -195,20 +188,21 @@ class QBOIntegrationService:
         
         return transactions
     
-    def _parse_jobs(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Parse QBO jobs (classes) response."""
-        jobs = []
+    ## NOTE: WE'RE NOT DOING JOB Related stuff now
+    # def _parse_jobs(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    #     """Parse QBO jobs (classes) response."""
+    #     jobs = []
         
-        if "QueryResponse" in data and "Class" in data["QueryResponse"]:
-            for job in data["QueryResponse"]["Class"]:
-                jobs.append({
-                    "job_id": job.get("Id", ""),
-                    "name": job.get("Name", ""),
-                    "active": job.get("Active", True),
-                    "sub_class": job.get("SubClass", False)
-                })
+    #     if "QueryResponse" in data and "Class" in data["QueryResponse"]:
+    #         for job in data["QueryResponse"]["Class"]:
+    #             jobs.append({
+    #                 "job_id": job.get("Id", ""),  # Parked for Phase 0
+    #                 "name": job.get("Name", ""),
+    #                 "active": job.get("Active", True),
+    #                 "sub_class": job.get("SubClass", False)
+    #             })
         
-        return jobs
+    #     return jobs
     
     def _parse_vendors(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Parse QBO vendors response."""

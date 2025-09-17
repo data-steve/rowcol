@@ -2,8 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict
 
 class RuleBase(BaseModel):
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: str
     priority: int
     match_type: str
     pattern: str

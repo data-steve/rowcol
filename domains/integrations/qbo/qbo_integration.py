@@ -1,4 +1,4 @@
-from intuitlib.client import AuthClient
+from intuitlib.client import AuthBusiness
 from sqlalchemy.orm import Session
 from domains.core.models.balance import Balance
 from domains.core.models.business import Business
@@ -14,7 +14,7 @@ class QBOIntegration:
     def __init__(self, business: Business):
         self.business = business
         self.tenant_id = business.qbo_id
-        self.auth_client = AuthClient(
+        self.auth_client = AuthBusiness(
             os.getenv("QBO_CLIENT_ID"),
             os.getenv("QBO_CLIENT_SECRET"),
             os.getenv("QBO_REDIRECT_URI"),
@@ -27,7 +27,7 @@ class QBOIntegration:
         return [
             {"qbo_id": b.qbo_id, "vendor": b.vendor_id, "amount": b.amount, "due_date": b.due_date}
             for b in db.query(Bill).filter(
-                Bill.business_id == self.business.client_id,
+                Bill.business_id == self.business.business_id,
                 Bill.due_date <= datetime.utcnow() + timedelta(days=due_days),
                 Bill.status != "paid"
             ).all()
@@ -39,7 +39,7 @@ class QBOIntegration:
         return [
             {"qbo_id": i.qbo_id, "customer": i.customer_id, "amount": i.total, "due_date": i.due_date, "aging_days": (today - i.due_date.date()).days}
             for i in db.query(Invoice).filter(
-                Invoice.business_id == self.business.client_id,
+                Invoice.business_id == self.business.business_id,
                 Invoice.due_date < datetime.utcnow() - timedelta(days=aging_days),
                 Invoice.status != "paid"
             ).all()
@@ -53,7 +53,7 @@ class QBOIntegration:
         ]
         for bal in mock_balances:
             db.add(Balance(
-                business_id=self.business.client_id,
+                business_id=self.business.business_id,
                 qbo_account_id=bal["AccountId"],
                 current_balance=bal["CurrentBalance"],
                 available_balance=bal["AvailableBalance"],

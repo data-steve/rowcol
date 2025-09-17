@@ -2,8 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 class CustomerBase(BaseModel):
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: int
     qbo_id: Optional[str] = None
     name: str
     email: Optional[str] = None

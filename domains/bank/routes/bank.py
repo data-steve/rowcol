@@ -4,13 +4,18 @@ Bank domain routes for transaction management.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from database import get_db
+from db.session import get_db
 from domains.bank.schemas.bank_transaction import BankTransactionCreate, BankTransaction
 from domains.bank.schemas.transfer import TransferCreate
 from domains.bank.services.bank_transaction import BankTransactionService
 from domains.bank.schemas.bank_transaction import BankTransactionCategorize
 
 router = APIRouter()
+
+@router.post("/process/{transaction_id}")
+def process_transaction(transaction_id: int, db: Session = Depends(get_db)):
+    service = BankTransactionService(db)
+    return service.process_transaction(transaction_id)
 
 @router.post("/transactions", response_model=BankTransaction)
 def create_transaction(

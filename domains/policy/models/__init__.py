@@ -1,12 +1,11 @@
-# Policy models
-from .rule import Rule as PolicyRuleTemplate
+from .rule import Rule
 from .correction import Correction
-from .suggestion import Suggestion as SuggestionModel
-from .policy_profile import PolicyProfile as PolicyProfileModel
+from .suggestion import Suggestion
+from .policy_profile import PolicyProfile
 
 __all__ = [
-    "PolicyRuleTemplate",
+    "Rule",
     "Correction", 
-    "SuggestionModel",
-    "PolicyProfileModel"
+    "Suggestion",
+    "PolicyProfile"
 ]

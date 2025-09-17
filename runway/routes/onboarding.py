@@ -1,13 +1,11 @@
-from fastapi import APIRouter, Form, Depends
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from runway.services.onboarding import qualify_onboarding
-from database import get_db
+from db.session import get_db
+from runway.services.onboarding import OnboardingService
 
-router = APIRouter(prefix="/onboard", tags=["Onboarding"])
+router = APIRouter()
 
 @router.post("/")
-async def onboard(email: str = Form(...), weekly_review: bool = Form(False), db: Session = Depends(get_db)):
-    result = qualify_onboarding(email, weekly_review, db)
-    if result.get("dropoff"):
-        return {"msg": result["reason"]}
-    return result
+def qualify(business_data: dict, user_data: dict, db: Session = Depends(get_db)):
+    service = OnboardingService(db)
+    return service.qualify_onboarding(business_data, user_data)

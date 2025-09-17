@@ -21,11 +21,11 @@ class InvoiceService:
             consumer_secret=os.getenv("QBO_CLIENT_SECRET"),
             access_token=os.getenv("QBO_ACCESS_TOKEN"),
             access_token_secret=os.getenv("QBO_REFRESH_TOKEN"),
-            company_id=os.getenv("QBO_REALM_ID")
+            business_id=os.getenv("QBO_REALM_ID")
         )
         self.policy_engine = PolicyEngineService(db)
 
-    def create_invoice(self, firm_id: str, customer_id: int, issue_date: datetime, due_date: datetime, total: float, lines: List[dict], client_id: Optional[int] = None) -> Invoice:
+    def create_invoice(self, business_id: int, customer_id: int, issue_date: datetime, due_date: datetime, total: float, lines: List[dict]) -> Invoice:
         """Create an invoice from CSV or manual input."""
         try:
             # Mock CSV parsing
@@ -36,14 +36,13 @@ class InvoiceService:
                 "total": total,
                 "lines": lines
             }
-            suggestion = self.policy_engine.categorize(firm_id, "invoice", total)
+            suggestion = self.policy_engine.categorize(business_id, "invoice", total)
             
             # Extract confidence from top_k
             confidence = suggestion.top_k[0].get("confidence", 0.8) if suggestion.top_k else 0.8
             
             invoice = InvoiceModel(
-                firm_id=firm_id,
-                client_id=client_id,
+                business_id=business_id,
                 customer_id=customer_id,
                 qbo_id=None,
                 issue_date=issue_date,
@@ -77,20 +76,19 @@ class InvoiceService:
             self.db.rollback()
             raise ValueError(f"Invoice creation failed: {str(e)}")
 
-    def sync_invoices(self, firm_id: str, client_id: Optional[int] = None) -> List[Invoice]:
+    def sync_invoices(self, business_id: int) -> List[Invoice]:
         """Sync invoices from QBO."""
         try:
             qbo_invoices = QBOInvoice.filter(qb=self.qbo_client)
             invoices = []
             for qbo_invoice in qbo_invoices:
                 invoice = self.db.query(InvoiceModel).filter(
-                    InvoiceModel.firm_id == firm_id,
+                    InvoiceModel.business_id == business_id,
                     InvoiceModel.qbo_id == qbo_invoice.Id
                 ).first()
                 if not invoice:
                     invoice = InvoiceModel(
-                        firm_id=firm_id,
-                        client_id=client_id,
+                        business_id=business_id,
                         customer_id=int(qbo_invoice.CustomerRef["value"]),
                         qbo_id=qbo_invoice.Id,
                         issue_date=qbo_invoice.TxnDate,

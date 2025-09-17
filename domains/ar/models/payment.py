@@ -1,25 +1,16 @@
-"""
-Payment model for AR domain.
-Represents customer payments applied to invoices.
-"""
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from domains.core.models.base import Base, TimestampMixin, TenantMixin
 
 class Payment(Base, TimestampMixin, TenantMixin):
-    __tablename__ = "payments"
-    
+    __tablename__ = 'ar_payments'
     payment_id = Column(Integer, primary_key=True, index=True)
-    customer_id = Column(Integer, ForeignKey("customers.customer_id"), nullable=True)
-    qbo_id = Column(String, nullable=True)
-    invoice_ids = Column(JSON, nullable=True)  # List of invoice IDs this payment applies to
+    business_id = Column(String(36), ForeignKey("businesses.business_id"), nullable=False, index=True)
+    qbo_payment_id = Column(String(255), nullable=True, index=True)
+    invoice_id = Column(Integer, ForeignKey('invoices.invoice_id'), nullable=True)
     amount = Column(Float, nullable=False)
-    date = Column(DateTime, nullable=False)
-    method = Column(String, nullable=False)  # ACH, check, credit_card, etc.
-    status = Column(String, default="pending")  # pending, applied, refunded
-    
-    # Relationships
-    customer = relationship("Customer", back_populates="payments")
-    
-    class Config:
-        from_attributes = True
+    payment_date = Column(DateTime, nullable=False)
+    status = Column(String(50), default="pending")
+    # business = relationship("Business", back_populates="ar_payments")  # Parked for Phase 0
+    # customer = relationship("Customer")  # Parked for Phase 0 - missing customer_id FK
+    # invoice = relationship("Invoice")    # Parked for Phase 0

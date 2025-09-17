@@ -1,36 +1,11 @@
-"""
-Consolidated router for all Escher API routes.
-This centralizes route registration and keeps main.py clean.
-"""
-# This code snippet is importing the necessary modules and routers for setting up API routes using
-# FastAPI framework in Python. Here's a breakdown of the imports:
 from fastapi import APIRouter
 
-from ...ap.routes import ingest
-from . import (
-    engagements, services, tasks, document_type, user, firm, client, staff, 
-    business_entity, engagement_entities, automation, csv, documents, review, kpi, sync
-)
+from . import automation, document_type, documents, sync, user
 
-# Create main router
 router = APIRouter()
 
-# Include all route modules
-router.include_router(engagements.router)
-router.include_router(services.router)
-router.include_router(tasks.router)
-router.include_router(document_type.router)
-router.include_router(user.router)
-router.include_router(firm.router)
-router.include_router(client.router)
-router.include_router(staff.router)
-router.include_router(business_entity.router)
-router.include_router(engagement_entities.router)
-router.include_router(automation.router)
-router.include_router(ingest.router)
-router.include_router(csv.router)
-router.include_router(documents.router)
-router.include_router(review.router)
-router.include_router(kpi.router)
-router.include_router(sync.router)
-# AR, Bank, and Payroll routes are now handled by their respective domains
+router.include_router(automation.router, prefix="/automation", tags=["automation"])
+router.include_router(document_type.router, prefix="/document_types", tags=["document_types"])
+router.include_router(documents.router, prefix="/documents", tags=["documents"])
+router.include_router(sync.router, prefix="/sync", tags=["sync"])
+router.include_router(user.router, prefix="/users", tags=["users"])

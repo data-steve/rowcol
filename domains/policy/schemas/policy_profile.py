@@ -2,11 +2,10 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 
 class PolicyProfileBase(BaseModel):
-    firm_id: str
+    business_id: str
     thresholds: Dict
     pricing_tier: str = "basic"
     doc_volume: int = 0
-    client_id: Optional[int] = None
     revenue_policy: Optional[str] = None
     cutoff_rules: Optional[List] = None
     tickmark_map: Optional[Dict] = None

@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-09-17T14:56:00.106876",
+  "qbo_mode": "mock",
+  "scenarios_tested": [
+    "marketing_agency"
+  ],
+  "validations": [
+    {
+      "test": "mock_data_generation",
+      "scenario": "marketing_agency",
+      "status": "pass",
+      "details": {
+        "mock_transactions_generated": 20,
+        "data_variety": 2,
+        "realistic_amounts": true
+      }
+    }
+  ],
+  "errors": [
+    {
+      "scenario": "marketing_agency",
+      "error": "'DigestService' object has no attribute 'calculate_cash_runway'",
+      "timestamp": "2025-09-17T14:56:00.107490"
+    }
+  ],
+  "summary": {
+    "total_scenarios": 1,
+    "total_tests": 1,
+    "passed_tests": 1,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "errors_encountered": 1
+  }
+}

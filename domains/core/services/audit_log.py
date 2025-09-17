@@ -2,8 +2,7 @@ from datetime import datetime, date
 from sqlalchemy.orm import Session
 from fastapi import Request
 from decimal import Decimal
-from app.models.audit_log import AuditLog
-from app.models.enums import EntityType, AuditSource, AuditAction
+from domains.core.models.audit_log import AuditLog, EntityType, AuditSource, AuditAction
 from typing import Optional, Dict, Any
 import json
 import uuid
@@ -12,7 +11,7 @@ from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy.inspection import inspect
 
 
-class AuditService:
+class AuditLogService:
     def __init__(self, db: Session, request: Request = None):
         self.db = db
         self.request = request

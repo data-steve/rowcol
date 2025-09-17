@@ -1,7 +1,28 @@
-from sqlalchemy import Column, String, ForeignKey, Enum, Text, Index
+from sqlalchemy import Column, String, ForeignKey, Enum, Text, Index, Integer
 from sqlalchemy.orm import relationship
-from app.models.base import Base, TimestampMixin
-from app.models.enums import AuditSource, AuditAction, EntityType
+from .base import Base, TimestampMixin
+from enum import Enum as PyEnum
+
+class AuditSource(PyEnum):
+    USER = "user"
+    SYSTEM = "system"
+    API = "api"
+
+class AuditAction(PyEnum):
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+    LOGIN = "login"
+    LOGOUT = "logout"
+    SIGNUP = "signup"
+
+class EntityType(PyEnum):
+    USER = "user"
+    FIRM = "firm"
+    CLIENT = "client"
+    INVOICE = "invoice"
+    BILL = "bill"
+
 import uuid
 
 class AuditLog(Base, TimestampMixin):
@@ -10,9 +31,9 @@ class AuditLog(Base, TimestampMixin):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
     # SOC2: Who, What, When, Where
-    performed_by_user_id = Column(String(36), ForeignKey('users.id'), 
+    performed_by_user_id = Column(Integer, ForeignKey('users.user_id'), 
                                   nullable=True)  # Null for SIGNUP
-    context_firm_id = Column(String(36), ForeignKey('firms.id'), 
+    context_business_id = Column(String(36), ForeignKey('businesses.business_id'), 
                              nullable=True)  # Null for firm creation
     source = Column(Enum(AuditSource), nullable=False, default=AuditSource.USER)
     action = Column(Enum(AuditAction), nullable=False)
@@ -36,13 +57,11 @@ class AuditLog(Base, TimestampMixin):
     # Relationships
     performed_by = relationship(
         "User",
-        back_populates="performed_audits",
         foreign_keys=[performed_by_user_id]
     )
-    firm = relationship(
-        "Firm",
-        back_populates="audit_logs",
-        foreign_keys=[context_firm_id]
+    business = relationship(
+        "Business",
+        foreign_keys=[context_business_id]
     )
     
     __table_args__ = (

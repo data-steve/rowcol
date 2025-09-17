@@ -2,13 +2,12 @@ from pydantic import BaseModel
 from typing import Optional, Dict
 
 class CorrectionBase(BaseModel):
-    firm_id: str
+    business_id: str
     txn_id: str
     raw_descriptor: str
     final: Dict
     created_by: int
     scope: str
-    client_id: Optional[int] = None
     suggested: Optional[Dict] = None
     rationale: Optional[str] = None
 
@@ -17,8 +16,7 @@ class CorrectionCreate(CorrectionBase):
 
 class Correction(CorrectionBase):
     correction_id: Optional[int] = None
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: str
     txn_id: str
     raw_descriptor: str
     suggested: Optional[Dict[str, str | float]] = None

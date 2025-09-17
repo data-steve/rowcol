@@ -13,18 +13,18 @@ class MatchConfidence(Enum):
     MANUAL_REVIEW = 0.25
 
 
-class RevenueRecognitionMethod(Enum):
-    CASH_BASIS = "cash"
-    ACCRUAL_BASIS = "accrual"
-    PERCENTAGE_COMPLETION = "percentage_completion"
-    MILESTONE = "milestone"
+# class RevenueRecognitionMethod(Enum):
+#     CASH_BASIS = "cash"
+#     ACCRUAL_BASIS = "accrual"
+#     PERCENTAGE_COMPLETION = "percentage_completion"
+#     MILESTONE = "milestone"
 
 
 @dataclass
 class PaymentMatch:
     stripe_payment_id: str
     jobber_invoice_ids: List[str]
-    job_ids: List[str]
+    # job_ids: List[str]  # Parked for Phase 0
     confidence: float
     match_type: str
     variance_amount: float
@@ -35,14 +35,14 @@ class PaymentMatch:
     rationale: Dict[str, Any]
 
 
-@dataclass
-class RevenueRecognitionEntry:
-    job_id: str
-    period: str  # YYYY-MM
-    work_performed_amount: float
-    cash_received_amount: float
-    variance_amount: float
-    recognition_method: str
-    journal_entries: List[Dict[str, Any]]
-    requires_accrual: bool
-    requires_deferral: bool
+# @dataclass
+# class RevenueRecognitionEntry:
+#     # job_id: str  # Parked for Phase 0
+#     period: str  # YYYY-MM
+#     work_performed_amount: float
+#     cash_received_amount: float
+#     variance_amount: float
+#     recognition_method: str
+#     journal_entries: List[Dict[str, Any]]
+#     requires_accrual: bool
+#     requires_deferral: bool

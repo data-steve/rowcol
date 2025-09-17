@@ -1,6 +1,6 @@
 """
 Preamble: Defines the BankTransaction SQLAlchemy model for Stage 1C of the Escher project.
-This model supports bank transaction creation and listing, with tenant isolation via firm_id.
+This model supports bank transaction creation and listing, with tenant isolation via business_id.
 References: Stage 1C requirements, models/base.py, models/firm.py, models/client.py.
 """
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, Enum
@@ -17,9 +17,10 @@ class ProcessorType(enum.Enum):
 class BankTransaction(Base, TimestampMixin, TenantMixin):
     __tablename__ = "bank_transactions"
 
-    transaction_id = Column(Integer, primary_key=True, index=True)
-    firm_id = Column(String(36), ForeignKey("firms.firm_id"), nullable=False)
-    client_id = Column(Integer, ForeignKey("clients.client_id"), nullable=True)
+    id = Column(Integer, primary_key=True, index=True)
+    business_id = Column(String(36), ForeignKey("businesses.business_id"), nullable=True)
+    qbo_bank_account_id = Column(String(255), nullable=True, index=True)
+    qbo_transaction_id = Column(String(255), nullable=True, index=True)
     external_id = Column(String(100), nullable=True)
     amount = Column(Float, nullable=False)
     date = Column(DateTime, nullable=False)
@@ -35,6 +36,6 @@ class BankTransaction(Base, TimestampMixin, TenantMixin):
     suggestion_id = Column(Integer, ForeignKey("suggestions.suggestion_id"), nullable=True)
 
     # Relationships
-    client = relationship("Client")
+    business = relationship("Business")
     rule = relationship("Rule")
     suggestion = relationship("Suggestion")
