@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from db.session import get_db
-from runway.services.onboarding import OnboardingService
+from runway.onboarding.services.onboarding import OnboardingService
 
 router = APIRouter()
 

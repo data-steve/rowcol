@@ -12,7 +12,10 @@ class DocumentStorageService:
     def store_document(self, file: UploadFile, firm_id: str, client_id: int) -> Document:
         content = file.file.read()
         file_hash = hashlib.sha256(content).hexdigest()
-        document = DocumentModel(
+        document = # The code snippet you provided is creating an instance of the `DocumentModel`
+        # class with specific attributes assigned. Here's a breakdown of what each
+        # attribute represents:
+        DocumentModel(
             firm_id=firm_id,
             client_id=client_id,
             period="2025-01",

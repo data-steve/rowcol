@@ -40,7 +40,7 @@ def update_business(business_id: str, business_update: BusinessUpdate, db: Sessi
 @router.get('/businesses/{business_id}/digest')
 def get_business_digest(business_id: str, db: Session = Depends(get_db)):
     """Generate weekly runway digest for business"""
-    from runway.services.digest import DigestService
+    from runway.digest.services.digest import DigestService
     
     digest_service = DigestService(db)
     try:

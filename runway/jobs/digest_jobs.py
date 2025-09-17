@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Any
 import os
 
 from runway.jobs.job_runner import JobRunner, Job, get_job_runner
-from runway.services.digest import DigestService
+from runway.digest.services.digest import DigestService
 from db.session import SessionLocal
 
 logger = logging.getLogger(__name__)

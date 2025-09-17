@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from db.session import get_db
 from domains.core.models.user import User
 from domains.core.models.business import Business
-from runway.schemas.auth import (
+from runway.auth.schemas.auth import (
     LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
     RegisterRequest, PasswordResetRequest, PasswordResetConfirm
 )

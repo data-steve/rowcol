@@ -4,8 +4,8 @@ from domains.core.models.business import Business
 from domains.core.models.user import User
 from domains.ap.models.bill import Bill
 from domains.ar.models.invoice import Invoice
-from domains.core.services.qbo_integration import QBOIntegrationService
-from runway.services.email import EmailService
+from domains.core.services.smart_sync import SmartSyncService
+from runway.digest.services.email import EmailService
 from common.exceptions import BusinessNotFoundError, RunwayCalculationError, EmailDeliveryError
 from config.business_rules import DigestSettings, RunwayThresholds
 from datetime import datetime, timedelta
@@ -25,7 +25,9 @@ class DigestService:
         if not business:
             raise ValueError("Business not found")
         
-        qbo = QBOIntegrationService(business)
+        # Use SmartSyncService as the single point for QBO data (ADR-001 compliance)
+        smart_sync = SmartSyncService(self.db, business_id)
+        qbo_data = smart_sync.get_qbo_data_for_digest()
         
         # Get recent balance data
         balances = self.db.query(Balance).filter(
@@ -33,9 +35,9 @@ class DigestService:
             Balance.snapshot_date >= datetime.utcnow() - timedelta(days=1)
         ).all()
         
-        # Get AR and AP data from QBO
-        overdue_invoices = qbo.get_invoices(self.db, aging_days=30)
-        upcoming_bills = qbo.get_bills(self.db, due_days=14)
+        # Extract QBO data with smart sync timing and rate limiting
+        overdue_invoices = qbo_data.get("invoices", [])
+        upcoming_bills = qbo_data.get("bills", [])
         
         # Calculate totals
         cash = sum(b.available_balance for b in balances)

@@ -95,7 +95,7 @@ class TrayService:
 ```python
 # runway/services/digest.py
 from domains.core.services.balance_calculation import BalanceService
-from domains.ap.services.bill_management import BillService
+from domains.ap.services.bill_ingestion import BillService
 ```
 
 ✅ **Domain → Domain**: Domains can import other domains (with care)
@@ -262,6 +262,38 @@ If we eventually move to microservices, this architecture provides natural servi
 - **Clean Architecture**: Martin, Robert. "Clean Architecture: A Craftsman's Guide to Software Structure and Design"
 - **Oodaloo Build Plan v4.3**: `/dev_plans/Oodaloo_v4.3_Build_Plan.md`
 - **Phase 0 Testing Strategy**: `/docs/PHASE0_TESTING_STRATEGY.md`
+
+## Addendum: QBO Integration Architecture Fix (2025-09-17)
+
+### Issue Identified
+During Phase 1 development, a **critical ADR-001 violation** was discovered:
+- Multiple services were making direct QBO API calls
+- `DigestService` (runway/) was calling `QBOIntegrationService` directly
+- `SmartSyncService` (domains/) was duplicating QBO logic
+- No unified coordination of QBO rate limiting and sync timing
+
+### Solution Implemented
+**Unified QBO Architecture** through `SmartSyncService`:
+
+```
+RUNWAY LAYER (Product Orchestration)
+├── DigestService ──┐
+├── JobRunner ──────┼──► SmartSyncService ──► domains/integrations/qbo/
+├── BillService ────┘    (Single QBO Coordinator)
+└── Other Services
+
+DOMAINS LAYER (QBO Primitives)
+├── SmartSyncService (QBO Coordinator)
+└── domains/integrations/qbo/ (Actual QBO API)
+```
+
+**Key Changes:**
+1. `SmartSyncService` became single point for all QBO coordination
+2. `DigestService` now uses `smart_sync.get_qbo_data_for_digest()`
+3. Removed direct QBO calls from runway/ services
+4. Unified rate limiting and sync timing across all QBO interactions
+
+**Result**: Full ADR-001 compliance with proper domains/runway separation.
 
 ---
 

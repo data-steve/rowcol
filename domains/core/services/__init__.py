@@ -4,7 +4,7 @@ from .document_management import DocumentManagementService
 from .document_review import DocumentReviewService
 from .document_storage import DocumentStorageService
 from .document_type import DocumentTypeService
-from .qbo_integration import QBOIntegrationService
+# QBOIntegrationService removed - use SmartSyncService as single QBO coordination point
 from .smart_sync import SmartSyncService
 from .user import UserService
 
@@ -15,7 +15,7 @@ __all__ = [
     "DocumentReviewService",
     "DocumentStorageService",
     "DocumentTypeService",
-    "QBOIntegrationService",
+    # "QBOIntegrationService",  # Removed - use SmartSyncService
     "SmartSyncService",
     "UserService",
 ]

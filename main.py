@@ -3,11 +3,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from db import create_db_and_tables
 from domains import router as domains_router
-from runway.routes import router as runway_router
-from runway.routes.auth import router as auth_router
-from runway.routes.businesses import router as businesses_router  
-from runway.routes.users import router as users_router
-from runway.routes.digest import router as digest_router
+from runway.auth.routes.auth import router as auth_router
+from runway.auth.routes.users import router as users_router
+from runway.businesses.routes.businesses import router as businesses_router  
+from runway.digest.routes.digest import router as digest_router
 from runway.middleware import setup_cors, AuthMiddleware, LoggingMiddleware, ErrorHandlingMiddleware
 import logging
 import os

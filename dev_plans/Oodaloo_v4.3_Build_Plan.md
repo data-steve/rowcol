@@ -27,12 +27,15 @@
 ```
 domains/
 ├── core/           # Business, User, Document, Integration models/services
+│                   # Key services: SmartSyncService, KPIService, DocumentReviewService
 ├── ap/             # Bill, Vendor, Payment models/services  
 ├── ar/             # Invoice, Customer, Payment models/services
 ├── bank/           # BankTransaction, Transfer models/services
 ├── policy/         # Rule, Correction, Suggestion models/services
 └── vendor_normalization/  # VendorCanonical models/services
 ```
+
+**Note**: Core services like `SmartSyncService` (QBO sync timing), `KPIService` (CAS analytics), and `DocumentReviewService` (bill processing) are essential infrastructure services that support multiple phases but may not be explicitly called out in each phase description.
 
 ### Runway/ Structure (Product Orchestration)
 ```
@@ -96,20 +99,22 @@ domains/*/routes/   # Internal domain APIs (QBO-facing)
 
 **Success Criteria**: `uvicorn main:app --reload` starts cleanly, basic API endpoints respond, core models persist correctly.
 
-## Phase 1: Smart AP & Payment Orchestration (120h, Weeks 3-5)
+## Phase 1: Smart AP & Payment Orchestration (134h, Weeks 3-5)
 
-*Goal*: Implement bill approval workflows, runway reserve earmarking, payment orchestration with mocked QBO sync. Reference parked AP files for business logic, implement fresh with mock payment execution. *Effort: ~120h*
+*Goal*: Implement bill approval workflows, runway reserve earmarking, payment orchestration with mocked QBO sync. Reference parked AP files for business logic, implement fresh with mock payment execution. *Effort: ~134h*
 
-### Stage 1.1: AP Domain Services (60h)
-- **[ ] Enhanced AP Models**: 
-  - [ ] Review `_parked/domains/ap/` for business logic patterns. *Effort: 10h*.
-  - [ ] `Bill` model enhancements: approval status, payment scheduling, QBO sync fields. *Effort: 8h*.
-  - [ ] `Payment` model: payment intents, execution tracking, reconciliation status. *Effort: 8h*.
-  - [ ] `Vendor` model: payment terms, preferred payment methods, canonical mapping. *Effort: 6h*.
-- **[ ] AP Services** (Fresh Implementation with Mocking):
-  - [ ] `BillManagementService`: Bill ingestion, approval workflows, payment scheduling with mock data. *Effort: 12h*.
-  - [ ] `PaymentOrchestrationService`: Mock payment execution, simulated QBO sync, reconciliation logic. *Effort: 10h*.
-  - [ ] `VendorNormalizationService`: Enhanced vendor matching and canonicalization with sample data. *Effort: 6h*.
+### Stage 1.1: AP Domain Services (74h)
+- **[✅] Enhanced AP Models**: 
+  - [✅] Review `_parked/domains/ap/` for business logic patterns. *Effort: 10h*.
+  - [✅] `Bill` model enhancements: approval status, payment scheduling, QBO sync fields. *Effort: 8h*.
+  - [✅] `Payment` model: payment intents, execution tracking, reconciliation status. *Effort: 8h*.
+  - [✅] `Vendor` model: payment terms, preferred payment methods, canonical mapping. *Effort: 6h*.
+- **[✅] AP Services** (Fresh Implementation with Mocking):
+  - [✅] `BillService`: Bill ingestion, approval workflows, payment scheduling with mock data. *Effort: 12h*.
+  - [✅] `PaymentService`: Mock payment execution, simulated QBO sync, reconciliation logic. *Effort: 10h*.
+  - [✅] `VendorService`: Enhanced vendor matching and canonicalization with sample data. *Effort: 6h*.
+  - [✅] `SmartSyncService`: **UNIFIED QBO COORDINATION** - Single point for all QBO access, intelligent sync timing, rate limiting, context-aware intervals. Eliminates ADR-001 violations. *Effort: 8h*.
+  - [✅] `DocumentReviewService`: Document processing workflows for bill ingestion and approval. *Effort: 6h*.
 
 ### Stage 1.2: Runway Reserve System (30h)
 - **[ ] Runway Reserve Logic**:
@@ -157,14 +162,15 @@ domains/*/routes/   # Internal domain APIs (QBO-facing)
 
 **Success Criteria**: AR aging calculated correctly, collection emails sent automatically, payments matched to invoices, 60%+ collection rate improvement.
 
-## Phase 3: Analytics & Automation (60h, Week 8)
+## Phase 3: Analytics & Automation (66h, Week 8)
 
-*Goal*: Add forecasting, automation rules, comprehensive analytics dashboard. Build on Phase 1-2 data patterns with mocked data for rapid development. *Effort: ~60h*
+*Goal*: Add forecasting, automation rules, comprehensive analytics dashboard. Build on Phase 1-2 data patterns with mocked data for rapid development. *Effort: ~66h*
 
-### Stage 3.1: Analytics Foundation (30h)
+### Stage 3.1: Analytics Foundation (36h)
 - **[ ] Analytics Models & Services**:
   - [ ] `AnalyticsService`: AR/AP aging trends, basic profit analysis, runway forecasting with mock historical data. *Effort: 10h*.
   - [ ] `ForecastingService`: 2-4 week cash flow predictions using trend algorithms. *Effort: 10h*.
+  - [ ] `KPIService`: CAS firm metrics (auto-posting %, override rates, task completion, processing times). *Effort: 6h*.
   - [ ] Chart.js integration for visual dashboards with sample data. *Effort: 10h*.
 
 ### Stage 3.2: Automation Rules Engine (20h)
@@ -759,6 +765,33 @@ class DigestService:
 2. **Domain & SSL Setup**: Secure domain name and certificate management
 3. **Monitoring Strategy**: Select APM tool (DataDog, New Relic, or open source)
 4. **Backup & Recovery**: Design database backup and disaster recovery plan
+
+### Oodaloo → RowCol Transition Architecture
+
+**Key Principle**: `business` in Oodaloo = `client` in RowCol
+
+**Oodaloo (Owner-Centric)**:
+- Single business owner managing their QBO
+- `business_id` as primary tenant identifier  
+- Analytics about the business performance
+- Simple user model (owner + bookkeeper)
+
+**RowCol Transition Point**: When we add multi-client management capabilities
+- Introduce `firm_id` as higher-level tenant
+- `business` becomes `client` in firm context
+- Add staff roles, engagement workflows, task management
+- Analytics remain client-focused (not firm operational metrics)
+
+**Preserved Concepts**:
+- All business/client analytics and KPIs (same data, different context)
+- Core AP/AR/Bank domain models (reusable across both products)
+- QBO integration patterns (scale from 1:1 to 1:many)
+
+**New RowCol Concepts**:
+- `firm` → `client` relationship management
+- Staff permissions and role-based access
+- Engagement and task workflow management
+- Firm-level operational dashboards (separate from client analytics)
 
 ### Long-term Considerations
 - **QBO App Store Submission**: Requirements and review process timeline

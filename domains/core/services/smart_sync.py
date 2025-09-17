@@ -7,6 +7,8 @@ from enum import Enum
 import os
 from dotenv import load_dotenv
 
+from domains.core.services.base_service import TenantAwareService
+
 load_dotenv()
 
 class SyncStrategy(Enum):
@@ -22,15 +24,29 @@ class SyncPriority(Enum):
     MEDIUM = "medium"   # Important but not urgent
     LOW = "low"         # Background maintenance
 
-class SmartSyncService:
-    """Smart sync service that intelligently manages data synchronization."""
+class SmartSyncService(TenantAwareService):
+    """
+    Smart sync service that intelligently manages data synchronization with tenant isolation.
     
-    def __init__(self, db: Session):
-        self.db = db
-        self.last_sync = {}  # Track last sync time per platform
-        self.sync_cache = {}  # Cache sync results
-        self.user_activity = {}  # Track user activity patterns
+    Handles QBO sync timing, rate limiting, and context-aware intervals for individual businesses.
+    Essential for Phase 1 AP & Payment Orchestration to prevent API rate limit issues.
+    """
+    
+    def __init__(self, db: Session, business_id: str):
+        """
+        Initialize smart sync service with tenant isolation.
+        
+        Args:
+            db: Database session
+            business_id: Business identifier for tenant isolation
+        """
+        super().__init__(db, business_id)
+        self.last_sync = {}  # Track last sync time per platform for this business
+        self.sync_cache = {}  # Cache sync results for this business
+        self.user_activity = {}  # Track user activity patterns for this business
         self.logger = logging.getLogger(__name__)
+        
+        self.logger.info(f"Initialized SmartSyncService for business {business_id}")
         
         # Sync intervals (in minutes)
         self.sync_intervals = {
@@ -40,16 +56,16 @@ class SmartSyncService:
                 "month_end": 120,        # Every 2 hours during month-end
                 "tax_season": 60         # Every hour during tax season
             },
-            "jobber": {
-                "min_interval": 15,      # Jobber can be synced more frequently
-                "business_hours": 120,   # Every 2 hours
-                "month_end": 60         # Every hour during month-end
-            },
-            "stripe": {
-                "min_interval": 5,       # Stripe can be very frequent
-                "business_hours": 60,    # Every hour
-                "month_end": 30         # Every 30 minutes during month-end
-            }
+            # "jobber": {
+            #     "min_interval": 15,      # Jobber can be synced more frequently
+            #     "business_hours": 120,   # Every 2 hours
+            #     "month_end": 60         # Every hour during month-end
+            # },
+            # "stripe": {
+            #     "min_interval": 5,       # Stripe can be very frequent
+            #     "business_hours": 60,    # Every hour
+            #     "month_end": 30         # Every 30 minutes during month-end
+            # }
         }
     
     def should_sync(self, platform: str, strategy: SyncStrategy, priority: SyncPriority = SyncPriority.MEDIUM) -> bool:
@@ -229,23 +245,60 @@ class SmartSyncService:
             }
     
     def _perform_sync(self, platform: str) -> Dict[str, Any]:
-        """Perform the actual sync for a platform."""
+        """Perform the actual sync for a platform using proper domains/integrations."""
         if platform == "qbo":
-            from .qbo_integration import QBOIntegrationService
-            service = QBOIntegrationService(self.db)
+            # Use the proper QBO integration from domains/integrations
+            from domains.integrations.qbo.qbo_integration import QBOIntegration
+            from domains.core.models.business import Business
+            
+            # Get business for this tenant
+            business = self.db.query(Business).filter(
+                Business.business_id == self.business_id
+            ).first()
+            
+            if not business:
+                raise ValueError(f"Business {self.business_id} not found")
+            
+            qbo_service = QBOIntegration(business)
             return {
-                "transactions": service.fetch_transactions(),
-                "jobs": service.fetch_jobs(),
-                "vendors": service.fetch_vendors()
+                "bills": qbo_service.get_bills(self.db, due_days=30),
+                "invoices": qbo_service.get_invoices(self.db, aging_days=30),
+                "balances": qbo_service.fetch_balances(self.db),
+                "synced_at": datetime.now().isoformat()
             }
-        elif platform == "jobber":
-            # TODO: Implement Jobber sync
-            return {"status": "not_implemented"}
-        elif platform == "stripe":
-            # TODO: Implement Stripe sync
-            return {"status": "not_implemented"}
+        elif platform == "plaid":
+            # Use Plaid integration from domains/integrations
+            from domains.integrations.plaid.sync import PlaidSync
+            plaid_service = PlaidSync(self.db, self.business_id)
+            return plaid_service.sync_accounts()
         else:
             raise ValueError(f"Unsupported platform: {platform}")
+    
+    # ==================== QBO-SPECIFIC SYNC METHODS ====================
+    
+    def sync_qbo_bills(self, due_days: int = 30) -> Dict[str, Any]:
+        """Sync QBO bills with smart timing."""
+        return self.sync_platform("qbo", SyncStrategy.EVENT_TRIGGERED)
+    
+    def sync_qbo_invoices(self, aging_days: int = 30) -> Dict[str, Any]:
+        """Sync QBO invoices with smart timing.""" 
+        return self.sync_platform("qbo", SyncStrategy.EVENT_TRIGGERED)
+    
+    def get_qbo_data_for_digest(self) -> Dict[str, Any]:
+        """Get QBO data specifically for digest generation."""
+        # Use ON_DEMAND strategy for digest generation (user is waiting)
+        result = self.sync_platform("qbo", SyncStrategy.ON_DEMAND, SyncPriority.HIGH)
+        
+        if result["status"] == "success":
+            return result["data"]
+        elif result["status"] == "skipped":
+            # Return cached data if sync was skipped
+            cached = self.sync_cache.get("qbo")
+            if cached:
+                return cached["data"]
+        
+        # If no cached data and sync failed, return empty data
+        return {"bills": [], "invoices": [], "balances": []}
     
     def get_sync_status(self, platform: str) -> Dict[str, Any]:
         """Get current sync status for a platform."""

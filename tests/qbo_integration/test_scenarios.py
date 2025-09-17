@@ -18,9 +18,9 @@ from typing import Dict, List, Any
 from unittest.mock import Mock, patch
 
 from domains.core.services.data_ingestion import DataIngestionService
-from runway.services.digest import DigestService
+from runway.digest.services.digest import DigestService
 from runway.tray.services.tray import TrayService
-from runway.services.onboarding import OnboardingService
+from runway.onboarding.services.onboarding import OnboardingService
 from db.session import SessionLocal
 from db.transaction import db_transaction
 

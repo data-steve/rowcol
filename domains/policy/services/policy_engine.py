@@ -47,18 +47,18 @@ class PolicyEngineService:
             vendor_category = self._get_vendor_category(txn.get("vendor_name", ""))
             if vendor_category:
                 top_k.append({
-                    "account": vendor_category.default_gl_account or "6000-Expenses",
+                    "account": vendor_category.default_gl_account or self._get_default_expense_account(),
                     "confidence": 0.6,
-                    "rule_id": "vendor_category",  # Use string instead of None
+                    "rule_id": "vendor_category",
                     "rule_name": f"Vendor Category: {vendor_category.category_name}"
                 })
         
         # Default fallback
         if not top_k:
             top_k.append({
-                "account": "6000-Expenses",
+                "account": self._get_default_expense_account(),
                 "confidence": 0.3,
-                "rule_id": "default",  # Use string instead of None
+                "rule_id": "default",
                 "rule_name": "Default Category"
             })
         
@@ -210,3 +210,8 @@ class PolicyEngineService:
         
         confidence = (base_confidence + priority_boost) * data_quality_score * rule_type_score
         return min(max(confidence, 0.0), 1.0)
+    
+    def _get_default_expense_account(self) -> str:
+        """Get the default expense account for categorization."""
+        # TODO: Make this configurable per business/client
+        return "6000-General Expenses"

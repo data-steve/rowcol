@@ -36,7 +36,7 @@ qbo_scenarios = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(qbo_scenarios)
 QBOSandboxScenarios = qbo_scenarios.QBOSandboxScenarios
 from domains.core.services.data_ingestion import DataIngestionService
-from runway.services.digest import DigestService
+from runway.digest.services.digest import DigestService
 from runway.tray.services.tray import TrayService
 from db.session import SessionLocal
 from db.transaction import db_transaction

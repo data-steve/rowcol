@@ -230,9 +230,10 @@ class RunwayReserveService:
             # Get business reserves
             reserves = self.get_business_reserves(business_id, active_only=True)
             
-            # Mock cash and burn rate calculation (replace with real QBO integration)
-            total_cash = Decimal('100000.00')  # TODO: Get from QBO
-            monthly_burn = Decimal('15000.00')  # TODO: Calculate from QBO expenses
+            # Get cash and burn rate from QBO integration or use defaults for development
+            # TODO: Replace with actual QBO cash flow data
+            total_cash = self._get_business_cash_balance(business_id)
+            monthly_burn = self._calculate_monthly_burn_rate(business_id)
             
             # Calculate reserve impacts
             total_reserved = sum(reserve.current_amount for reserve in reserves)
@@ -279,10 +280,11 @@ class RunwayReserveService:
         """Generate reserve recommendations for a business."""
         reserves = self.get_business_reserves(business_id, active_only=True)
         
-        # Mock business data (replace with real QBO integration)
-        monthly_revenue = Decimal('25000.00')
-        monthly_expenses = Decimal('15000.00')
-        employee_count = 5
+        # Get business data from QBO integration or use defaults for development
+        # TODO: Replace with actual QBO financial data
+        monthly_revenue = self._get_monthly_revenue(business_id)
+        monthly_expenses = self._get_monthly_expenses(business_id)
+        employee_count = self._get_employee_count(business_id)
         
         recommendations = []
         
@@ -355,3 +357,35 @@ class RunwayReserveService:
             recommendations.append("Consider creating an emergency payroll reserve")
         
         return recommendations
+    
+    # ==================== HELPER METHODS FOR QBO DATA ====================
+    
+    def _get_business_cash_balance(self, business_id: str) -> Decimal:
+        """Get current cash balance from QBO or use default for development."""
+        # TODO: Implement QBO cash balance API call
+        # For now, return a reasonable default for development
+        return Decimal('100000.00')
+    
+    def _calculate_monthly_burn_rate(self, business_id: str) -> Decimal:
+        """Calculate monthly burn rate from QBO expense data."""
+        # TODO: Implement QBO expense analysis
+        # For now, return a reasonable default for development
+        return Decimal('15000.00')
+    
+    def _get_monthly_revenue(self, business_id: str) -> Decimal:
+        """Get average monthly revenue from QBO."""
+        # TODO: Implement QBO revenue analysis
+        # For now, return a reasonable default for development
+        return Decimal('25000.00')
+    
+    def _get_monthly_expenses(self, business_id: str) -> Decimal:
+        """Get average monthly expenses from QBO."""
+        # TODO: Implement QBO expense analysis
+        # For now, return a reasonable default for development
+        return Decimal('15000.00')
+    
+    def _get_employee_count(self, business_id: str) -> int:
+        """Get employee count from QBO payroll or HR data."""
+        # TODO: Implement QBO payroll API call
+        # For now, return a reasonable default for development
+        return 5

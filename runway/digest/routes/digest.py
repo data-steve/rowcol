@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from db.session import get_db
-from runway.services.digest import DigestService
+from runway.digest.services.digest import DigestService
 from typing import Dict, Any
 
 router = APIRouter(prefix='/runway', tags=['digest'])
@@ -60,7 +60,7 @@ async def send_all_digests(db: Session = Depends(get_db)):
 @router.get('/digest/email-status')
 async def get_email_provider_status():
     """Get status of email providers"""
-    from runway.services.email import EmailService
+    from runway.digest.services.email import EmailService
     
     email_service = EmailService()
     provider_status = email_service.get_provider_status()
