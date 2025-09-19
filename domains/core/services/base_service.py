@@ -7,7 +7,6 @@ Follows ADR-003 Multi-Tenancy Strategy.
 
 from typing import TypeVar, Type, Optional, List
 from sqlalchemy.orm import Session, Query
-from sqlalchemy import and_
 
 from domains.core.models.business import Business
 from common.exceptions import ValidationError, TenantAccessError
@@ -23,22 +22,26 @@ class TenantAwareService:
     Follows ADR-003 Multi-Tenancy Strategy patterns.
     """
     
-    def __init__(self, db: Session, business_id: str):
+    def __init__(self, db: Session, business_id: str, validate_business: bool = True):
         """
         Initialize tenant-aware service.
         
         Args:
             db: Database session
             business_id: Business identifier for tenant isolation
+            validate_business: Whether to validate business exists (default: True)
             
         Raises:
-            ValidationError: If business_id is invalid
+            ValidationError: If business_id is invalid and validate_business is True
         """
         self.db = db
         self.business_id = business_id
         
-        # Validate business exists
-        self.business = self._validate_business_access(business_id)
+        # Optionally validate business exists
+        if validate_business:
+            self.business = self._validate_business_access(business_id)
+        else:
+            self.business = None
     
     def _validate_business_access(self, business_id: str) -> Business:
         """

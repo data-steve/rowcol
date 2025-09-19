@@ -1,8 +1,7 @@
-from sqlalchemy import Column, DateTime, String, ForeignKey
+from sqlalchemy import Column, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Query
-from typing import TypeVar, Type
     
 Base = declarative_base()
 

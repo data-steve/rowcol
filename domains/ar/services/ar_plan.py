@@ -1,4 +1,3 @@
-from typing import Optional
 from sqlalchemy.orm import Session
 from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice

@@ -1,6 +1,3 @@
-import pytest
-from unittest.mock import patch
-from domains.core.services.qbo_integration import QBOIntegrationService
 
 # This test file is for a QBO integration that lives in a different directory now.
 # This test is likely redundant or outdated.

@@ -3,10 +3,7 @@ Preamble: Tests for TransferService and routes in Stage 1C of the Escher project
 Includes unit and integration tests for transfer creation and detection (Slice 3).
 References: Stage 1C requirements, tests/conftest.py, services/transfer.py.
 """
-import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
-from main import app
 from sqlalchemy.orm import Session
 from domains.bank.services.transfer import TransferService
 from domains.bank.services.bank_transaction import BankTransactionService

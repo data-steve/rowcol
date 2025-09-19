@@ -7,14 +7,14 @@ Essential for Phase 1 AP workflows where documents need human review before bill
 Enhanced for business_id tenant isolation and AP bill processing workflows.
 """
 
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any
 from sqlalchemy.orm import Session
+from sqlalchemy import Float
 from datetime import datetime
 import logging
 
 from domains.core.services.base_service import TenantAwareService
 from domains.core.models.document import Document as DocumentModel
-from domains.ap.models.bill import Bill, BillStatus
 from common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class DocumentReviewService(TenantAwareService):
             elif batch_by == "confidence":
                 # Order by confidence score (lowest first for manual review)
                 query = query.order_by(
-                    DocumentModel.extracted_fields['confidence'].astext.cast(db.Float)
+                    DocumentModel.extracted_fields['confidence'].astext.cast(Float)
                 )
             
             documents = query.limit(limit).all()
@@ -193,7 +193,7 @@ class DocumentReviewService(TenantAwareService):
             # Find high-confidence documents in review status
             documents = self._base_query(DocumentModel).filter(
                 DocumentModel.status == "review",
-                DocumentModel.extracted_fields['confidence'].astext.cast(db.Float) >= confidence_threshold
+                DocumentModel.extracted_fields['confidence'].astext.cast(Float) >= confidence_threshold
             ).all()
             
             approved_docs = []

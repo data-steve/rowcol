@@ -9,8 +9,8 @@ This service handles all business logic for runway reserves including:
 """
 
 from sqlalchemy.orm import Session
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta
+from typing import List
+from datetime import datetime
 from decimal import Decimal
 import logging
 
@@ -19,8 +19,7 @@ from runway.reserves.models.runway_reserve import (
     ReserveType, ReserveStatus
 )
 from runway.reserves.schemas.runway_reserve import (
-    RunwayReserveCreate, RunwayReserveUpdate, ReserveTransactionCreate,
-    ReserveAllocationCreate, RunwayCalculationWithReserves, ReserveRecommendation
+    RunwayReserveCreate, RunwayReserveUpdate, ReserveAllocationCreate, RunwayCalculationWithReserves, ReserveRecommendation
 )
 from db.transaction import db_transaction
 from common.exceptions import (
@@ -33,8 +32,9 @@ logger = logging.getLogger(__name__)
 class RunwayReserveService:
     """Service for managing runway reserves and their impact on cash flow."""
     
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, business_id: str = None):
         self.db = db
+        self.business_id = business_id
     
     def create_reserve(self, reserve_data: RunwayReserveCreate, created_by: str = None) -> RunwayReserve:
         """Create a new runway reserve."""

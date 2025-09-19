@@ -1,6 +1,6 @@
 import argparse
 import os
-from engine import AutoCoder, load_rules_yaml, save_rules_yaml, learn_from_corrections
+from engine import AutoCoder, load_rules_yaml, learn_from_corrections
 
 def cmd_autocode(args):
     rules = load_rules_yaml(args.rules)

@@ -1,8 +1,5 @@
-import pytest
 from sqlalchemy.orm import Session
 from runway.tray.services.tray import TrayService
-from runway.tray.models.tray_item import TrayItem
-from datetime import datetime
 
 def test_get_tray_items(db: Session, test_tray_item):
     tray_service = TrayService(db)

@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from db.session import get_db
 from runway.digest.services.digest import DigestService
-from typing import Dict, Any
 
 router = APIRouter(prefix='/runway', tags=['digest'])
 

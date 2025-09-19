@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import MagicMock
-from domains.ar.services.collections import CollectionsService # This service is parked, but we'll test the shell
 
 # For now, we are just creating a placeholder test since the collections service is parked.
 # This test ensures the test file can be collected by pytest without import errors.

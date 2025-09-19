@@ -4,7 +4,7 @@ Payment model for AP payment tracking and QBO integration.
 Stores payment records with execution status, reconciliation data, and QBO sync fields.
 Business logic handled by PaymentService.
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON, Boolean, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Boolean, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from domains.core.models.base import Base, TimestampMixin, TenantMixin
@@ -80,7 +80,7 @@ class Payment(Base, TimestampMixin, TenantMixin):
     # Relationships
     vendor = relationship("Vendor", back_populates="payments")
     bill = relationship("Bill", back_populates="payments")
-    business = relationship("Business")
+    business = relationship("Business", back_populates="ap_payments")
     approved_by_user = relationship("User", foreign_keys=[approved_by])
     reconciled_by_user = relationship("User", foreign_keys=[reconciled_by])
     created_by_user = relationship("User", foreign_keys=[created_by])

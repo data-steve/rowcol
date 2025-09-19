@@ -1,4 +1,5 @@
-import yaml, pandas as pd
+import yaml
+import pandas as pd
 from pathlib import Path
 from src.downloader import download_usaspending, ensure_mcc_reference, ensure_naics_reference
 from src.cleaners import load_normalize_cfg, normalize_bank_descriptors, build_vendor_canonical, fuzzy_match_descriptors
@@ -29,7 +30,6 @@ def main():
     if Path(sample).exists():
         df_desc = normalize_bank_descriptors(sample, norm_cfg)
         df_desc.to_csv(PROC / "bank_descriptors_norm.csv", index=False)
-        from rapidfuzz import fuzz
         matches = fuzzy_match_descriptors(df_desc["descriptor_norm"].dropna().unique(), vendor_table, score_cutoff=90)
         matches.to_csv(PROC / "descriptor_matches.csv", index=False)
     else:

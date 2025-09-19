@@ -1,4 +1,3 @@
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from domains.core.models.integration import Integration
 from domains.core.models.transaction import Transaction
@@ -6,9 +5,7 @@ from domains.core.providers import DataProvider, get_data_provider
 from db.transaction import db_transaction
 from common.exceptions import DataIngestionError, IntegrationError
 from tenacity import retry, stop_after_attempt, wait_exponential
-from typing import Dict, Any, List, Optional
-import requests
-from datetime import datetime
+from typing import Dict, Any, Optional
 import logging
 
 logger = logging.getLogger(__name__)

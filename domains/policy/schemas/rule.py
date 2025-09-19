@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Dict
 
 class RuleBase(BaseModel):
     business_id: str

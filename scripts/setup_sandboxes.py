@@ -50,8 +50,7 @@ def setup_qbo_sandbox(db: Session) -> Dict[str, Any]:
 
     integration = Integration(
         integration_id="qbo_001",
-        firm_id="tenant_001",
-        client_id=1,
+        business_id="tenant_001",
         platform="qbo",
         access_token=access_token,
         refresh_token=QBO_REFRESH_TOKEN,
@@ -116,8 +115,7 @@ def setup_jobber_sandbox(db: Session) -> Dict[str, Any]:
 
     integration = Integration(
         integration_id="jobber_001",
-        firm_id="tenant_001",
-        client_id=1,
+        business_id="tenant_001",
         platform="jobber",
         access_token=JOBBER_ACCESS_TOKEN,
         refresh_token=os.getenv("JOBBER_REFRESH_TOKEN", "mock_refresh"),
@@ -217,8 +215,7 @@ def setup_stripe_sandbox(db: Session) -> Dict[str, Any]:
 
     integration = Integration(
         integration_id="stripe_001",
-        firm_id="tenant_001",
-        client_id=1,
+        business_id="tenant_001",
         platform="stripe",
         access_token=STRIPE_SECRET_KEY,
         refresh_token=None,

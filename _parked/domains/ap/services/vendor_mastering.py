@@ -4,7 +4,6 @@ from quickbooks.objects import Vendor as QBOVendor
 from domains.ap.models.vendor import Vendor as VendorModel
 from domains.ap.models.vendor_canonical import VendorCanonical as VendorCanonicalModel
 from domains.ap.schemas.vendor import Vendor
-from domains.ap.schemas.vendor_canonical import VendorCanonical
 from docs.normalization_tagging.escher_vendor_brain_v0_1.src.cleaners import build_vendor_canonical, fuzzy_match_descriptors, normalize_descriptor, load_normalize_cfg
 from typing import Optional, List
 import pandas as pd

@@ -2,8 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 class VendorCanonicalBase(BaseModel):
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: str
     raw_name: str
     canonical_name: str
     mcc: Optional[str] = None

@@ -1,14 +1,11 @@
-from typing import List, Dict, Optional, Any
+from typing import Dict, Optional
 from sqlalchemy.orm import Session
 from domains.ap.models.policy_rule_template import PolicyRuleTemplate as PolicyRuleTemplate
 from domains.policy.models.rule import Rule as RuntimeRule
 from domains.policy.models.correction import Correction as CorrectionModel
 from domains.policy.models.suggestion import Suggestion as SuggestionModel
-from domains.policy.models.policy_profile import PolicyProfile as PolicyProfileModel
 from domains.ap.models.vendor_category import VendorCategory
-from domains.policy.schemas.suggestion import Suggestion
 from domains.policy.schemas.correction import Correction
-from domains.policy.schemas.rule import Rule
 import re
 import json
 
@@ -18,7 +15,7 @@ class PolicyEngineService:
     def __init__(self, db: Session):
         self.db = db
 
-    def categorize_transaction(self, txn: Dict, firm_id: str, client_id: Optional[int] = None) -> SuggestionModel:
+    def categorize_transaction(self, txn: Dict, business_id: str) -> SuggestionModel:
         """Categorize a transaction using real policy rules from database."""
         # Get applicable policy rules for this transaction
         rules = self.db.query(PolicyRuleTemplate).filter(
@@ -63,8 +60,7 @@ class PolicyEngineService:
             })
         
         suggestion = SuggestionModel(
-            firm_id=firm_id,
-            client_id=client_id,
+            business_id=business_id,
             txn_id=txn.get("txn_id"),
             top_k=top_k,
             chosen_idx=None
@@ -74,32 +70,31 @@ class PolicyEngineService:
         self.db.refresh(suggestion)
         return suggestion
 
-    def categorize(self, firm_id: str, description: str, amount: float, client_id: Optional[int] = None) -> SuggestionModel:
+    def categorize(self, business_id: str, description: str, amount: float) -> SuggestionModel:
         """Categorize a transaction by description and amount (wrapper for categorize_transaction)."""
         txn = {
             "description": description,
             "amount": amount,
             "txn_id": f"txn_{hash(description)}"
         }
-        return self.categorize_transaction(txn, firm_id, client_id)
+        return self.categorize_transaction(txn, business_id)
 
-    def add_rule(self, firm_id: str, pattern: str, output: Dict, client_id: Optional[int] = None, priority: int = 10, match_type: str = "exact") -> RuntimeRule:
+    def add_rule(self, business_id: str, pattern: str, output: Dict, priority: int = 10, match_type: str = "exact") -> RuntimeRule:
         """Add a new runtime rule (not a template)."""
         rule = RuntimeRule(
-            firm_id=firm_id,
-            client_id=client_id,
+            business_id=business_id,
             priority=priority,
             match_type=match_type,
             pattern=pattern,
             output=output,
-            scope="client" if client_id else "global",
+            scope="global",
         )
         self.db.add(rule)
         self.db.commit()
         self.db.refresh(rule)
         return rule
 
-    def apply_correction(self, correction: Correction, firm_id: str) -> CorrectionModel:
+    def apply_correction(self, correction: Correction, business_id: str) -> CorrectionModel:
         """Persist a correction and update rules if applicable."""
         db_correction = CorrectionModel(**correction.dict())
         self.db.add(db_correction)

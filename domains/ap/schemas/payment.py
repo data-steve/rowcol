@@ -3,8 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 
 class PaymentBase(BaseModel):
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: str
     qbo_id: Optional[str] = None
     customer_id: Optional[int] = None
     invoice_ids: Optional[List[int]] = None
@@ -23,3 +22,19 @@ class Payment(PaymentBase):
 
     class Config:
         from_attributes = True
+
+# API Response schemas
+class PaymentResponse(Payment):
+    """Response schema for Payment API endpoints"""
+    pass
+
+class PaymentExecutionRequest(BaseModel):
+    """Request schema for payment execution"""
+    payment_id: int
+    execute_date: Optional[datetime] = None
+
+class PaymentScheduleRequest(BaseModel):
+    """Request schema for payment scheduling"""
+    bill_id: int
+    scheduled_date: datetime
+    amount: Optional[float] = None

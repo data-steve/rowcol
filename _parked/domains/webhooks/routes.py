@@ -1,11 +1,9 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from domains.core.services.data_ingestion import DataIngestionService
 from domains.webhooks.models.webhook_event import WebhookEvent
 from domains.integrations.plaid.sync import PlaidSyncService
 from db.session import get_db
-import os
 
 router = APIRouter()
 

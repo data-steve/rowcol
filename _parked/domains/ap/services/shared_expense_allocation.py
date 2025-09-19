@@ -63,12 +63,9 @@ from typing import Dict, List, Any, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import uuid
-import re
 
 # Import existing AP services and models for integration
 from .vendor_normalization import VendorNormalizationService
-from ..models.bill import Bill
-from ..models.vendor_canonical import VendorCanonical
 from domains.policy.services.policy_engine import PolicyEngineService
 
 

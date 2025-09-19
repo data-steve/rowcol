@@ -1,6 +1,6 @@
 """Mock data provider for TrayService development and testing."""
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from abc import ABC, abstractmethod
 import os
 

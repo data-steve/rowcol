@@ -3,11 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from db import create_db_and_tables
 from domains import router as domains_router
-from runway.auth.routes.auth import router as auth_router
-from runway.auth.routes.users import router as users_router
-from runway.businesses.routes.businesses import router as businesses_router  
-from runway.digest.routes.digest import router as digest_router
-from runway.middleware import setup_cors, AuthMiddleware, LoggingMiddleware, ErrorHandlingMiddleware
+from runway import router as runway_router
+from runway.auth.middleware import setup_cors, AuthMiddleware, LoggingMiddleware, ErrorHandlingMiddleware
 import logging
 import os
 
@@ -42,13 +39,9 @@ def on_startup():
     create_db_and_tables()
     logging.info("Oodaloo Runway API started successfully")
 
-# Include routers
-app.include_router(auth_router)
-app.include_router(businesses_router)
-app.include_router(users_router)
-app.include_router(digest_router)
-app.include_router(runway_router)  # Existing runway routes (onboarding, tray)
-app.include_router(domains_router)  # Domain-specific internal routes
+# Include routers - clean cascading import pattern
+app.include_router(runway_router)  # All runway product APIs
+app.include_router(domains_router)  # All domain-specific internal APIs
 
 @app.get("/")
 async def root():

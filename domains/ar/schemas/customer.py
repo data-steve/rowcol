@@ -17,3 +17,8 @@ class Customer(CustomerBase):
 
     class Config:
         from_attributes = True
+
+# API Response schemas
+class CustomerResponse(Customer):
+    """Response schema for Customer API endpoints"""
+    pass

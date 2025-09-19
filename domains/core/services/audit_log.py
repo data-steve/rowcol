@@ -7,7 +7,6 @@ from typing import Optional, Dict, Any
 import json
 import uuid
 from enum import Enum
-from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy.inspection import inspect
 
 
@@ -48,7 +47,7 @@ class AuditLogService:
     async def log_audit_event(
         self,
         user_id: Optional[str],
-        firm_id: Optional[str],
+        business_id: Optional[str],
         action: AuditAction,
         entity_type: EntityType,
         entity_id: str,
@@ -69,7 +68,7 @@ class AuditLogService:
         audit_log = AuditLog(
             id=str(uuid.uuid4()),
             performed_by_user_id=user_id,
-            context_firm_id=firm_id,
+            context_business_id=business_id,
             source=source,
             action=action,
             entity_type=entity_type,

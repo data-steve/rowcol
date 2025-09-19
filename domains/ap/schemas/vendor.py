@@ -2,8 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 class VendorBase(BaseModel):
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: str
     canonical_id: Optional[int] = None
     qbo_id: Optional[str] = None
     w9_status: str = "pending"
@@ -19,3 +18,14 @@ class Vendor(VendorBase):
 
     class Config:
         from_attributes = True
+
+# API Request/Response schemas
+class VendorUpdate(BaseModel):
+    """Update schema for Vendor"""
+    name: Optional[str] = None
+    contact_email: Optional[str] = None
+    payment_terms: Optional[str] = None
+
+class VendorResponse(Vendor):
+    """Response schema for Vendor API endpoints"""
+    pass

@@ -8,7 +8,7 @@ from typing import Optional
 from datetime import datetime
 
 class TransferBase(BaseModel):
-    firm_id: str
+    business_id: str
     source_transaction_id: int
     destination_transaction_id: int
     amount: float

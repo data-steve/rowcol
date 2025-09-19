@@ -1,7 +1,5 @@
 import pytest
 import requests
-from datetime import datetime, timedelta
-from domains.core.models import Integration
 from database import SessionLocal
 from scripts.setup_sandboxes import setup_qbo_sandbox, setup_jobber_sandbox, setup_stripe_sandbox
 import stripe

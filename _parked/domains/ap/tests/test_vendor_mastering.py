@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from domains.ap.services.vendor_mastering import VendorMasteringService
 from domains.vendor_normalization.models import VendorCanonical as VendorCanonicalModel
 from domains.ap.models.vendor import Vendor as VendorModel

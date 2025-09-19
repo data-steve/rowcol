@@ -1,10 +1,9 @@
-from fastapi import Form, Depends, HTTPException
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.user import User
 from domains.core.models.integration import Integration
 from domains.core.services.audit_log import AuditLogService
-from db.session import get_db
 from db.transaction import db_transaction
 from common.exceptions import (
     OnboardingError, 
@@ -13,7 +12,7 @@ from common.exceptions import (
     ValidationError
 )
 from config.business_rules import OnboardingSettings, IntegrationStatuses
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import secrets
 import os

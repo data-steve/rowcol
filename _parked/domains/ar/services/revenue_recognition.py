@@ -55,11 +55,8 @@ This service ensures contractors can:
 - Handle complex project billing scenarios correctly
 """
 
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from typing import Dict, List, Any
 from sqlalchemy.orm import Session
-import uuid
 
 from .types import RevenueRecognitionMethod, RevenueRecognitionEntry
 

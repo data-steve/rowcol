@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean
 from domains.core.models.base import Base, TimestampMixin
 
 class COATemplate(Base, TimestampMixin):

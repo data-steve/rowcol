@@ -17,8 +17,9 @@ class Business(Base, TimestampMixin, TenantMixin):
     tray_items = relationship("TrayItem", back_populates="business")
     users = relationship("User", back_populates="business")
     transactions = relationship("Transaction", back_populates="business")
-    # ap_payments = relationship("domains.ap.models.payment.Payment", back_populates="business")  # Parked for Phase 0
-    # ar_payments = relationship("domains.ar.models.payment.Payment", back_populates="business")  # Parked for Phase 0
+    ap_payments = relationship("domains.ap.models.payment.Payment", back_populates="business")
+    ar_payments = relationship("domains.ar.models.payment.ARPayment", back_populates="business")
+    bank_transactions = relationship("domains.bank.models.bank_transaction.BankTransaction", back_populates="business")
     
-    # Runway reserves (product-specific, not QBO primitive)
-    runway_reserves = relationship("runway.reserves.models.runway_reserve.RunwayReserve", back_populates="business")
+    # Runway reserves relationship removed to enforce ADR-001
+    # The relationship is now defined on the RunwayReserve model itself.

@@ -1,15 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch
 
 from main import app  # Import your FastAPI app
 from dotenv import load_dotenv
 import os
-import stripe
-import hmac
-import hashlib
-import json
-import time
 
 load_dotenv()
 

@@ -1,30 +1,21 @@
 from sqlalchemy.orm import Session
 from domains.policy.models.suggestion import Suggestion as SuggestionModel
 from domains.core.models.document import Document as DocumentModel
-from domains.core.models.task import Task as TaskModel
 
 class KPIService:
     def __init__(self, db: Session):
         self.db = db
 
-    def calculate_kpis(self, firm_id: str) -> dict:
-        suggestions = self.db.query(SuggestionModel).filter(SuggestionModel.firm_id == firm_id).all()
-        documents = self.db.query(DocumentModel).filter(DocumentModel.firm_id == firm_id).all()
-        tasks = self.db.query(TaskModel).filter(TaskModel.firm_id == firm_id).all()
-
-        total_txns = len(suggestions)
-        auto_posted = len([s for s in suggestions if s.top_k and s.top_k[0]["confidence"] >= 0.9])
-        overrides = len([s for s in suggestions if s.chosen_idx is not None])
-        doc_processing_time = 0
-        csv_error_rate = 0
-        ocr_review_time = 0
-        task_completion_rate = len([t for t in tasks if t.status == "completed"]) / len(tasks) if tasks else 0
-
+    def calculate_kpis(self, business_id: str) -> dict:
+        """
+        Calculates Key Performance Indicators for a given firm.
+        """
+        # Placeholder for real KPI logic
+        document_count = self.db.query(DocumentModel).count()
+        suggestion_count = self.db.query(SuggestionModel).count()
+        
         return {
-            "percent_auto_posted": (auto_posted / total_txns * 100) if total_txns else 0,
-            "override_rate": (overrides / total_txns * 100) if total_txns else 0,
-            "doc_processing_time": doc_processing_time,
-            "csv_error_rate": csv_error_rate,
-            "ocr_review_time": ocr_review_time,
-            "task_completion_rate": task_completion_rate * 100
+            "total_documents": document_count,
+            "total_suggestions": suggestion_count,
+            "tasks_pending": 0  # Hardcoded to 0 since Task model is parked
         }

@@ -8,7 +8,6 @@ Follows ADR-002 Mock-First Development Strategy.
 import uuid
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
-from decimal import Decimal
 import random
 
 from .qbo_provider import QBOAPProvider

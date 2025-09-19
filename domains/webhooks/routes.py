@@ -1,11 +1,9 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from domains.core.services.data_ingestion import DataIngestionService
 from domains.webhooks.models.webhook_event import WebhookEvent
 from domains.integrations.plaid.sync import PlaidSyncService
 from db.session import get_db
-import os
 
 router = APIRouter()
 
@@ -19,18 +17,18 @@ class WebhookPayload(BaseModel):
 async def plaid_webhook(request: Request, db: Session = Depends(get_db)):
     """Process Plaid webhook events (TRANSACTIONS_UPDATE, etc.)."""
     payload = await request.json()
-    firm_id = payload.get("firm_id")  # Assume added via integration setup
+    business_id = payload.get("business_id")  # Assume added via integration setup
     event_key = f"plaid:{payload.get('transaction_id')}:{payload.get('created', '')[:10]}"
 
     if db.query(WebhookEvent).filter(
-        WebhookEvent.firm_id == firm_id,
+        WebhookEvent.business_id == business_id,
         WebhookEvent.id == event_key
     ).first():
         return {"status": "duplicate"}
 
     db.add(WebhookEvent(
         id=event_key,
-        firm_id=firm_id,
+        business_id=business_id,
         source="plaid",
         external_id=payload.get("transaction_id"),
         day_bucket=payload.get("created", "")[:10]
@@ -38,7 +36,7 @@ async def plaid_webhook(request: Request, db: Session = Depends(get_db)):
 
     service = PlaidSyncService(db)
     try:
-        result = await service.sync(firm_id, commit=True)
+        result = await service.sync(business_id, commit=True)
         return {"status": "success", "processed": len(result.get("added", []))}
     except Exception as e:
         return {"status": "error", "message": str(e)}

@@ -5,7 +5,7 @@ References: Stage 2 requirements, domains/close/schemas/preclose.py, domains/clo
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from domains.close.services.preclose import PreCloseService, PBCTrackerService
-from domains.close.schemas.preclose import PreCloseCheck, PreCloseCheckCreate, Exception, ExceptionCreate, PBCRequest, PBCRequestCreate, CloseChecklist, CloseChecklistCreate, KPIResponse
+from domains.close.schemas.preclose import PreCloseCheck, Exception, PBCRequest, PBCRequestCreate, CloseChecklist, CloseChecklistCreate, KPIResponse
 from domains.close.models.preclose import Exception as ExceptionModel, CloseChecklist as CloseChecklistModel
 from database import get_db
 from typing import List, Optional

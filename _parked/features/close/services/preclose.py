@@ -4,12 +4,11 @@ Handles pre-close checks, PBC tracking, client communications, and client portal
 References: Stage 2 requirements, domains/bank/models/bank_transaction.py, domains/payroll/models/payroll.py, domains/core/services/task.py.
 """
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 from domains.close.models.preclose import PreCloseCheck as PreCloseCheckModel, Exception as ExceptionModel, PBCRequest as PBCRequestModel, CloseChecklist as CloseChecklistModel
 from domains.bank.models.bank_transaction import BankTransaction as BankTransactionModel
 from domains.payroll.models.payroll import PayrollBatch as PayrollBatchModel
 from domains.core.models.task import Task as TaskModel
-from domains.close.schemas.preclose import PreCloseCheck, PreCloseCheckCreate, Exception, ExceptionCreate, PBCRequest, PBCRequestCreate, CloseChecklist, CloseChecklistCreate, KPIResponse
+from domains.close.schemas.preclose import Exception, PBCRequestCreate, KPIResponse
 from domains.bank.services.bank_transaction import BankTransactionService
 from domains.payroll.services.payroll import PayrollService
 from domains.core.services.task import TaskService

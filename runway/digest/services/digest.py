@@ -2,14 +2,12 @@ from sqlalchemy.orm import Session
 from domains.core.models.balance import Balance
 from domains.core.models.business import Business
 from domains.core.models.user import User
-from domains.ap.models.bill import Bill
-from domains.ar.models.invoice import Invoice
-from domains.core.services.smart_sync import SmartSyncService
+from domains.integrations.smart_sync import SmartSyncService
 from runway.digest.services.email import EmailService
-from common.exceptions import BusinessNotFoundError, RunwayCalculationError, EmailDeliveryError
-from config.business_rules import DigestSettings, RunwayThresholds
+from common.exceptions import BusinessNotFoundError, EmailDeliveryError
+from config.business_rules import DigestSettings
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict
 import logging
 
 logger = logging.getLogger(__name__)

@@ -14,15 +14,15 @@ Business Context:
 - Reserve utilization affects runway calculations in real-time
 """
 
-from sqlalchemy import Column, String, Integer, Float, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List, Optional, Any
+from typing import Dict, Any
 from enum import Enum
 
-from db.base import Base
+from domains.core.models.base import Base, TimestampMixin, TenantMixin
 
 class ReserveType(Enum):
     """Types of runway reserves."""
@@ -79,7 +79,7 @@ class RunwayReserve(Base):
     created_by = Column(String(36), ForeignKey("users.user_id"))
     
     # Relationships
-    business = relationship("domains.core.models.business.Business", back_populates="runway_reserves")
+    business = relationship("domains.core.models.business.Business", backref="runway_reserves")
     reserve_transactions = relationship("ReserveTransaction", back_populates="reserve")
     reserve_allocations = relationship("ReserveAllocation", back_populates="reserve")
     

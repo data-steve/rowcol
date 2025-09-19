@@ -71,3 +71,15 @@ class ConfigurationError(OodalooBaseException):
 class DataIngestionError(OodalooBaseException):
     """Raised when data ingestion fails."""
     pass
+
+class TenantAccessError(AuthorizationError):
+    """Raised when user tries to access data outside their tenant."""
+    pass
+
+class QBOSyncError(IntegrationError):
+    """Raised when QBO synchronization fails."""
+    pass
+
+class BusinessRuleViolationError(BusinessError):
+    """Raised when business rule validation fails."""
+    pass

@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 from .base import EmailProvider, EmailMessage, EmailResult
 from .sendgrid_provider import SendGridProvider
 from .ses_provider import SESProvider

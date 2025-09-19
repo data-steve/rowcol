@@ -291,7 +291,8 @@ class TestQBOSandboxIntegration:
     
     def test_qbo_connection(self):
         """Test QBO API connectivity."""
-        qbo_service = QBOIntegrationService()
+        # Use SmartSyncService as the unified QBO coordinator
+        smart_sync = SmartSyncService(db, business_id)
         result = qbo_service.test_connection()
         
         assert result["status"] == "connected"

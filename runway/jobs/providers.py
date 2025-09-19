@@ -6,11 +6,10 @@ with the same interface for easy switching.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 import os
 import json
 import logging
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +132,6 @@ class RedisJobProvider(JobProvider):
     
     def save_job(self, job: "Job") -> None:
         """Save job to Redis."""
-        from runway.jobs.job_runner import Job  # Import here to avoid circular import
         
         # Save job data
         job_key = self._job_key(job.id)

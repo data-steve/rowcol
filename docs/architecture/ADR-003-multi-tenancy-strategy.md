@@ -213,7 +213,7 @@ Each business maintains its own QBO connection:
 
 ```python
 # QBO integration per tenant
-class QBOIntegrationService:
+class SmartSyncService:  # Unified QBO coordinator
     def __init__(self, business_id: str):
         self.business_id = business_id
         self.integration = self._get_business_integration(business_id)
@@ -295,40 +295,7 @@ def get_accessible_businesses(user: User) -> List[str]:
 
 ## Testing Strategy
 
-### **Tenant Isolation Testing**
-
-```python
-def test_tenant_data_isolation():
-    """Ensure businesses cannot access each other's data."""
-    business_a = create_test_business("business_a")
-    business_b = create_test_business("business_b")
-    
-    # Create data for business A
-    tray_item_a = create_tray_item(business_id=business_a.business_id)
-    
-    # Business B should not see business A's data
-    tray_service_b = TrayService(db, business_b.business_id)
-    items_b = tray_service_b.get_tray_items()
-    
-    assert tray_item_a not in items_b
-    assert len(items_b) == 0
-```
-
-### **Performance Testing**
-
-```python
-def test_tenant_query_performance():
-    """Ensure tenant filtering doesn't degrade performance."""
-    # Create 1000 businesses with data
-    businesses = [create_test_business(f"business_{i}") for i in range(1000)]
-    
-    # Query should be fast with proper indexing
-    start_time = time.time()
-    items = get_tray_items(businesses[500].business_id)
-    query_time = time.time() - start_time
-    
-    assert query_time < 0.1  # Sub-100ms performance
-```
+Multi-tenancy testing approaches are covered in **ADR-002: Testing Strategy**, including tenant isolation verification, performance testing, and decoupled testing patterns for tenant-aware services.
 
 ## Benefits
 

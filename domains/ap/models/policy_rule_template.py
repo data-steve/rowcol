@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Boolean, JSON
 from domains.core.models.base import Base, TimestampMixin
 
 class PolicyRuleTemplate(Base, TimestampMixin):

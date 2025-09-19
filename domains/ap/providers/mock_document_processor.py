@@ -8,7 +8,6 @@ Follows ADR-002 Mock-First Development Strategy.
 import random
 from datetime import datetime, timedelta
 from typing import Dict, Any
-from decimal import Decimal
 
 from .document_processor import DocumentProcessor
 

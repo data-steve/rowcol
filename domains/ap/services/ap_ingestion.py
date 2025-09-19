@@ -1,71 +1,33 @@
-from typing import List, Dict, Optional
+from typing import Dict, Optional, List
 from sqlalchemy.orm import Session
-from intuitlib.client import AuthClient
-from intuitlib.enums import Scopes
-from quickbooks import QuickBooks
-from quickbooks.objects import Bill as QBOBill
-from domains.ap.models.bill import Bill as BillModel
+from domains.core.services.base_service import TenantAwareService
+from domains.integrations.smart_sync import SmartSyncService
+from domains.ap.models.bill import Bill as BillModel, BillStatus
 from domains.vendor_normalization.models import VendorCanonical as VendorCanonicalModel
 from domains.ap.schemas.bill import Bill
-from domains.vendor_normalization.schemas import VendorCanonical
 from domains.vendor_normalization.services import VendorNormalizationService
 from .ocr_adapter import get_ocr_adapter
-import os
-from dotenv import load_dotenv
 from domains.vendor_normalization.cleaners import normalize_descriptor, load_normalize_cfg
+from common.exceptions import ValidationError, QBOSyncError
+from db.transaction import db_transaction
 from datetime import datetime
 import dateutil.parser
-import json
+import logging
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
-class IngestionService:
-    def __init__(self, db: Session):
-        self.db = db
-        self.auth_client = AuthClient(
-            client_id=os.getenv("QBO_CLIENT_ID"),
-            client_secret=os.getenv("QBO_CLIENT_SECRET"),
-            redirect_uri=os.getenv("QBO_REDIRECT_URI", "http://localhost:8000/callback"),
-            environment="sandbox"
-        )
-        
-        # Set tokens from environment
-        access_token = os.getenv("QBO_ACCESS_TOKEN")
-        refresh_token = os.getenv("QBO_REFRESH_TOKEN")
-        realm_id = os.getenv("QBO_REALM_ID")
-        
-        if access_token and refresh_token and realm_id:
-            self.auth_client.access_token = access_token
-            self.auth_client.refresh_token = refresh_token
-            self.auth_client.realm_id = realm_id
-            
-            # Initialize QBO client
-            self.qbo_client = QuickBooks(
-                sandbox=True,
-                consumer_key=os.getenv("QBO_CLIENT_ID"),
-                consumer_secret=os.getenv("QBO_CLIENT_SECRET"),
-                access_token=access_token,
-                access_token_secret=refresh_token,
-                company_id=realm_id
-            )
-        else:
-            # For testing or when tokens aren't available
-            self.qbo_client = None
-            
+class IngestionService(TenantAwareService):
+    def __init__(self, db: Session, business_id: str):
+        super().__init__(db, business_id)
+        # TODO: Complete refactor to use SmartSyncService instead of direct QBO client
+        # This addresses the critical architectural violation identified in code audit
+        self.smart_sync = SmartSyncService(db, business_id)
         self.ocr_adapter = get_ocr_adapter()
         self.vendor_service = VendorNormalizationService(db)
-        self.norm_cfg = load_normalize_cfg("domains/vendor_normalization/config/normalize.yaml")
+        self.norm_cfg = load_normalize_cfg("domains/vendor_normalization/scripts/config/normalize.yaml")
 
-    def refresh_token(self):
-        """Refresh QBO access token."""
-        try:
-            self.auth_client.refresh()
-            # Update .env or database with new tokens
-            os.environ["QBO_ACCESS_TOKEN"] = self.auth_client.access_token
-            os.environ["QBO_REFRESH_TOKEN"] = self.auth_client.refresh_token
-            # TODO: Store in qbo_tokens table
-        except Exception as e:
-            raise ValueError(f"Token refresh failed: {str(e)}")
+    # Token refresh is now handled centrally by QBOAuth and SmartSyncService
+    # Individual services should not manage tokens directly
 
     def _parse_date(self, date_value) -> Optional[datetime]:
         """Parse date value to datetime object."""
@@ -76,11 +38,11 @@ class IngestionService:
         if isinstance(date_value, str):
             try:
                 return dateutil.parser.parse(date_value)
-            except:
+            except (ValueError, TypeError):
                 return None
         return None
 
-    def sync_bills(self, business_id: str, client_id: Optional[int] = None, full_sync: bool = False) -> Dict:
+    def sync_bills(self, business_id: str, full_sync: bool = False) -> Dict:
         """Sync bills from QBO and store in database."""
         if not self.qbo_client:
             return {"status": "error", "message": "QBO client not configured"}
@@ -125,12 +87,11 @@ class IngestionService:
                 if not bill:
                     bill = BillModel(
                         business_id=business_id,
-                        client_id=client_id,
                         vendor_id=vendor.vendor_id if vendor else None,
                         qbo_bill_id=qbo_bill.Id,
                         amount=qbo_bill.TotalAmt,
                         due_date=due_date,
-                        status="pending",
+                        status=BillStatus.PENDING.value,
                         gl_account="6000-Expenses" if "food" in normalized_name.lower() else None,
                         confidence=0.9 if "food" in normalized_name.lower() else 0.7
                     )
@@ -166,7 +127,7 @@ class IngestionService:
             qbo_bill_id=extracted.get("invoice_number", "mock_" + str(hash(file_path))),
             amount=float(extracted.get("amount", 0.0)),
             due_date=due_date,
-            status="pending",
+            status=BillStatus.PENDING.value,
             extracted_fields=extracted,  # Direct assignment for JSON field
             gl_account="6000-Expenses" if "food" in normalized_name.lower() else None,
             confidence=0.9 if "food" in normalized_name.lower() else 0.7

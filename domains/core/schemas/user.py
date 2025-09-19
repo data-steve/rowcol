@@ -11,16 +11,18 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
-class UserUpdate(BaseModel):
-    role: Optional[str] = None
-    email: Optional[str] = None
-    permissions: Optional[Dict] = None
-    training_level: Optional[str] = None
-    is_active: Optional[bool] = None
-
 class User(UserBase):
     user_id: str
     is_active: Optional[bool] = True
 
     class Config:
         from_attributes = True
+
+# API Request/Response schemas  
+class UserUpdate(BaseModel):
+    """Update schema for User"""
+    email: Optional[str] = None
+    role: Optional[str] = None
+    permissions: Optional[Dict] = None
+    training_level: Optional[str] = None
+    is_active: Optional[bool] = None

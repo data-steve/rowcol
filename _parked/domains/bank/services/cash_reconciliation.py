@@ -5,15 +5,9 @@ This engine handles the direct matching of cash deposits (payments) to outstandi
 implementing the sophisticated payment matching algorithm that was previously embedded
 in the monolithic reconciliation service.
 """
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
+from datetime import datetime
 from sqlalchemy.orm import Session
-import json
-import uuid
-import math
-from enum import Enum
-from itertools import combinations
 from domains.bank.models.bank_transaction import BankTransaction
 from domains.ar.services.types import MatchConfidence, PaymentMatch
 from domains.identity_graph import services as ig, consolidate as igc

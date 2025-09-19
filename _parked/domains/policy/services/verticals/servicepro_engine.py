@@ -1,6 +1,5 @@
 from typing import List, Dict, Optional, Any, Tuple
 from dataclasses import dataclass
-from sqlalchemy.orm import Session
 from sqlalchemy import text
 import json
 import re

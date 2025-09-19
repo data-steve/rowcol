@@ -3,8 +3,7 @@ Payment Application Service for AR domain.
 Handles payment application to invoices with tenant isolation.
 """
 from sqlalchemy.orm import Session
-from domains.ap.models.payment import Payment as PaymentModel
-from domains.ar.models.invoice import Invoice as InvoiceModel
+from domains.ar.models.payment import Payment as PaymentModel
 from datetime import datetime
 from typing import Optional
 
@@ -22,9 +21,9 @@ class PaymentApplicationService:
                 business_id=business_id,
                 customer_id=customer_id,
                 amount=amount,
-                date=date,
-                method=method,
-                status="applied"
+                payment_date=date,
+                payment_method=method,
+                status="matched"  # AR payments use "matched" status
             )
             
             self.db.add(payment)

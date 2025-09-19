@@ -67,7 +67,7 @@ def audit_log(
             )
             await audit_service.log_audit_event(
                 user_id=str(current_user.id),
-                firm_id=str(current_user.firm_id),
+                business_id=str(current_user.business_id),
                 action=action,
                 entity_type=entity_type,
                 entity_id=str(entity_id),

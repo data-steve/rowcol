@@ -268,7 +268,7 @@ If we eventually move to microservices, this architecture provides natural servi
 ### Issue Identified
 During Phase 1 development, a **critical ADR-001 violation** was discovered:
 - Multiple services were making direct QBO API calls
-- `DigestService` (runway/) was calling `QBOIntegrationService` directly
+- `DigestService` (runway/) was calling `QBOIntegrationService` directly (now fixed to use SmartSyncService)
 - `SmartSyncService` (domains/) was duplicating QBO logic
 - No unified coordination of QBO rate limiting and sync timing
 

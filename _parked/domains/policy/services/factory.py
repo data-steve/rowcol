@@ -1,6 +1,5 @@
 # domains/policy/services/factory.py
 from sqlalchemy.orm import Session
-from typing import Optional
 from domains.policy.services.policy_engine import PolicyEngineService
 from domains.policy.services.verticals.servicepro_engine import ServiceProPolicyEngine
 from domains.policy.models.policy_profile import PolicyProfile as PolicyProfileModel

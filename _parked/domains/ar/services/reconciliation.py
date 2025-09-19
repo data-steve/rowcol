@@ -4,14 +4,12 @@ Bundled AR Matching Engine for Service Contractors - V3
 This file acts as the main orchestrator for the accounts receivable reconciliation process.
 It coordinates the distinct steps of cash reconciliation and revenue recognition.
 """
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
+from typing import Dict, List, Any
 from sqlalchemy.orm import Session
-from enum import Enum
 
 # Import the new dedicated services
 from .cash_reconciliation import CashReconciliationService
-from .types import MatchConfidence, PaymentMatch
+from .types import PaymentMatch
 # Disabled: RevenueRecognitionService, SharedExpenseAllocationService - not core ServicePro features
 
 

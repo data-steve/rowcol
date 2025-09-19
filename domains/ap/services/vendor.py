@@ -11,10 +11,9 @@ Handles vendor business logic and lifecycle operations:
 Enhanced service following established architecture patterns.
 """
 
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from datetime import datetime
-from decimal import Decimal
 import logging
 
 from domains.core.services.base_service import TenantAwareService
@@ -195,13 +194,13 @@ class VendorService(TenantAwareService):
     def get_critical_vendors(self) -> List[Vendor]:
         """Get all critical vendors for the business."""
         return self._base_query(Vendor).filter(
-            Vendor.is_critical == True,
-            Vendor.is_active == True
+            Vendor.is_critical,
+            Vendor.is_active
         ).all()
     
     def get_vendors_needing_w9_update(self) -> List[Vendor]:
         """Get vendors that need W9 updates."""
-        vendors = self._base_query(Vendor).filter(Vendor.is_active == True).all()
+        vendors = self._base_query(Vendor).filter(Vendor.is_active).all()
         return [v for v in vendors if self.vendor_needs_w9_update(v)]
     
     def get_vendor_payment_history_summary(self, vendor_id: int) -> Dict[str, Any]:

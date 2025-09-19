@@ -11,21 +11,18 @@ Handles the complete lifecycle of bills from ingestion through payment:
 Enhanced from basic BillIngestionService to include comprehensive functionality.
 """
 
-from typing import List, Dict, Optional, Any, Tuple
+from typing import List, Dict, Optional, Any
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from decimal import Decimal
-import uuid
 import logging
 from fastapi import UploadFile, HTTPException
 
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.bill import Bill, BillStatus, BillPriority
 from domains.ap.models.vendor import Vendor
-from domains.ap.models.payment import Payment
-from domains.core.models.user import User
 from domains.ap.providers.factories import get_qbo_ap_provider, get_document_processor
-from common.exceptions import ValidationError, BusinessRuleViolationError
+from common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +43,8 @@ class BillService(TenantAwareService):
     """
     
     def __init__(self, db: Session, business_id: str, 
-                 qbo_provider=None, document_processor=None, runway_reserve_service=None):
+                 qbo_provider=None, document_processor=None, runway_reserve_service=None,
+                 validate_business: bool = True):
         """
         Initialize bill service with tenant isolation.
         
@@ -56,8 +54,9 @@ class BillService(TenantAwareService):
             qbo_provider: Optional QBO provider (uses factory if None)
             document_processor: Optional document processor (uses factory if None)
             runway_reserve_service: Optional runway reserve service
+            validate_business: Whether to validate business exists (default: True)
         """
-        super().__init__(db, business_id)
+        super().__init__(db, business_id, validate_business=validate_business)
         
         self.qbo_provider = qbo_provider or get_qbo_ap_provider(business_id)
         self.document_processor = document_processor or get_document_processor()
@@ -146,13 +145,31 @@ class BillService(TenantAwareService):
         URGENT_DAYS_THRESHOLD = 7
         HIGH_AMOUNT_THRESHOLD = Decimal('5000.00')
         
-        if days_until_due <= URGENT_DAYS_THRESHOLD or bill.amount >= HIGH_AMOUNT_THRESHOLD:
+        # New scoring system for more nuanced priority
+        score = 0
+        if self.is_bill_overdue(bill):
+            score += 80  # Overdue is high priority
+        
+        # Add points for due date proximity
+        if days_until_due is not None and days_until_due > 0:
+            if days_until_due <= URGENT_DAYS_THRESHOLD:
+                score += (URGENT_DAYS_THRESHOLD - days_until_due) * 10
+            score += max(0, 30 - days_until_due)
+
+        # Add points for high amount
+        if bill.amount >= HIGH_AMOUNT_THRESHOLD:
+            score += 40 # Give high-amount bills a significant boost
+
+        # Convert score to priority enum
+        if score >= 80:
+            return BillPriority.URGENT
+        elif score >= 40:  # High amount alone should trigger HIGH
             return BillPriority.HIGH
-        elif days_until_due <= 30:
+        elif score >= 15:  # Due in 15 days should trigger MEDIUM
             return BillPriority.MEDIUM
         else:
             return BillPriority.LOW
-    
+
     def is_bill_overdue(self, bill: Bill) -> bool:
         """Check if bill is past due."""
         if not bill.due_date:
@@ -165,7 +182,67 @@ class BillService(TenantAwareService):
             return None
         delta = bill.due_date - datetime.utcnow()
         return delta.days
-    
+
+    def calculate_latest_safe_pay_date(self, bill: Bill, grace_days: int = 5) -> Optional[datetime]:
+        """
+        Calculate the latest safe payment date for a bill.
+
+        This is a "smart" feature that considers:
+        - Bill due date
+        - Vendor-specific payment terms (future enhancement)
+        - A configurable grace period to avoid late fees
+        - Vendor relationship health (future enhancement)
+        """
+        if not bill.due_date:
+            return None
+
+        # Simple logic for now: due date + grace period
+        # Future: Enhance with vendor-specific terms from Vendor model
+        latest_safe_date = bill.due_date + timedelta(days=grace_days)
+        
+        return latest_safe_date
+
+    def get_runway_impact_suggestion(self, bill: Bill, runway_days: int) -> Dict[str, Any]:
+        """
+        Generates a 'smart' suggestion about the runway impact of paying a bill.
+
+        This is a "Connective Intelligence" feature that links AP decisions
+        to the cash runway.
+        """
+        if not bill.due_date or not bill.amount:
+            return {
+                "recommendation": "Pay when convenient.",
+                "impact_days": 0,
+                "confidence": 0.5,
+                "reasoning": "Bill details are incomplete."
+            }
+
+        days_to_delay = (self.calculate_latest_safe_pay_date(bill) - datetime.utcnow()).days
+        
+        # Simplified runway impact calculation
+        # Future: Use a more sophisticated calculation from a dedicated runway service
+        daily_burn_rate = 1000  # Placeholder
+        impact_days = int(bill.amount / daily_burn_rate)
+
+        if days_to_delay > 0:
+            recommendation = (
+                f"Delaying this ${bill.amount:,.2f} payment by {days_to_delay} days "
+                f"could protect {impact_days} days of runway."
+            )
+            confidence = 0.9
+            reasoning = "Based on your current runway and the bill's flexibility."
+        else:
+            recommendation = f"Paying this overdue bill will cost {impact_days} days of runway."
+            confidence = 0.95
+            reasoning = "This bill is past its due date and should be paid promptly."
+
+        return {
+            "recommendation": recommendation,
+            "impact_days": impact_days,
+            "confidence": confidence,
+            "reasoning": reasoning
+        }
+
     def can_bill_be_approved(self, bill: Bill) -> bool:
         """Check if bill can be approved."""
         return bill.status in [BillStatus.PENDING, BillStatus.REVIEW] and bill.requires_approval
@@ -198,6 +275,8 @@ class BillService(TenantAwareService):
     
     def _bill_to_dict(self, bill: Bill) -> Dict[str, Any]:
         """Convert bill to dictionary for API responses."""
+        latest_safe_pay_date = self.calculate_latest_safe_pay_date(bill)
+        runway_impact = self.get_runway_impact_suggestion(bill, runway_days=90) # Placeholder runway
         return {
             'bill_id': bill.bill_id,
             'business_id': bill.business_id,
@@ -221,6 +300,8 @@ class BillService(TenantAwareService):
             'confidence': bill.confidence,
             'is_overdue': self.is_bill_overdue(bill),
             'days_until_due': self.get_days_until_due(bill),
+            'latest_safe_pay_date': latest_safe_pay_date.isoformat() if latest_safe_pay_date else None,
+            'runway_impact_suggestion': runway_impact,
             'requires_approval': bill.requires_approval,
             'description': bill.description,
             'tags': bill.tags,

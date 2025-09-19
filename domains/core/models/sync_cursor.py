@@ -1,5 +1,4 @@
 from sqlalchemy import Column, String, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
 from domains.core.models.base import Base, TimestampMixin, TenantMixin
 import uuid
 

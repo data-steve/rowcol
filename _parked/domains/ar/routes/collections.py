@@ -5,9 +5,7 @@ Handles collections and reminders for AR domain.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.services.collections import CollectionsService
-from datetime import datetime
 
 router = APIRouter()
 

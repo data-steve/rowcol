@@ -12,7 +12,7 @@ def load_seed_data():
     """Load seed data from SQL file into the database."""
     
     # Get the database path
-    db_path = "bookclose.db"
+    db_path = "oodaloo.db"
     
     if not os.path.exists(db_path):
         print(f"Database {db_path} not found. Please run create_tables.py first.")

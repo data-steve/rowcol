@@ -6,7 +6,6 @@ Follows ADR-002 Mock-First Development Strategy.
 """
 
 import os
-from typing import Optional
 
 from .qbo_provider import QBOAPProvider
 from .mock_qbo_provider import MockQBOAPProvider

@@ -6,9 +6,8 @@ References: Stage 1C requirements, models/transfer.py, services/bank_transaction
 from sqlalchemy.orm import Session
 from domains.bank.models.transfer import Transfer as TransferModel
 from domains.bank.models.bank_transaction import BankTransaction as BankTransactionModel
-from domains.bank.schemas.transfer import TransferCreate, Transfer
-from typing import List, Optional
-from datetime import datetime, timedelta
+from domains.bank.schemas.transfer import TransferCreate
+from typing import List
 
 class TransferService:
     def __init__(self, db: Session):

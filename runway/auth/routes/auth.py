@@ -7,10 +7,9 @@ from runway.auth.schemas.auth import (
     LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
     RegisterRequest, PasswordResetRequest, PasswordResetConfirm
 )
-from runway.middleware.auth import create_access_token, verify_token
+from runway.auth.middleware.auth import create_access_token, verify_token
 import hashlib
 import secrets
-from datetime import datetime, timedelta
 
 router = APIRouter(prefix='/runway', tags=['auth'])
 

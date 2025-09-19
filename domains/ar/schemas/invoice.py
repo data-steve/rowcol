@@ -30,3 +30,8 @@ class Invoice(InvoiceBase):
 
     class Config:
         from_attributes = True
+
+# API Response schemas
+class InvoiceResponse(Invoice):
+    """Response schema for Invoice API endpoints"""
+    pass

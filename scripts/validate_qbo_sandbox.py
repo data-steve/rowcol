@@ -20,8 +20,7 @@ import argparse
 import os
 import sys
 from datetime import datetime, timedelta
-from decimal import Decimal
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 import json
 
 # Add project root to path
@@ -39,7 +38,6 @@ from domains.core.services.data_ingestion import DataIngestionService
 from runway.digest.services.digest import DigestService
 from runway.tray.services.tray import TrayService
 from db.session import SessionLocal
-from db.transaction import db_transaction
 
 class QBOSandboxValidator:
     """Validates QBO integration capabilities against sandbox data."""
@@ -299,7 +297,6 @@ class QBOSandboxValidator:
     
     def _mock_qbo_data(self, scenario_data: Dict[str, Any]):
         """Context manager to mock QBO data for testing."""
-        from unittest.mock import patch
         
         class MockContext:
             def __enter__(self):

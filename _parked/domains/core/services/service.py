@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 from domains.core.models.service import Service as ServiceModel
-from domains.ap.models.compliance import ComplianceRequirement, ServiceComplianceMapping
+from domains.ap.models.compliance import ServiceComplianceMapping
 from domains.ap.models.task_template import TaskTemplate
 from domains.core.schemas.service import Service
-from typing import List, Optional
+from typing import List
 import json
 
 # In-memory cache

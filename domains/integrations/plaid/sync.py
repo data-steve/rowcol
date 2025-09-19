@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 from sqlalchemy.orm import Session
 try:
     from plaid import Configuration, ApiBusiness

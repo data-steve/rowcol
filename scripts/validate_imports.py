@@ -28,8 +28,8 @@ import ast
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional
-from collections import defaultdict, deque
+from typing import Dict, List, Optional
+from collections import defaultdict
 import argparse
 
 class ImportAnalyzer(ast.NodeVisitor):

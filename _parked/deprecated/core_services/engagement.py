@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from domains.core.models.engagement import Engagement as EngagementModel
 from domains.core.schemas.engagement import Engagement
-from typing import List, Optional
+from typing import List
 from datetime import datetime
 
 class EngagementService:

@@ -1,25 +1,28 @@
-from intuitlib.client import AuthBusiness
 from sqlalchemy.orm import Session
 from domains.core.models.balance import Balance
 from domains.core.models.business import Business
+from .qbo_auth import qbo_auth
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
-import os
-import json
-from dotenv import load_dotenv
+from typing import List, Dict, Any, Optional
+import logging
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 class QBOIntegration:
+    """QBO integration with centralized authentication and token management.
+    
+    Uses the centralized QBOAuth service for all token operations,
+    eliminating the anti-pattern of individual auth client management.
+    """
+    
     def __init__(self, business: Business):
         self.business = business
         self.tenant_id = business.qbo_id
-        self.auth_client = AuthBusiness(
-            os.getenv("QBO_CLIENT_ID"),
-            os.getenv("QBO_CLIENT_SECRET"),
-            os.getenv("QBO_REDIRECT_URI"),
-            "sandbox"
-        )
+        self.business_id = business.business_id
+
+    def _get_authenticated_client(self) -> Optional[str]:
+        """Get a valid access token through centralized auth."""
+        return qbo_auth.get_valid_token(self.business_id)
 
     def get_bills(self, db: Session, due_days: int = 14) -> List[Dict[str, Any]]:
         from domains.ap.models.bill import Bill

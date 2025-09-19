@@ -1,71 +1,26 @@
-from typing import List, Dict, Optional
+from typing import Dict, Optional
 from sqlalchemy.orm import Session
-from intuitlib.client import AuthClient
-from intuitlib.enums import Scopes
-from quickbooks import QuickBooks
-from quickbooks.objects import Bill as QBOBill
+from domains.integrations.smart_sync import SmartSyncService
 from domains.ap.models.bill import Bill as BillModel
 from domains.vendor_normalization.models import VendorCanonical as VendorCanonicalModel
-from domains.ap.schemas.bill import Bill
-from domains.vendor_normalization.schemas import VendorCanonical
 from domains.vendor_normalization.services import VendorNormalizationService
-# from domains.ap.services.ocr_adapter import get_ocr_adapter
-import os
-from dotenv import load_dotenv
 from domains.vendor_normalization.lib.cleaners import normalize_descriptor, load_normalize_cfg
 from datetime import datetime
 import dateutil.parser
-import json
-
-load_dotenv()
+import os
 
 class IngestionService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, business_id: str = None):
         self.db = db
-        self.auth_client = AuthClient(
-            client_id=os.getenv("QBO_CLIENT_ID"),
-            client_secret=os.getenv("QBO_CLIENT_SECRET"),
-            redirect_uri=os.getenv("QBO_REDIRECT_URI", "http://localhost:8000/callback"),
-            environment="sandbox"
-        )
-        
-        # Set tokens from environment
-        access_token = os.getenv("QBO_ACCESS_TOKEN")
-        refresh_token = os.getenv("QBO_REFRESH_TOKEN")
-        realm_id = os.getenv("QBO_REALM_ID")
-        
-        if access_token and refresh_token and realm_id:
-            self.auth_client.access_token = access_token
-            self.auth_client.refresh_token = refresh_token
-            self.auth_client.realm_id = realm_id
-            
-            # Initialize QBO client
-            self.qbo_client = QuickBooks(
-                sandbox=True,
-                consumer_key=os.getenv("QBO_CLIENT_ID"),
-                consumer_secret=os.getenv("QBO_CLIENT_SECRET"),
-                access_token=access_token,
-                access_token_secret=refresh_token,
-                company_id=realm_id
-            )
-        else:
-            # For testing or when tokens aren't available
-            self.qbo_client = None
+        self.business_id = business_id
+        self.smart_sync = SmartSyncService(db, business_id) if business_id else None
             
         # self.ocr_adapter = get_ocr_adapter()
         self.vendor_service = VendorNormalizationService(db)
         self.norm_cfg = load_normalize_cfg("domains/vendor_normalization/scripts/config/normalize.yaml")
 
-    def refresh_token(self):
-        """Refresh QBO access token."""
-        try:
-            self.auth_client.refresh()
-            # Update .env or database with new tokens
-            os.environ["QBO_ACCESS_TOKEN"] = self.auth_client.access_token
-            os.environ["QBO_REFRESH_TOKEN"] = self.auth_client.refresh_token
-            # TODO: Store in qbo_tokens table
-        except Exception as e:
-            raise ValueError(f"Token refresh failed: {str(e)}")
+    # Token refresh is now handled centrally by QBOAuth and SmartSyncService
+    # Individual services should not manage tokens directly
 
     def _parse_date(self, date_value) -> Optional[datetime]:
         """Parse date value to datetime object."""
@@ -76,29 +31,25 @@ class IngestionService:
         if isinstance(date_value, str):
             try:
                 return dateutil.parser.parse(date_value)
-            except:
+            except (ValueError, TypeError):
                 return None
         return None
 
-    def sync_bills(self, business_id: str, client_id: Optional[int] = None, full_sync: bool = False) -> Dict:
-        """Sync bills from QBO and store in database."""
-        if not self.qbo_client:
-            return {"status": "error", "message": "QBO client not configured"}
+    def sync_bills(self, business_id: str, full_sync: bool = False) -> Dict:
+        """Sync bills from QBO via SmartSyncService and store in database."""
+        if not self.smart_sync:
+            # Fallback for when business_id wasn't provided in constructor
+            self.smart_sync = SmartSyncService(self.db, str(business_id))
         
-        # Check if QBO client has a valid session
-        if not hasattr(self.qbo_client, 'session') or self.qbo_client.session is None:
-            # Normalize message to what tests expect
-            return {"status": "error", "message": "QBO client not configured"}
-            
         try:
-            # Fetch bills from QBO
-            bills = QBOBill.filter(qb=self.qbo_client)
+            # Use SmartSyncService to get QBO bills data
+            qbo_data = self.smart_sync.sync_qbo_bills()
+            bills_data = qbo_data.get("bills", [])
             synced_bills = []
             
-            for qbo_bill in bills:
+            for qbo_bill_data in bills_data:
                 # Normalize vendor name using vendor_normalization domain
-                raw_vendor = qbo_bill.VendorRef.name if qbo_bill.VendorRef else ""
-                normalized_name = normalize_descriptor(raw_vendor, self.norm_cfg)
+                raw_vendor = qbo_bill_data.get("VendorRef", {}).get("name", "")
                 
                 # Check for existing vendor
                 vendor = self.db.query(VendorCanonicalModel).filter(
@@ -110,68 +61,38 @@ class IngestionService:
                     # Create new vendor using VendorNormalizationService
                     vendor_schema = self.vendor_service.normalize_vendor(raw_vendor, business_id)
                     vendor = self.db.query(VendorCanonicalModel).filter(
-                        VendorCanonicalModel.vendor_id == vendor_schema.vendor_id
+                        VendorCanonicalModel.id == vendor_schema.id
                     ).first()
 
                 # Create or update bill
                 bill = self.db.query(BillModel).filter(
-                    BillModel.qbo_bill_id == qbo_bill.Id,
+                    BillModel.qbo_bill_id == qbo_bill_data.get("Id"),
                     BillModel.business_id == business_id
                 ).first()
                 
                 # Parse due date properly
-                due_date = self._parse_date(qbo_bill.DueDate)
+                due_date = self._parse_date(qbo_bill_data.get("DueDate"))
                 
                 if not bill:
                     bill = BillModel(
                         business_id=business_id,
-                        client_id=client_id,
-                        vendor_id=vendor.vendor_id if vendor else None,
-                        qbo_bill_id=qbo_bill.Id,
-                        amount=qbo_bill.TotalAmt,
+                        vendor_id=vendor.id if vendor else None,
+                        qbo_bill_id=qbo_bill_data.get("Id"),
+                        amount_cents=int(float(qbo_bill_data.get("TotalAmt", 0)) * 100),
                         due_date=due_date,
-                        status="pending",
-                        gl_account="6000-Expenses" if "food" in normalized_name.lower() else None,
-                        confidence=0.9 if "food" in normalized_name.lower() else 0.7
+                        status="pending"
                     )
                     self.db.add(bill)
                 else:
-                    bill.amount = qbo_bill.TotalAmt
+                    bill.amount_cents = int(float(qbo_bill_data.get("TotalAmt", 0)) * 100)
                     bill.due_date = due_date
-                    bill.vendor_id = vendor.vendor_id if vendor else None
+                    bill.vendor_id = vendor.id if vendor else None
                 
                 synced_bills.append(bill)
             
             self.db.commit()
-            return {"status": "success", "synced_bills": len(synced_bills), "bills": [bill.dict() for bill in synced_bills]}
+            return {"status": "success", "synced_bills": len(synced_bills)}
         
         except Exception as e:
             self.db.rollback()
             raise ValueError(f"QBO bill sync failed: {str(e)}")
-
-    # def ingest_document(self, file_path: str, business_id: int) -> Bill:
-    #     """Ingest a document (mock OCR for now)."""
-    #     extracted = self.ocr_adapter.extract_document(file_path)
-    #     raw_vendor = extracted.get("vendor_name", "")
-    #     normalized_name = normalize_descriptor(raw_vendor, self.norm_cfg)
-        
-    #     vendor = self.vendor_service.normalize_vendor(raw_vendor, business_id)
-        
-    #     # Parse date properly
-    #     due_date = self._parse_date(extracted.get("date"))
-        
-    #     bill = BillModel(
-    #         business_id=business_id,
-    #         vendor_id=vendor.vendor_id,
-    #         qbo_bill_id=extracted.get("invoice_number", "mock_" + str(hash(file_path))),
-    #         amount=float(extracted.get("amount", 0.0)),
-    #         due_date=due_date,
-    #         status="pending",
-    #         extracted_fields=extracted,  # Direct assignment for JSON field
-    #         gl_account="6000-Expenses" if "food" in normalized_name.lower() else None,
-    #         confidence=0.9 if "food" in normalized_name.lower() else 0.7
-    #     )
-    #     self.db.add(bill)
-    #     self.db.commit()
-    #     self.db.refresh(bill)
-    #     return bill
