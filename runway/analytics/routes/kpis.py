@@ -16,7 +16,7 @@ from domains.core.services.kpi import KPIService
 from domains.integrations.smart_sync import SmartSyncService
 from runway.reserves.services.runway_reserve_service import RunwayReserveService
 
-router = APIRouter(prefix="/kpis", tags=["Analytics KPIs"])
+router = APIRouter(tags=["Analytics KPIs"])
 
 def get_services(
     db: Session = Depends(get_db),

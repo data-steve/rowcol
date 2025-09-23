@@ -11,7 +11,7 @@ from runway.auth.middleware.auth import create_access_token, verify_token
 import hashlib
 import secrets
 
-router = APIRouter(prefix='/runway', tags=['auth'])
+router = APIRouter(tags=['auth'])
 
 def hash_password(password: str) -> str:
     """Hash password using SHA-256 with salt"""

@@ -49,6 +49,7 @@ Oodaloo is a cash runway management platform for service agencies ($1M–$5M, 10
 2. **Mock-First Development** (ADR-002): Build with mocks, productionalize incrementally
 3. **Multi-Tenancy Strategy** (ADR-003): Business-centric tenant isolation
 4. **Model Complexity Standards** (ADR-004): Enterprise-grade models with comprehensive documentation
+5. **Service Method Delegation** (ADR-005): Business logic belongs in domain services, not orchestrators
 
 ---
 

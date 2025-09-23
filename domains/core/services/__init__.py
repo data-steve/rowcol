@@ -1,5 +1,6 @@
 from .audit_log import AuditLogService
-from .data_ingestion import DataIngestionService
+# NOTE: DataIngestionService temporarily disabled due to provider refactoring
+# from .data_ingestion import DataIngestionService
 # DocumentManagementService removed - out of scope for cash runway focus
 from .document_review import DocumentReviewService
 from .document_storage import DocumentStorageService

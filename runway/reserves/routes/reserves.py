@@ -20,7 +20,7 @@ from runway.reserves.schemas.runway_reserve import (
 )
 from common.exceptions import ValidationError
 
-router = APIRouter(prefix="/reserves", tags=["Runway Reserves"])
+router = APIRouter(tags=["Runway Reserves"])
 
 def get_reserve_service(
     db: Session = Depends(get_db),

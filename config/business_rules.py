@@ -46,14 +46,79 @@ class OnboardingSettings:
     OAUTH_STATE_EXPIRY_HOURS = 1         # OAuth state expires after 1 hour
     REQUIRED_BUSINESS_FIELDS = [
         "name", 
-        "industry", 
-        "employee_count"
+        "industry"
     ]
     REQUIRED_USER_FIELDS = [
         "email", 
-        "password_hash", 
-        "full_name"
+        "full_name",
+        "password_hash"
     ]
+
+class RunwayAnalysisSettings:
+    """Settings for runway replay and analysis calculations."""
+    # AP (Accounts Payable) optimization factors
+    AP_OPTIMIZATION_EFFICIENCY = 0.1      # 10% of overdue AP can be optimized for runway protection
+    AP_CRITICAL_THRESHOLD = 0.2           # AP > 20% of cash triggers critical issue
+    
+    # AR (Accounts Receivable) collection factors  
+    AR_COLLECTION_EFFICIENCY = 0.3        # 30% collection efficiency for overdue AR
+    AR_SIGNIFICANT_THRESHOLD = 10000       # AR amounts above $10k considered significant
+    
+    # Runway calculation defaults
+    DEFAULT_DAILY_BURN_RATE = 1000        # $1000/day fallback burn rate estimate
+    RUNWAY_CRITICAL_DAYS = 30             # Runway below 30 days triggers critical alert
+    
+    # Hygiene score impact factors
+    HYGIENE_BILL_DUE_DATE_IMPACT = 0.5    # 0.5 days runway impact per bill missing due date
+    HYGIENE_UNCATEGORIZED_IMPACT = 0.2    # 0.2 days runway impact per uncategorized transaction
+    HYGIENE_LARGE_INVOICE_IMPACT = 1.0    # 1.0 days runway impact per large unpaid invoice
+    HYGIENE_VENDOR_TERMS_IMPACT = 0.3     # 0.3 days runway impact per vendor missing payment terms
+    HYGIENE_LARGE_INVOICE_THRESHOLD = 5000 # Invoices above $5k considered "large"
+    
+    # Hygiene scoring
+    HYGIENE_MAX_ISSUES = 5                # Maximum number of issue types we check
+    HYGIENE_POINTS_PER_ISSUE = 20         # Lose 20 points per issue type found
+    HYGIENE_OVERDUE_INVOICE_THRESHOLD = 5 # More than 5 overdue invoices = high severity
+
+class ProofOfValueThresholds:
+    """Thresholds for test drive proof statements and marketing language."""
+    SIGNIFICANT_RUNWAY_PROTECTION = 10    # 10+ days = significant protection achieved
+    MANY_INSIGHTS_THRESHOLD = 5           # 5+ insights = substantial analysis value
+
+class RunwayThresholds:
+    """Runway status thresholds for consistent categorization."""
+    CRITICAL_DAYS = 7                     # Below 7 days = critical
+    WARNING_DAYS = 30                     # 7-29 days = warning  
+    HEALTHY_DAYS = 90                     # 30-89 days = healthy
+    # 90+ days = excellent
+
+class DataQualityThresholds:
+    """
+    Domain-specific thresholds for different types of data quality analysis.
+    
+    These thresholds are based on industry standards and business impact:
+    - Hygiene Score: Subjective business assessment, 80% is reasonable for "excellent"
+    - Data Consistency: Critical for system integrity, requires 95% for "excellent"  
+    - Data Completeness: Missing data impacts accuracy, requires 90% for "excellent"
+    """
+    
+    # Hygiene Score thresholds (business assessment of QBO data quality)
+    HYGIENE_EXCELLENT = 80                # 80+ = excellent (most issues resolved)
+    HYGIENE_GOOD = 60                     # 60-79 = good (minor issues remain)  
+    HYGIENE_FAIR = 40                     # 40-59 = fair (several issues)
+    # Below 40 = needs_attention (significant data quality problems)
+    
+    # Data Consistency thresholds (referential integrity, entity matching)
+    CONSISTENCY_EXCELLENT = 95            # 95+ = excellent (high data integrity)
+    CONSISTENCY_GOOD = 85                 # 85-94 = good (minor inconsistencies)
+    CONSISTENCY_FAIR = 70                 # 70-84 = fair (some data mismatches)
+    # Below 70 = needs_attention (significant integrity issues)
+    
+    # Data Completeness thresholds (required fields populated)
+    COMPLETENESS_EXCELLENT = 90           # 90+ = excellent (comprehensive data)
+    COMPLETENESS_GOOD = 75                # 75-89 = good (most fields complete)
+    COMPLETENESS_FAIR = 60                # 60-74 = fair (key fields missing)
+    # Below 60 = needs_attention (insufficient data for analysis)
 
 class TrayItemTypes:
     """Standard tray item types."""

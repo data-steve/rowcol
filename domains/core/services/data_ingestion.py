@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from domains.core.models.integration import Integration
 from domains.core.models.transaction import Transaction
-from domains.core.providers import DataProvider, get_data_provider
+# NOTE: Providers parked for future strategy - service temporarily disabled
+# from domains.core.providers import DataProvider, get_data_provider
 from db.transaction import db_transaction
 from common.exceptions import DataIngestionError, IntegrationError
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -11,9 +12,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 class DataIngestionService:
-    def __init__(self, db: Session, data_provider: Optional[DataProvider] = None):
+    """
+    NOTE: This service is temporarily disabled due to provider architecture refactoring.
+    The provider pattern was parked for future strategic consideration.
+    Use QBOAPIProvider directly or SmartSyncService for QBO operations.
+    """
+    def __init__(self, db: Session):
         self.db = db
-        self.data_provider = data_provider or get_data_provider()
+        # TODO: Implement direct QBO integration when provider strategy is decided
+        raise NotImplementedError("DataIngestionService temporarily disabled - use QBOAPIProvider directly")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def fetch_platform_data(self, platform: str, credentials: Dict[str, str]) -> Dict[str, Any]:

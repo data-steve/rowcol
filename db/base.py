@@ -1,3 +1,2 @@
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+# Import Base from the centralized location
+from domains.core.models.base import Base

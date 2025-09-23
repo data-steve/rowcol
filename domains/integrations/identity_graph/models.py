@@ -4,9 +4,8 @@ try:
     # Prefer your shared Base if present
     from domains.core.models.base import Base
 except Exception:
-    # Fallback Base to allow imports in isolation
-    from sqlalchemy.orm import declarative_base
-    Base = declarative_base()
+    # Import Base from centralized location
+    from domains.core.models.base import Base
 
 class RawEvent(Base):
     __tablename__ = "raw_event"

@@ -15,6 +15,17 @@ from runway.tray.models.tray_item import TrayItem
 from main import app
 from db.session import SessionLocal, get_db
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# QBO Sandbox Credentials for Integration Tests
+QBO_CLIENT_ID = os.getenv('QBO_CLIENT_ID', 'test_client_id')
+QBO_CLIENT_SECRET = os.getenv('QBO_CLIENT_SECRET', 'test_client_secret')
+QBO_REDIRECT_URI = os.getenv('QBO_REDIRECT_URI', 'http://localhost:8000/callback')
+QBO_SANDBOX_BASE_URL = 'https://sandbox-quickbooks.api.intuit.com'
+
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -253,3 +264,151 @@ def mock_payment():
     return mock
 
 # Note: Task model is parked - no test_task fixture needed
+
+# ==================== QBO TEST FIXTURES ====================
+
+@pytest.fixture(scope="function")
+def qbo_connected_business(db):
+    business = Business(
+        business_id="test_qbo_business_id",
+        name="Test QBO Business",
+        industry="Software",
+        qbo_id=os.getenv('QBO_REALM_ID', 'test_realm_id')
+    )
+    db.add(business)
+    db.commit()
+    db.refresh(business)
+
+    # Add QBO integration with real sandbox credentials if available
+    integration = Integration(
+        business_id=business.business_id,
+        platform="qbo",
+        access_token=os.getenv('QBO_ACCESS_TOKEN', 'test_access_token'),
+        refresh_token=os.getenv('QBO_REFRESH_TOKEN', 'test_refresh_token'),
+        realm_id=os.getenv('QBO_REALM_ID', 'test_realm_id')
+    )
+    db.add(integration)
+    db.commit()
+    
+    # Add test data using centralized helper
+    _add_test_data(db, business)
+    
+    return business
+
+@pytest.fixture(scope="function") 
+def qbo_auth_setup():
+    """Setup QBO auth service for tests without creating a business."""
+    from domains.integrations.qbo.qbo_auth import qbo_auth
+    
+    # Clear any existing tokens
+    qbo_auth.tokens.clear()
+    
+    yield qbo_auth
+    
+    # Cleanup
+    qbo_auth.tokens.clear()
+
+
+def _add_test_data(db, business: Business):
+    """Add test data for integration tests."""
+    from domains.ap.models.vendor import Vendor
+    from domains.ar.models.customer import Customer
+    from domains.ap.models.bill import Bill
+    from domains.ar.models.invoice import Invoice
+    from domains.core.models.balance import Balance
+    from decimal import Decimal
+    
+    # Add test vendors
+    vendor1 = Vendor(
+        business_id=business.business_id,
+        qbo_vendor_id="1",
+        name="Office Supplies Co",
+        is_active=True
+    )
+    vendor2 = Vendor(
+        business_id=business.business_id,
+        qbo_vendor_id="2", 
+        name="Software Solutions Inc",
+        is_active=True
+    )
+    db.add_all([vendor1, vendor2])
+    db.flush()
+    
+    # Add test customers
+    customer1 = Customer(
+        business_id=business.business_id,
+        qbo_customer_id="1",
+        name="Acme Corp",
+        is_active=True
+    )
+    customer2 = Customer(
+        business_id=business.business_id,
+        qbo_customer_id="2",
+        name="Tech Startup LLC", 
+        is_active=True
+    )
+    db.add_all([customer1, customer2])
+    db.flush()
+    
+    # Add test bills
+    bill1 = Bill(
+        business_id=business.business_id,
+        vendor_id=vendor1.vendor_id,
+        qbo_bill_id="1",
+        bill_number="BILL-001",
+        amount_cents=25000,  # $250
+        due_date=datetime.now() + timedelta(days=15),
+        status="pending"
+    )
+    bill2 = Bill(
+        business_id=business.business_id,
+        vendor_id=vendor2.vendor_id,
+        qbo_bill_id="2",
+        bill_number="BILL-002", 
+        amount_cents=150000,  # $1500
+        due_date=datetime.now() + timedelta(days=30),
+        status="pending"
+    )
+    db.add_all([bill1, bill2])
+    
+    # Add test invoices
+    invoice1 = Invoice(
+        business_id=business.business_id,
+        customer_id=customer1.customer_id,
+        qbo_invoice_id="1",
+        issue_date=datetime.now() - timedelta(days=30),
+        due_date=datetime.now() - timedelta(days=15),  # Overdue
+        total=5000.00,
+        status="sent"
+    )
+    invoice2 = Invoice(
+        business_id=business.business_id,
+        customer_id=customer2.customer_id,
+        qbo_invoice_id="2",
+        issue_date=datetime.now() - timedelta(days=20), 
+        due_date=datetime.now() - timedelta(days=5),   # Overdue
+        total=2500.00,
+        status="sent"
+    )
+    db.add_all([invoice1, invoice2])
+    
+    # Add test balances
+    balance1 = Balance(
+        business_id=business.business_id,
+        qbo_account_id="1",
+        current_balance=15000.00,
+        available_balance=15000.00,
+        account_type="checking",
+        snapshot_date=datetime.now()
+    )
+    balance2 = Balance(
+        business_id=business.business_id,
+        qbo_account_id="2",
+        current_balance=5000.00,
+        available_balance=5000.00,
+        account_type="savings",
+        snapshot_date=datetime.now()
+    )
+    db.add_all([balance1, balance2])
+    
+    db.commit()

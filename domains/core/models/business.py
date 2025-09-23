@@ -5,7 +5,7 @@ from domains.core.models.balance import Balance
 
 class Business(Base, TimestampMixin, TenantMixin):
     __tablename__ = "businesses"
-    business_id = Column(String(36), primary_key=True, index=True)
+    business_id = Column(String(36), primary_key=True, index=True, default=lambda: str(__import__('uuid').uuid4()))
     name = Column(String(255), nullable=False, index=True)
     qbo_id = Column(String(50), nullable=True, index=True)
     industry = Column(String(50), nullable=True)  # agency, consulting, retail

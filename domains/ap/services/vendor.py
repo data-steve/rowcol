@@ -37,6 +37,38 @@ class VendorService(TenantAwareService):
         super().__init__(db, business_id)
         logger.info(f"Initialized VendorService for business {business_id}")
     
+    # ==================== SMART SYNC DATA METHODS ====================
+    
+    def get_active_vendors(self) -> List[Dict[str, Any]]:
+        """Get all active vendors for digest/sync purposes."""
+        try:
+            vendors = self.db.query(Vendor).filter(
+                Vendor.business_id == self.business_id,
+                Vendor.is_active
+            ).all()
+            
+            return [
+                {
+                    "qbo_id": vendor.qbo_vendor_id,
+                    "name": vendor.name,
+                    "is_active": vendor.is_active,
+                    "balance": 0,  # Would need to calculate from unpaid bills
+                    "payment_terms": getattr(vendor, 'payment_terms', None),
+                    "contact_info": {
+                        "email": vendor.email,
+                        "phone": vendor.phone
+                    }
+                }
+                for vendor in vendors
+            ]
+        except Exception as e:
+            logger.error(f"Failed to get active vendors: {e}")
+            return []
+    
+    def get_vendors_for_digest(self) -> List[Dict[str, Any]]:
+        """Get vendors formatted for digest generation."""
+        return self.get_active_vendors()
+    
     # ==================== VENDOR BUSINESS LOGIC ====================
     
     def get_vendor_payment_methods(self, vendor: Vendor) -> List[str]:
@@ -71,9 +103,10 @@ class VendorService(TenantAwareService):
         if vendor.is_critical:
             return "high"
         
-        # Business rule thresholds - TODO: Make configurable per business
-        HIGH_AMOUNT_THRESHOLD = 5000.0
-        HIGH_RELIABILITY_THRESHOLD = 80
+        # Use centralized payment rules for consistent thresholds
+        from config.business_rules import PaymentRules
+        HIGH_AMOUNT_THRESHOLD = PaymentRules.HIGH_AMOUNT_THRESHOLD
+        HIGH_RELIABILITY_THRESHOLD = PaymentRules.HIGH_RELIABILITY_THRESHOLD
         
         if bill_amount >= HIGH_AMOUNT_THRESHOLD or (vendor.payment_reliability_score and vendor.payment_reliability_score >= HIGH_RELIABILITY_THRESHOLD):
             return "medium"

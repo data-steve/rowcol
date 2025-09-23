@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.post("/invoices")
 def create_invoice(invoice_data: dict, business_id: str, db: Session = Depends(get_db)):
-    service = InvoiceService(db)
+    service = InvoiceService(db, business_id)
     return service.create_invoice(
         business_id=business_id,
         customer_id=invoice_data["customer_id"],

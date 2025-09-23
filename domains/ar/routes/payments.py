@@ -13,7 +13,7 @@ router = APIRouter()
 
 @router.post("/payments/apply")
 def apply_payment(payment_data: dict, business_id: str, db: Session = Depends(get_db)):
-    service = PaymentApplicationService(db)
+    service = PaymentApplicationService(db, business_id)
     return service.apply_payment(
         business_id=business_id,
         amount=payment_data["amount"],

@@ -5,7 +5,7 @@ from domains.core.models.user import User
 from domains.core.schemas.user import UserCreate, UserUpdate, User as UserSchema
 from typing import List
 
-router = APIRouter(prefix='/runway', tags=['users'])
+router = APIRouter(tags=['users'])
 
 @router.post('/users/', response_model=UserSchema)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):

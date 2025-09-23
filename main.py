@@ -41,7 +41,7 @@ def on_startup():
 
 # Include routers - clean cascading import pattern
 app.include_router(runway_router)  # All runway product APIs
-app.include_router(domains_router)  # All domain-specific internal APIs
+# app.include_router(domains_router)  # All domain-specific internal APIs - REMOVED to ensure only runway/ is exposed
 
 @app.get("/")
 async def root():

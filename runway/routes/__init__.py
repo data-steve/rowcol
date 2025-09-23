@@ -23,27 +23,27 @@ from ..analytics.routes.kpis import router as analytics_kpis_router
 from ..onboarding.routes.onboarding import router as onboarding_router
 from ..tray.routes.tray import router as tray_router
 
-# Create consolidated runway router
-router = APIRouter()
+# Create consolidated runway router with /api/v1 prefix
+router = APIRouter(prefix="/api/v1")
 
-# Include all runway routes with appropriate prefixes
-router.include_router(auth_router)  # No prefix - auth routes define their own
-router.include_router(users_router)  # No prefix - users routes define their own
-router.include_router(digest_router)  # No prefix - digest routes define their own
+# Include all runway routes with standardized prefixes
+router.include_router(auth_router, prefix="/auth")
+router.include_router(users_router, prefix="/users")
+router.include_router(digest_router, prefix="/digest")
 
-# Runway-specific routes with /runway prefix
+# Runway-specific routes
 router.include_router(reserves_router, prefix="/runway")
-router.include_router(onboarding_router, prefix="/runway/onboarding")
-router.include_router(tray_router, prefix="/runway")
+router.include_router(onboarding_router, prefix="/onboarding")
+router.include_router(tray_router, prefix="/tray")
 
-# AP routes under /runway/ap
-router.include_router(ap_bills_router, prefix="/runway/ap")
-router.include_router(ap_payments_router, prefix="/runway/ap")
-router.include_router(ap_vendors_router, prefix="/runway/ap")
+# AP routes
+router.include_router(ap_bills_router, prefix="/ap")
+router.include_router(ap_payments_router, prefix="/ap")
+router.include_router(ap_vendors_router, prefix="/ap")
 
-# AR routes under /runway/ar
-router.include_router(ar_collections_router, prefix="/runway/ar")
-router.include_router(ar_invoices_router, prefix="/runway/ar")
+# AR routes
+router.include_router(ar_collections_router, prefix="/ar")
+router.include_router(ar_invoices_router, prefix="/ar")
 
-# Analytics routes under /runway/analytics
-router.include_router(analytics_kpis_router, prefix="/runway/analytics")
+# Analytics routes
+router.include_router(analytics_kpis_router, prefix="/analytics")

@@ -1,5 +1,6 @@
 from typing import Tuple, Optional, Dict
 from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,20 +34,41 @@ class QBOAuth:
         logger.info(f"Tokens exchanged for business {business_id}")
         return access, refresh
 
-    def get_valid_token(self, business_id: int) -> Optional[str]:
+    def get_valid_token(self, business_id: int, db: Session) -> Optional[str]:
         """Get a valid access token, refreshing if necessary."""
-        if business_id not in self.tokens:
-            logger.warning(f"No tokens found for business {business_id}")
-            return None
-            
-        token_data = self.tokens[business_id]
+        # First check in-memory cache
+        if business_id in self.tokens:
+            token_data = self.tokens[business_id]
+            # Check if token is still valid (with 5-minute buffer)
+            if datetime.utcnow() + timedelta(minutes=5) < token_data["expires_at"]:
+                return token_data["access"]
+            # Token needs refresh
+            return self._refresh_token(business_id)
         
-        # Check if token is still valid (with 5-minute buffer)
-        if datetime.utcnow() + timedelta(minutes=5) < token_data["expires_at"]:
-            return token_data["access"]
+        # Not in cache, try to load from database
+        try:
+            from domains.core.models.integration import Integration
+            integration = db.query(Integration).filter(
+                Integration.business_id == business_id,
+                Integration.platform == "qbo"
+            ).first()
             
-        # Token needs refresh
-        return self._refresh_token(business_id)
+            if integration and integration.access_token:
+                # Check if this is a real token (not a mock)
+                if not integration.access_token.startswith("mock_"):
+                    # Real token from database - use it directly
+                    logger.info(f"Using real QBO token for business {business_id}")
+                    return integration.access_token
+                else:
+                    # Mock token - return it for unit tests
+                    logger.info(f"Using mock QBO token for business {business_id}")
+                    return integration.access_token
+                
+        except Exception as e:
+            logger.error(f"Failed to load tokens from database for business {business_id}: {e}")
+        
+        logger.warning(f"No tokens found for business {business_id}")
+        return None
 
     def _refresh_token(self, business_id: int) -> Optional[str]:
         """Refresh access token for a business."""

@@ -98,6 +98,14 @@ def test_database_performance_basic(db: Session):
     """Test basic database performance for Phase 0 operations"""
     import time
     
+    # Create a test business first
+    test_business = Business(
+        business_id="test_perf_123",
+        name="Performance Test Business"
+    )
+    db.add(test_business)
+    db.commit()
+    
     # Test business query performance
     start_time = time.time()
     businesses = db.query(Business).all()

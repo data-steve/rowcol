@@ -72,10 +72,15 @@ def test_is_bill_overdue(db, test_business):
     assert bill_service.is_bill_overdue(overdue_bill)
     assert not bill_service.is_bill_overdue(future_bill)
 
-@patch('domains.ap.services.bill_ingestion.get_document_processor')
-def test_ingest_document(mock_get_processor, db, test_business):
+def test_ingest_document(db, test_business):
     """Test document ingestion functionality."""
-    # Mock document processor
+    bill_service = BillService(db, test_business.business_id, validate_business=False)
+    
+    # Test document ingestion with mock document processor
+    file_data = b"fake pdf content"
+    filename = "test_invoice.pdf"
+    
+    # Mock the document processor that's passed to the service
     mock_processor = MagicMock()
     mock_processor.extract_bill_data.return_value = {
         'amount': 150.00,
@@ -83,15 +88,15 @@ def test_ingest_document(mock_get_processor, db, test_business):
         'vendor_name': 'Test Vendor',
         'invoice_number': 'INV-001'
     }
-    mock_get_processor.return_value = mock_processor
     
-    bill_service = BillService(db, test_business.business_id, validate_business=False)
+    # Create service with mock processor
+    bill_service_with_processor = BillService(
+        db, test_business.business_id, 
+        document_processor=mock_processor,
+        validate_business=False
+    )
     
-    # Test document ingestion
-    file_data = b"fake pdf content"
-    filename = "test_invoice.pdf"
-    
-    with patch.object(bill_service, '_create_bill_from_document') as mock_create:
+    with patch.object(bill_service_with_processor, '_create_bill_from_document') as mock_create:
         mock_bill = BillModel(
             business_id=test_business.business_id,
             bill_id="test_ingested_001",
@@ -99,7 +104,7 @@ def test_ingest_document(mock_get_processor, db, test_business):
         )
         mock_create.return_value = mock_bill
         
-        result = bill_service.ingest_document(file_data, filename)
+        result = bill_service_with_processor.ingest_document(file_data, filename)
         
         assert result == mock_bill
         mock_processor.extract_bill_data.assert_called_once_with(file_data, filename)

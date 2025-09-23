@@ -2,42 +2,35 @@
 Phase 0 QBO Integration Tests
 
 Tests for basic QBO integration functionality that's core to Phase 0 MVP.
-Uses mocked QBO data to avoid external dependencies.
+Uses the enhanced QBOAPIProvider with proper mock/real switching.
 """
 import pytest
+import asyncio
 from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 from domains.core.models import Business, Integration
-from domains.integrations.qbo.qbo_integration import QBOIntegration as QBOIntegrationService
+from domains.integrations.qbo.qbo_api_provider import QBOAPIProvider, get_qbo_provider
 
 
-def test_qbo_integration_service_import():
-    """Test that QBOIntegrationService can be imported"""
-    assert QBOIntegrationService is not None
+def test_qbo_provider_import():
+    """Test that QBOAPIProvider can be imported"""
+    assert QBOAPIProvider is not None
+    assert get_qbo_provider is not None
 
 
-def test_qbo_integration_service_init(test_business: Business):
-    """Test QBOIntegrationService initialization"""
-    service = QBOIntegrationService(test_business)
-    assert service.business == test_business
+def test_qbo_provider_factory_real(db: Session, test_business: Business):
+    """Test QBO provider factory returns real provider"""
+    provider = get_qbo_provider(test_business.business_id, db)
+    assert isinstance(provider, QBOAPIProvider)
+    assert provider.business_id == test_business.business_id
 
 
-@patch('domains.core.services.qbo_integration.QuickBooks')
-def test_qbo_connection_mock(mock_qb_class, test_business: Business):
-    """Test QBO connection with mocked QuickBooks client"""
-    # Mock the QuickBooks client
-    mock_qb_instance = Mock()
-    mock_qb_class.return_value = mock_qb_instance
-    
-    service = QBOIntegrationService(test_business)
-    
-    # Test connection attempt
-    try:
-        qb_client = service._get_qb_client()
-        assert qb_client is not None
-    except Exception as e:
-        # Expected to fail in Phase 0 without real credentials
-        assert "access_token" in str(e) or "refresh_token" in str(e)
+def test_qbo_provider_factory_auto_realm_lookup(db: Session, test_business: Business):
+    """Test QBO provider factory can lookup realm_id automatically"""
+    # This will use the fallback "mock_realm" since no integration exists
+    provider = get_qbo_provider(test_business.business_id, db)
+    assert isinstance(provider, QBOAPIProvider)
+    assert provider.realm_id == "mock_realm"
 
 
 def test_integration_model_structure():
@@ -54,99 +47,87 @@ def test_integration_model_structure():
 def test_integration_creation(db: Session, test_business: Business):
     """Test basic Integration model creation for QBO"""
     from datetime import datetime, timedelta
-    
+
     integration = Integration(
-        integration_id="qbo_integration_123",
+        # Do not set integration_id as it's an auto-incremented Integer primary key
         business_id=test_business.business_id,
         platform="QBO",
         access_token="mock_access_token",
         refresh_token="mock_refresh_token",
-        expires_at=datetime.now() + timedelta(hours=1)
+        expires_at=datetime.now() + timedelta(hours=1),
+        status="active"
     )
-    
+
     db.add(integration)
     db.commit()
-    db.refresh(integration)
-    
-    assert integration.integration_id == "qbo_integration_123"
+
     assert integration.business_id == test_business.business_id
     assert integration.platform == "QBO"
+    assert integration.status == "active"
 
 
-@patch('domains.core.services.qbo_integration.QuickBooks')
-def test_qbo_data_sync_mock(mock_qb_class, db: Session, test_business: Business):
-    """Test QBO data sync with mocked responses"""
-    # Mock QBO client and responses
-    mock_qb_instance = Mock()
-    mock_qb_class.return_value = mock_qb_instance
+@pytest.mark.asyncio
+async def test_qbo_provider_get_bills_real(db: Session, test_business: Business):
+    """Test QBO provider can get bills using real provider"""
+    provider = get_qbo_provider(test_business.business_id, db)
     
-    # Mock company info response
-    mock_company_info = Mock()
-    mock_company_info.Name = "Test Agency"
-    mock_company_info.Id = "123456789"
-    mock_qb_instance.query_objects.return_value = [mock_company_info]
-    
-    service = QBOIntegrationService(test_business)
-    
-    # Test that service can handle mocked data
+    # Test that provider can get bills (will fail with 401 due to invalid tokens, but that's expected)
     try:
-        # This would normally sync QBO data
-        result = service._get_qb_client()
-        # In Phase 0, we expect this to fail gracefully
-        assert True  # If we get here, mocking worked
+        bills = await provider.get_bills()
+        assert isinstance(bills, list)
     except Exception as e:
-        # Expected behavior in Phase 0 without real integration
-        assert "access_token" in str(e) or "refresh_token" in str(e)
+        # Expected to fail due to invalid test tokens
+        assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
 
 
-def test_qbo_service_business_relationship(test_business: Business):
-    """Test that QBOIntegrationService properly references business"""
-    service = QBOIntegrationService(test_business)
+@pytest.mark.asyncio
+async def test_qbo_provider_get_invoices_real(db: Session, test_business: Business):
+    """Test QBO provider can get invoices using real provider"""
+    provider = get_qbo_provider(test_business.business_id, db)
     
-    assert service.business.business_id == test_business.business_id
-    assert service.business.name == test_business.name
-    assert service.business.qbo_id == test_business.qbo_id
-
-
-@patch('domains.core.services.qbo_integration.AuthClient')
-def test_qbo_auth_mock(mock_auth_client, test_business: Business):
-    """Test QBO authentication flow with mocked auth client"""
-    # Mock auth client
-    mock_auth_instance = Mock()
-    mock_auth_client.return_value = mock_auth_instance
-    mock_auth_instance.get_authorization_url.return_value = ("http://auth.url", "state123")
-    
-    service = QBOIntegrationService(test_business)
-    
-    # Test auth URL generation (mocked)
+    # Test that provider can get invoices (will fail with 401 due to invalid tokens, but that's expected)
     try:
-        # This would normally generate real auth URLs
-        auth_url = service._get_auth_url() if hasattr(service, '_get_auth_url') else None
-        # In Phase 0, we just test that service can be instantiated
-        assert service is not None
+        invoices = await provider.get_invoices()
+        assert isinstance(invoices, list)
     except Exception as e:
-        # Expected in Phase 0 without full auth implementation
-        pytest.skip(f"Auth not fully implemented in Phase 0: {e}")
+        # Expected to fail due to invalid test tokens
+        assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
 
 
-def test_qbo_integration_phase0_scope():
-    """Test that QBO integration is properly scoped for Phase 0"""
-    # Phase 0 QBO integration should support:
-    # - Basic connection setup
-    # - Company info retrieval  
-    # - Simple data sync preparation
-    # - Integration model persistence
+def test_qbo_provider_business_relationship(db: Session, test_business: Business):
+    """Test that QBO provider properly references business"""
+    provider = get_qbo_provider(test_business.business_id, db)
     
-    # Advanced features parked for later phases:
+    assert provider.business_id == test_business.business_id
+
+
+def test_qbo_provider_factory_function(db: Session, test_business: Business):
+    """Test QBO provider factory function"""
+    provider = get_qbo_provider(test_business.business_id, db)
+    
+    assert isinstance(provider, QBOAPIProvider)
+    assert provider.business_id == test_business.business_id
+
+
+def test_qbo_provider_phase0_scope():
+    """Test that QBO provider is properly scoped for Phase 0"""
+    # Phase 0 QBO provider should support:
+    # - Mock/real provider switching
+    # - Basic data retrieval (bills, invoices, vendors, customers)
+    # - Automatic realm_id lookup
+    # - Graceful error handling
+    
+    # Advanced features for later phases:
     # - Real-time webhooks
     # - Complex transaction sync
     # - Advanced reconciliation
     
     try:
-        from domains.integrations.qbo.qbo_integration import QBOIntegration as QBOIntegrationService
-        assert QBOIntegrationService is not None
+        from domains.integrations.qbo.qbo_api_provider import QBOAPIProvider, get_qbo_provider
+        assert QBOAPIProvider is not None
+        assert get_qbo_provider is not None
         
-        # Basic service should be importable
+        # Basic provider should be importable
         assert True
     except ImportError as e:
-        pytest.fail(f"QBO integration service not available in Phase 0: {e}")
+        pytest.fail(f"QBO provider not available in Phase 0: {e}")

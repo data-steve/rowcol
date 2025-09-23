@@ -18,7 +18,7 @@ from runway.reserves.services.runway_reserve_service import RunwayReserveService
 from domains.ap.schemas.payment import PaymentResponse, PaymentExecutionRequest
 from common.exceptions import BusinessRuleViolationError
 
-router = APIRouter(prefix="/payments", tags=["AP Payments"])
+router = APIRouter(tags=["AP Payments"])
 
 def get_services(
     db: Session = Depends(get_db),

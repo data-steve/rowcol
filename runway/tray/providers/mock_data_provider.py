@@ -21,6 +21,11 @@ class TrayDataProvider(ABC):
     def get_priority_weights(self) -> Dict[str, int]:
         """Get priority weights for different tray item types."""
         pass
+    
+    @abstractmethod
+    def get_tray_items(self, business_id: str) -> list:
+        """Get tray items for a business."""
+        pass
 
 class MockTrayDataProvider(TrayDataProvider):
     """Mock data provider for development."""
@@ -84,6 +89,37 @@ class MockTrayDataProvider(TrayDataProvider):
             "vendor_duplicate": 15,
             "missing_receipt": 10
         }
+    
+    def get_tray_items(self, business_id: str) -> list:
+        """Get mock tray items for testing."""
+        return [
+            {
+                "id": 1,
+                "business_id": business_id,
+                "item_type": "bill_payment",
+                "title": "Pay Acme Corp",
+                "amount": 1500.00,
+                "due_date": "2024-01-15",
+                "priority": "high",
+                "metadata": {
+                    "qbo_bill_id": "mock_bill_1",
+                    "vendor_name": "Acme Corp"
+                }
+            },
+            {
+                "id": 2,
+                "business_id": business_id,
+                "item_type": "invoice_followup",
+                "title": "Follow up on Invoice #1001",
+                "amount": 2500.00,
+                "due_date": "2024-01-10",
+                "priority": "medium",
+                "metadata": {
+                    "qbo_invoice_id": "mock_invoice_1",
+                    "customer_name": "Client ABC"
+                }
+            }
+        ]
 
 class ProductionTrayDataProvider(TrayDataProvider):
     """Production data provider that integrates with real QBO."""
@@ -114,6 +150,12 @@ class ProductionTrayDataProvider(TrayDataProvider):
             "vendor_duplicate": 15,
             "missing_receipt": 10
         }
+    
+    def get_tray_items(self, business_id: str) -> list:
+        """Get tray items from real QBO data."""
+        # TODO: Implement real tray item retrieval from QBO
+        # For now, return empty list until production implementation
+        return []
 
 def get_tray_data_provider() -> TrayDataProvider:
     """Factory function to get the appropriate data provider based on environment."""

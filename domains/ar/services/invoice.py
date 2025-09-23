@@ -1,17 +1,106 @@
-from typing import List
+from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice
 from domains.policy.services.policy_engine import PolicyEngineService
 from domains.integrations.smart_sync import SmartSyncService
-from datetime import datetime
+from datetime import datetime, timedelta
+from domains.core.services.base_service import TenantAwareService
+import logging
 
-class InvoiceService:
-    def __init__(self, db: Session, business_id: str = None):
-        self.db = db
-        self.business_id = business_id
-        self.smart_sync = SmartSyncService(db, business_id) if business_id else None
+logger = logging.getLogger(__name__)
+
+class InvoiceService(TenantAwareService):
+    def __init__(self, db: Session, business_id: str):
+        super().__init__(db, business_id)
+        self.smart_sync = SmartSyncService(db, business_id)
         self.policy_engine = PolicyEngineService(db)
+    
+    # ==================== SMART SYNC DATA METHODS ====================
+    
+    def get_overdue_invoices(self, days: int = 0) -> List[Dict[str, Any]]:
+        """
+        Get invoices that are overdue by specified number of days.
+        
+        Args:
+            days: Minimum days overdue (0 = all overdue invoices)
+        """
+        try:
+            today = datetime.utcnow()
+            cutoff_date = today - timedelta(days=days)
+            
+            invoices = self.db.query(InvoiceModel).filter(
+                InvoiceModel.business_id == self.business_id,
+                InvoiceModel.due_date <= cutoff_date,
+                InvoiceModel.status.in_(["sent", "review", "pending"])  # Not paid
+            ).all()
+            
+            return [
+                {
+                    "qbo_id": invoice.qbo_invoice_id,
+                    "customer": invoice.customer.name if invoice.customer else "Unknown Customer",
+                    "customer_id": invoice.customer_id,
+                    "amount": float(invoice.total),
+                    "due_date": invoice.due_date.isoformat() if invoice.due_date else None,
+                    "status": invoice.status,
+                    "balance": float(invoice.total),  # Simplified
+                    "aging_days": (today - invoice.due_date).days if invoice.due_date else 0
+                }
+                for invoice in invoices
+            ]
+        except Exception as e:
+            logger.error(f"Failed to get overdue invoices: {e}")
+            return []
+    
+    def get_invoices_for_digest(self) -> List[Dict[str, Any]]:
+        """Get all overdue invoices for digest generation."""
+        return self.get_overdue_invoices(0)
+    
+    def get_aging_buckets(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Get invoices organized by aging buckets."""
+        try:
+            return {
+                "current": self.get_overdue_invoices(-30),  # Not yet due
+                "1_30": self.get_overdue_invoices_in_range(1, 30),
+                "31_60": self.get_overdue_invoices_in_range(31, 60), 
+                "61_90": self.get_overdue_invoices_in_range(61, 90),
+                "over_90": self.get_overdue_invoices_in_range(91, 999)
+            }
+        except Exception as e:
+            logger.error(f"Failed to get aging buckets: {e}")
+            return {}
+    
+    def get_overdue_invoices_in_range(self, min_days: int, max_days: int) -> List[Dict[str, Any]]:
+        """Get invoices overdue within a specific day range."""
+        try:
+            from datetime import timedelta
+            today = datetime.utcnow()
+            min_date = today - timedelta(days=max_days)
+            max_date = today - timedelta(days=min_days)
+            
+            invoices = self.db.query(InvoiceModel).filter(
+                InvoiceModel.business_id == self.business_id,
+                InvoiceModel.due_date >= min_date,
+                InvoiceModel.due_date <= max_date,
+                InvoiceModel.status.in_(["sent", "review", "pending"])
+            ).all()
+            
+            return [
+                {
+                    "qbo_id": invoice.qbo_invoice_id,
+                    "customer": invoice.customer.name if invoice.customer else "Unknown Customer",
+                    "customer_id": invoice.customer_id,
+                    "amount": float(invoice.total),
+                    "due_date": invoice.due_date.isoformat() if invoice.due_date else None,
+                    "status": invoice.status,
+                    "balance": float(invoice.total),
+                    "aging_days": (today - invoice.due_date).days if invoice.due_date else 0
+                }
+                for invoice in invoices
+            ]
+        except Exception as e:
+            logger.error(f"Failed to get invoices in range {min_days}-{max_days}: {e}")
+            return []
 
     def create_invoice(self, business_id: int, customer_id: int, issue_date: datetime, due_date: datetime, total: float, lines: List[dict]) -> Invoice:
         """Create an invoice from CSV or manual input."""
@@ -35,20 +124,9 @@ class InvoiceService:
             )
             self.db.add(invoice)
             
-            # Sync with QBO (if client is configured)
-            try:
-                # TODO: Implement QBO invoice sync in Phase 4
-                # qbo_invoice = QBOInvoice()
-                # qbo_invoice.CustomerRef = {"value": str(customer_id)}
-                # qbo_invoice.TotalAmt = total
-                # qbo_invoice.Line = [{"Amount": line["amount"], "DetailType": "SalesItemLineDetail"} for line in lines]
-                # qbo_invoice.save(qb=self.qbo_client)
-                # invoice.qbo_invoice_id = qbo_invoice.Id
-                invoice.qbo_invoice_id = f"MOCK_QBO_{invoice.invoice_id}"  # Mock QBO ID for Phase 0-3
-            except Exception as e:
-                # QBO sync failed, but we can still create the invoice
-                print(f"QBO sync failed: {e}")
-                invoice.qbo_invoice_id = None
+            # QBO sync will be handled by SmartSync in Phase 4
+            # For now, we create invoices locally and sync later
+            invoice.qbo_invoice_id = f"LOCAL_{invoice.invoice_id}"
             
             self.db.commit()
             self.db.refresh(invoice)
@@ -101,3 +179,45 @@ class InvoiceService:
         except Exception as e:
             self.db.rollback()
             raise ValueError(f"Invoice sync failed: {str(e)}")
+
+    def ingest_invoice_from_qbo(self, business_id: str, qbo_invoice_data: Dict[str, Any]) -> InvoiceModel:
+        """
+        Ingest an invoice from QBO data structure into our database.
+        
+        Args:
+            business_id: The ID of the business
+            qbo_invoice_data: Dictionary containing QBO invoice data
+        
+        Returns:
+            InvoiceModel: The created or updated invoice object
+        """
+        try:
+            qbo_id = qbo_invoice_data.get('qbo_id')
+            invoice = self.db.query(InvoiceModel).filter(
+                InvoiceModel.qbo_invoice_id == qbo_id,
+                InvoiceModel.business_id == business_id
+            ).first()
+            
+            if not invoice:
+                invoice = InvoiceModel(
+                    business_id=business_id,
+                    qbo_invoice_id=qbo_id,
+                    total=qbo_invoice_data.get('amount', 0.0),
+                    due_date=datetime.fromisoformat(qbo_invoice_data.get('due_date')) if qbo_invoice_data.get('due_date') else None,
+                    status=qbo_invoice_data.get('status', 'sent'),
+                    customer_id=qbo_invoice_data.get('customer_id')
+                )
+                self.db.add(invoice)
+            else:
+                invoice.total = qbo_invoice_data.get('amount', 0.0)
+                invoice.due_date = datetime.fromisoformat(qbo_invoice_data.get('due_date')) if qbo_invoice_data.get('due_date') else None
+                invoice.status = qbo_invoice_data.get('status', 'sent')
+                invoice.customer_id = qbo_invoice_data.get('customer_id')
+            
+            self.db.commit()
+            self.db.refresh(invoice)
+            return invoice
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to ingest invoice from QBO: {e}")
+            raise ValueError(f"Failed to ingest invoice from QBO: {e}")

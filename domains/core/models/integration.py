@@ -21,9 +21,16 @@ class Integration(Base, TimestampMixin, TenantMixin):
     access_token = Column(String, nullable=True)
     refresh_token = Column(String, nullable=True)
     expires_at = Column(DateTime, nullable=True)
+    token_expires_at = Column(DateTime, nullable=True)  # For QBO OAuth
     account_id = Column(String, nullable=True)
+    realm_id = Column(String, nullable=True)  # QBO company ID
     status = Column(String, default="active")  # active, inactive, expired, error
+    oauth_state = Column(String, nullable=True)  # OAuth state parameter
+    connected_at = Column(DateTime, nullable=True)  # When connection was established
+    error_message = Column(String, nullable=True)  # Error details if failed
+    created_by = Column(String, nullable=True)  # User who initiated connection
     platform_metadata = Column(String, nullable=True)  # JSON string for platform-specific data
+    runway_replay_data = Column(JSON, nullable=True)  # Store runway replay results
     
     # Relationships
     business = relationship("Business", back_populates="integrations")

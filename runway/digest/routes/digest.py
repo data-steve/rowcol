@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from db.session import get_db
 from runway.digest.services.digest import DigestService
 
-router = APIRouter(prefix='/runway', tags=['digest'])
+router = APIRouter(tags=['digest'])
 
 @router.get('/businesses/{business_id}/digest')
 async def get_business_digest(business_id: str, db: Session = Depends(get_db)):

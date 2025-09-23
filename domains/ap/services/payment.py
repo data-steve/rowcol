@@ -20,7 +20,7 @@ import logging
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.payment import Payment, PaymentStatus, PaymentType
 from domains.ap.models.bill import Bill as BillModel
-from domains.ap.providers.factories import get_qbo_ap_provider
+# NOTE: Providers parked for future strategy - using QBOAPIProvider directly
 from common.exceptions import ValidationError, BusinessRuleViolationError
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,9 @@ class PaymentService(TenantAwareService):
         """
         super().__init__(db, business_id)
         
-        self.qbo_provider = qbo_provider or get_qbo_ap_provider(business_id)
+        # NOTE: Providers parked for future strategy - using QBOAPIProvider directly
+        from domains.integrations.qbo.qbo_api_provider import get_qbo_provider
+        self.qbo_provider = qbo_provider or get_qbo_provider(business_id, self.db)
         self.runway_reserve_service = runway_reserve_service
         
         logger.info(f"Initialized PaymentService for business {business_id}")

@@ -16,7 +16,7 @@ from domains.ar.services.invoice import InvoiceService
 from domains.integrations.smart_sync import SmartSyncService
 from runway.reserves.services.runway_reserve_service import RunwayReserveService
 
-router = APIRouter(prefix="/collections", tags=["AR Collections"])
+router = APIRouter(tags=["AR Collections"])
 
 def get_services(
     db: Session = Depends(get_db),

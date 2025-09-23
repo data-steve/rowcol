@@ -4,10 +4,11 @@ from domains.core.models.base import Base, TimestampMixin, TenantMixin
 
 class User(Base, TimestampMixin, TenantMixin):
     __tablename__ = "users"
-    user_id = Column(String(36), primary_key=True, index=True)  # Changed to String for UUID-like IDs
+    user_id = Column(String(36), primary_key=True, index=True, default=lambda: str(__import__('uuid').uuid4()))  # Changed to String for UUID-like IDs
     business_id = Column(String(36), ForeignKey("businesses.business_id"), nullable=False)
     role = Column(String, nullable=False)  # owner, admin, staff
     email = Column(String, unique=True, nullable=False, index=True)
+    full_name = Column(String, nullable=False)  # Required for billing, emails, UX
     password_hash = Column(String, nullable=False)  # Added for authentication
     permissions = Column(JSON, nullable=True)
     training_level = Column(String, default="junior")  # junior, senior, manager

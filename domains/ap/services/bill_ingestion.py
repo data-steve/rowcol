@@ -21,7 +21,8 @@ from fastapi import UploadFile, HTTPException
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.bill import Bill, BillStatus, BillPriority
 from domains.ap.models.vendor import Vendor
-from domains.ap.providers.factories import get_qbo_ap_provider, get_document_processor
+from domains.integrations.qbo.qbo_api_provider import QBOAPIProvider
+from domains.integrations.qbo.qbo_connection_manager import get_qbo_connection_manager
 from common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -58,11 +59,132 @@ class BillService(TenantAwareService):
         """
         super().__init__(db, business_id, validate_business=validate_business)
         
-        self.qbo_provider = qbo_provider or get_qbo_ap_provider(business_id)
-        self.document_processor = document_processor or get_document_processor()
+        # NOTE: Providers parked for future strategy - using QBOAPIProvider directly
+        from domains.integrations.qbo.qbo_api_provider import get_qbo_provider
+        self.qbo_provider = qbo_provider or get_qbo_provider(business_id, self.db)
+        self.document_processor = document_processor  # TODO: Implement when provider strategy decided
         self.runway_reserve_service = runway_reserve_service
         
         logger.info(f"Initialized BillService for business {business_id}")
+
+    # ==================== SMART SYNC DATA METHODS ====================
+    
+    def get_payment_ready_bills(self, max_amount: Optional[float] = None) -> List[Dict[str, Any]]:
+        """
+        Get bills that are ready for payment, with optional amount constraint.
+        
+        This method handles the database query and entity transformation.
+        For priority calculations, use PaymentPriorityCalculator from runway/core/services.
+        
+        Args:
+            max_amount: Maximum total amount to consider for payment (optional)
+        
+        Returns:
+            List of bill dictionaries ready for payment prioritization
+        """
+        try:
+            from domains.ap.models.bill import Bill, BillStatus
+            
+            bills = self.db.query(Bill).filter(
+                Bill.business_id == self.business_id,
+                Bill.status.in_([BillStatus.APPROVED, 'approved'])
+            ).all()
+            
+            bill_dicts = [
+                {
+                    'qbo_id': bill.qbo_bill_id,
+                    'amount': float(bill.amount_cents / 100) if bill.amount_cents else 0.0,
+                    'due_date': bill.due_date.isoformat() if bill.due_date else None,
+                    'vendor_id': bill.vendor_id,
+                    'vendor_name': getattr(bill.vendor, 'name', 'Unknown') if hasattr(bill, 'vendor') and bill.vendor else 'Unknown',
+                    'status': bill.status,
+                    'bill_type': getattr(bill, 'bill_type', '')
+                }
+                for bill in bills
+            ]
+            
+            # Apply amount constraint if specified
+            if max_amount is not None:
+                total = 0.0
+                filtered = []
+                # Sort by amount ascending to fit more bills within constraint
+                bill_dicts.sort(key=lambda x: x['amount'])
+                for bill in bill_dicts:
+                    if total + bill['amount'] <= max_amount:
+                        filtered.append(bill)
+                        total += bill['amount']
+                    else:
+                        break
+                return filtered
+            
+            return bill_dicts
+            
+        except Exception as e:
+            logger.error(f"Failed to get payment-ready bills: {e}")
+            return []
+    
+    def get_bills_due_in_days(self, days: int = 30) -> List[Dict[str, Any]]:
+        """
+        Get bills due within specified number of days.
+        
+        This is the proper method for SmartSync to call instead of 
+        duplicating business logic.
+        """
+        try:
+            from datetime import datetime, timedelta
+            
+            due_cutoff = datetime.utcnow() + timedelta(days=days)
+            bills = self.db.query(Bill).filter(
+                Bill.business_id == self.business_id,
+                Bill.due_date <= due_cutoff,
+                Bill.status.in_([BillStatus.PENDING, BillStatus.APPROVED, "pending", "approved"])
+            ).all()
+            
+            return [
+                {
+                    "qbo_id": bill.qbo_bill_id,
+                    "vendor": bill.vendor.name if bill.vendor else "Unknown Vendor",
+                    "vendor_id": bill.vendor_id,
+                    "amount": float(bill.amount_cents / 100),  # Convert cents to dollars
+                    "due_date": bill.due_date.isoformat() if bill.due_date else None,
+                    "status": bill.status if isinstance(bill.status, str) else bill.status.value,
+                    "balance": float(bill.amount_cents / 100)  # Simplified for now
+                }
+                for bill in bills
+            ]
+        except Exception as e:
+            logger.error(f"Failed to get bills due in {days} days: {e}")
+            return []
+    
+    def get_bills_for_digest(self) -> List[Dict[str, Any]]:
+        """Get bills formatted for digest generation."""
+        return self.get_bills_due_in_days(30)
+    
+    def get_overdue_bills(self) -> List[Dict[str, Any]]:
+        """Get overdue bills for collections."""
+        try:
+            today = datetime.utcnow()
+            bills = self.db.query(Bill).filter(
+                Bill.business_id == self.business_id,
+                Bill.due_date < today,
+                Bill.status.in_([BillStatus.PENDING, BillStatus.APPROVED, "pending", "approved"])
+            ).all()
+            
+            return [
+                {
+                    "qbo_id": bill.qbo_bill_id,
+                    "vendor": bill.vendor.name if bill.vendor else "Unknown Vendor",
+                    "vendor_id": bill.vendor_id,
+                    "amount": float(bill.amount_cents / 100),
+                    "due_date": bill.due_date.isoformat() if bill.due_date else None,
+                    "days_overdue": (today - bill.due_date).days if bill.due_date else 0,
+                    "status": bill.status if isinstance(bill.status, str) else bill.status.value
+                }
+                for bill in bills
+            ]
+        except Exception as e:
+            logger.error(f"Failed to get overdue bills: {e}")
+            return []
 
     # ==================== BILL INGESTION ====================
     
@@ -130,6 +252,48 @@ class BillService(TenantAwareService):
             logger.error(f"Document ingestion failed: {str(e)}")
             raise ValidationError(f"Document ingestion failed: {str(e)}")
     
+    def ingest_bill_from_qbo(self, business_id: str, qbo_bill_data: Dict[str, Any]) -> Bill:
+        """
+        Ingest a bill from QBO data structure into our database.
+        
+        Args:
+            business_id: The ID of the business
+            qbo_bill_data: Dictionary containing QBO bill data
+        
+        Returns:
+            Bill: The created or updated bill object
+        """
+        try:
+            qbo_id = qbo_bill_data.get('qbo_id')
+            bill = self.db.query(Bill).filter(
+                Bill.qbo_bill_id == qbo_id,
+                Bill.business_id == business_id
+            ).first()
+            
+            if not bill:
+                bill = Bill(
+                    business_id=business_id,
+                    qbo_bill_id=qbo_id,
+                    amount_cents=int(qbo_bill_data.get('amount', 0) * 100),  # Convert dollars to cents
+                    due_date=datetime.fromisoformat(qbo_bill_data.get('due_date')) if qbo_bill_data.get('due_date') else None,
+                    status=BillStatus.PENDING if isinstance(qbo_bill_data.get('status'), str) else qbo_bill_data.get('status', BillStatus.PENDING),
+                    vendor_id=qbo_bill_data.get('vendor_id')
+                )
+                self.db.add(bill)
+            else:
+                bill.amount_cents = int(qbo_bill_data.get('amount', 0) * 100)
+                bill.due_date = datetime.fromisoformat(qbo_bill_data.get('due_date')) if qbo_bill_data.get('due_date') else None
+                bill.status = BillStatus.PENDING if isinstance(qbo_bill_data.get('status'), str) else qbo_bill_data.get('status', BillStatus.PENDING)
+                bill.vendor_id = qbo_bill_data.get('vendor_id')
+            
+            self.db.commit()
+            self.db.refresh(bill)
+            return bill
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed to ingest bill from QBO: {e}")
+            raise ValueError(f"Failed to ingest bill from QBO: {e}")
+
     # ==================== BILL BUSINESS LOGIC ====================
     
     def calculate_bill_priority(self, bill: Bill) -> str:

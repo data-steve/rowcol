@@ -359,33 +359,80 @@ class RunwayReserveService:
         return recommendations
     
     # ==================== HELPER METHODS FOR QBO DATA ====================
+    # NOTE: These methods contain hardcoded values and need real QBO integration
     
     def _get_business_cash_balance(self, business_id: str) -> Decimal:
-        """Get current cash balance from QBO or use default for development."""
-        # TODO: Implement QBO cash balance API call
-        # For now, return a reasonable default for development
-        return Decimal('100000.00')
+        """Get current cash balance from QBO via RunwayCalculator."""
+        try:
+            from runway.core.services.runway_calculator import RunwayCalculator
+            runway_calculator = RunwayCalculator(self.db, business_id, validate_business=False)
+            runway_data = runway_calculator.calculate_current_runway({})
+            cash_position = runway_data.get('cash_position', 0)
+            return Decimal(str(cash_position))
+        except Exception as e:
+            logger.warning(f"Failed to get QBO cash balance for business {business_id}: {e}")
+            from config.business_rules.core_thresholds import RunwayAnalysisSettings
+            return Decimal(str(RunwayAnalysisSettings.DEFAULT_CASH_BALANCE))
     
     def _calculate_monthly_burn_rate(self, business_id: str) -> Decimal:
-        """Calculate monthly burn rate from QBO expense data."""
-        # TODO: Implement QBO expense analysis
-        # For now, return a reasonable default for development
-        return Decimal('15000.00')
+        """Calculate monthly burn rate from QBO expense data via RunwayCalculator."""
+        try:
+            from runway.core.services.runway_calculator import RunwayCalculator
+            runway_calculator = RunwayCalculator(self.db, business_id, validate_business=False)
+            runway_data = runway_calculator.calculate_current_runway({})
+            burn_rate_data = runway_data.get('burn_rate', {})
+            daily_burn = burn_rate_data.get('daily_burn', 0) if isinstance(burn_rate_data, dict) else 0
+            # Convert daily burn to monthly (30 days)
+            return Decimal(str(daily_burn * 30))
+        except Exception as e:
+            logger.warning(f"Failed to get QBO burn rate for business {business_id}: {e}")
+            from config.business_rules.core_thresholds import RunwayAnalysisSettings
+            daily_burn = Decimal(str(RunwayAnalysisSettings.DEFAULT_DAILY_BURN_RATE))
+            return daily_burn * 30
     
     def _get_monthly_revenue(self, business_id: str) -> Decimal:
-        """Get average monthly revenue from QBO."""
-        # TODO: Implement QBO revenue analysis
-        # For now, return a reasonable default for development
-        return Decimal('25000.00')
+        """
+        Get average monthly revenue from QBO.
+        
+        NOTE: This is intentionally using fallback values for now.
+        Reserve management is a Phase 5+ feature. The core runway calculation
+        (which this depends on) already has real QBO integration.
+        
+        When we implement advanced reserve features, this should query
+        QBO Income accounts for the last 3-6 months and calculate average.
+        """
+        from config.business_rules.core_thresholds import RunwayAnalysisSettings
+        
+        logger.info(f"Using default monthly revenue for reserve calculations - business {business_id}")
+        return Decimal(str(RunwayAnalysisSettings.DEFAULT_MONTHLY_REVENUE))
     
     def _get_monthly_expenses(self, business_id: str) -> Decimal:
-        """Get average monthly expenses from QBO."""
-        # TODO: Implement QBO expense analysis
-        # For now, return a reasonable default for development
-        return Decimal('15000.00')
+        """
+        Get average monthly expenses from QBO.
+        
+        NOTE: This is intentionally using fallback values for now.
+        Reserve management is a Phase 5+ feature. For current runway calculations,
+        use RunwayCalculator which has real QBO integration for burn rate.
+        
+        When we implement advanced reserve features, this should query
+        QBO Expense accounts for the last 3-6 months and calculate average.
+        """
+        from config.business_rules.core_thresholds import RunwayAnalysisSettings
+        
+        logger.info(f"Using default monthly expenses for reserve calculations - business {business_id}")
+        return Decimal(str(RunwayAnalysisSettings.DEFAULT_MONTHLY_EXPENSES))
     
     def _get_employee_count(self, business_id: str) -> int:
-        """Get employee count from QBO payroll or HR data."""
-        # TODO: Implement QBO payroll API call
-        # For now, return a reasonable default for development
-        return 5
+        """
+        Get employee count from QBO payroll or HR data.
+        
+        NOTE: This is intentionally using fallback values for now.
+        Employee count is used for reserve recommendations, not core runway calculation.
+        
+        When we implement advanced reserve features, this should query
+        QBO Employee entities or integrate with payroll systems.
+        """
+        from config.business_rules.core_thresholds import RunwayAnalysisSettings
+        
+        logger.info(f"Using default employee count for reserve calculations - business {business_id}")
+        return RunwayAnalysisSettings.DEFAULT_EMPLOYEE_COUNT

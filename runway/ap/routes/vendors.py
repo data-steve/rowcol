@@ -16,7 +16,7 @@ from domains.integrations.smart_sync import SmartSyncService
 from domains.ap.schemas.vendor import VendorResponse, VendorCreate, VendorUpdate
 from common.exceptions import ValidationError
 
-router = APIRouter(prefix="/vendors", tags=["AP Vendors"])
+router = APIRouter(tags=["AP Vendors"])
 
 def get_services(
     db: Session = Depends(get_db),

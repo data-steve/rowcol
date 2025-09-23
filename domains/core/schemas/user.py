@@ -5,6 +5,7 @@ class UserBase(BaseModel):
     business_id: str
     role: str
     email: str
+    full_name: str
     permissions: Optional[Dict] = None
     training_level: str
 
@@ -22,6 +23,7 @@ class User(UserBase):
 class UserUpdate(BaseModel):
     """Update schema for User"""
     email: Optional[str] = None
+    full_name: Optional[str] = None
     role: Optional[str] = None
     permissions: Optional[Dict] = None
     training_level: Optional[str] = None

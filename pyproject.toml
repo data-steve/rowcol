@@ -77,6 +77,10 @@ asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests", "domains"]
 python_files = ["test_*.py"]
 pythonpath = ["."]
+markers = [
+  "integration: marks integration tests",
+  "qbo_real_api: tests that may hit QBO sandbox APIs"
+]
 
 [tool.ruff]
 select = ["E", "F"]  # Focus on errors (E: syntax, type) and fatal (F: undefined names, imports)

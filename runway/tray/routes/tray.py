@@ -5,7 +5,7 @@ from db.session import get_db
 from runway.auth.middleware.auth import get_current_business_id
 from runway.tray.services.tray import TrayService
 
-router = APIRouter(prefix="/tray", tags=["Tray"])
+router = APIRouter(tags=["Tray"])
 
 def get_tray_service(
     db: Session = Depends(get_db),

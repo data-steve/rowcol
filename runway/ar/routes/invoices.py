@@ -18,7 +18,7 @@ from domains.integrations.smart_sync import SmartSyncService
 from runway.reserves.services.runway_reserve_service import RunwayReserveService
 from common.exceptions import ValidationError
 
-router = APIRouter(prefix="/invoices", tags=["AR Invoices"])
+router = APIRouter(tags=["AR Invoices"])
 
 def get_services(
     db: Session = Depends(get_db),
