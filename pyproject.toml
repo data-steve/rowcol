@@ -1,12 +1,13 @@
 [tool.poetry]
-name = "bookclose"
+name = "oodaloo"
 version = "0.1.0"
-description = "BookClose is an automation-first platform designed to streamline the book-to-close process for accounting firms, achieving 70-80% automation of transaction categorization, reconciliation, and audit-ready binder generation."
+description = "One-liner: Jobber helps make revenue. Oodaloo helps make profit.Core wedge: Weekly cash-basis job profitability + payroll runway, fixed fast by a dispatcher exceptions tray."
 authors = ["data-steve <steven.troy.simpson@gmail.com>"]
 readme = "README.md"
 packages = [
   { include = "app" },
 ]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
@@ -50,6 +51,13 @@ python-quickbooks = "^0.9.12"
 python-dateutil = "^2.9.0.post0"
 apscheduler = "^3.11.0"
 isort = "^6.0.1"
+stripe = "^12.4.0"
+gql = {extras = ["all"], version = "^3.0.0"}
+plaid-python = "^10.0.0"
+streamlit = "^1.48.1"
+watchdog = "^6.0.0"
+ortools = "^9.14.6206"
+plotly = "^6.3.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -66,8 +74,13 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["app/tests"]
+testpaths = ["tests", "domains"]
 python_files = ["test_*.py"]
+pythonpath = ["."]
+markers = [
+  "integration: marks integration tests",
+  "qbo_real_api: tests that may hit QBO sandbox APIs"
+]
 
 [tool.ruff]
 select = ["E", "F"]  # Focus on errors (E: syntax, type) and fatal (F: undefined names, imports)
@@ -83,4 +96,4 @@ target-version = "py39"  # Match your Python version (adjust if different)
 
 [tool.poetry.scripts]
 lint = "ruff check . --fix"  # Run Ruff with auto-fix
-test = "pytest app/tests/v1/ -v"  # Existing test command
+test = "pytest tests/ -v"  # Existing test command

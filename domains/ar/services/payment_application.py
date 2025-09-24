@@ -3,8 +3,7 @@ Payment Application Service for AR domain.
 Handles payment application to invoices with tenant isolation.
 """
 from sqlalchemy.orm import Session
-from domains.ap.models.payment import Payment as PaymentModel
-from domains.ar.models.invoice import Invoice as InvoiceModel
+from domains.ar.models.payment import Payment as PaymentModel
 from datetime import datetime
 from typing import Optional
 
@@ -12,19 +11,19 @@ class PaymentApplicationService:
     def __init__(self, db: Session):
         self.db = db
 
-    def apply_payment(self, firm_id: str, amount: float, date: datetime, method: str, customer_id: Optional[int] = None) -> PaymentModel:
+    def apply_payment(self, business_id: int, amount: float, date: datetime, method: str, customer_id: Optional[int] = None) -> PaymentModel:
         """
         Apply a payment to invoices with tenant isolation.
         """
         try:
             # Create payment record
             payment = PaymentModel(
-                firm_id=firm_id,
+                business_id=business_id,
                 customer_id=customer_id,
                 amount=amount,
-                date=date,
-                method=method,
-                status="applied"
+                payment_date=date,
+                payment_method=method,
+                status="matched"  # AR payments use "matched" status
             )
             
             self.db.add(payment)
@@ -36,16 +35,16 @@ class PaymentApplicationService:
             self.db.rollback()
             raise ValueError(f"Payment application failed: {str(e)}")
 
-    def get_payment(self, payment_id: int, firm_id: str) -> PaymentModel:
+    def get_payment(self, payment_id: int, business_id: int) -> PaymentModel:
         """
         Get payment by ID with tenant isolation.
         """
         payment = self.db.query(PaymentModel).filter(
             PaymentModel.payment_id == payment_id,
-            PaymentModel.firm_id == firm_id
+            PaymentModel.business_id == business_id
         ).first()
         
         if not payment:
-            raise ValueError("Payment not found or does not belong to firm")
+            raise ValueError("Payment not found or does not belong to business")
         
         return payment

@@ -145,3 +145,27 @@ google-docs-ai-bookclose-467315-83691dfd1266.json
 bundle.json
 grok_bundle.json
 keys/qbo_tokens.json
+
+# secrets
+*_tokens.json
+keys/*.json
+
+# local db
+*.db
+
+# secrets
+*_tokens.json
+keys/*.json
+
+# Ignore local QBO dev tokens
+domains/integrations/qbo/dev_tokens.json
+
+# Agent-based workflow files
+dev/agent/runs/
+dev/agent/TASK.md
+dev/agent/archive/
+.cursor_taskmem.json
+PLAN.json
+
+# VCR Cassettes
+tests/cassettes/

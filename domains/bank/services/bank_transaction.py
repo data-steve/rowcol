@@ -1,126 +1,133 @@
 """
-Preamble: Implements BankTransactionService for Stage 1C of the Escher project.
-Handles creation and listing of bank transactions with tenant isolation and policy engine integration.
-Extends BankTransactionService for Stage 1C of the Escher project.
-Adds transaction categorization functionality for Slice 2.
-References: Stage 1C requirements, services/policy_engine.py, models/bank_transaction.py.
+Bank Transaction Service for Oodaloo
+
+PURPOSE: Handle bank feed transactions for single business owners
+- Import bank transactions from QBO bank feeds
+- Simple expense categorization for cash flow tracking
+- Support runway calculations with actual bank data
+
+SCOPE: Oodaloo Phase 2-3 (single business owner)
+NOT: Multi-client expense allocation (that's RowCol complexity - see _parked/)
 """
+
 from sqlalchemy.orm import Session
-from domains.bank.models.bank_transaction import BankTransaction as BankTransactionModel
-from domains.bank.schemas.bank_transaction import BankTransactionCreate, BankTransaction, BankTransactionCategorize
-from domains.core.services.policy_engine import PolicyEngineService
+from domains.bank.models import BankTransaction
+from domains.core.services.base_service import TenantAwareService
 from typing import List, Optional
+from decimal import Decimal
+from datetime import datetime
 
-class BankTransactionService:
-    def __init__(self, db: Session):
-        self.db = db
-        self.policy_engine = PolicyEngineService(db)
-
-    def create_transaction(self, transaction_data: BankTransactionCreate, firm_id: str, client_id: Optional[int] = None) -> BankTransactionModel:
+class BankTransactionService(TenantAwareService):
+    """
+    Simple bank transaction service for Oodaloo business owners.
+    
+    Core Use Cases:
+    1. Import bank transactions from QBO bank feeds
+    2. Basic expense categorization (Office, Travel, etc.)
+    3. Cash flow tracking for runway calculations
+    4. Simple transaction search and filtering
+    """
+    
+    def __init__(self, db: Session, business_id: str, validate_business: bool = True):
+        super().__init__(db, business_id, validate_business)
+    
+    def import_from_qbo(self, qbo_transactions: List[dict]) -> List[BankTransaction]:
         """
-        Create a new bank transaction with tenant isolation and categorization.
-        """
-        try:
-            # Validate firm_id
-            if not firm_id:
-                raise ValueError("firm_id is required")
-            
-            # Create transaction
-            db_transaction = BankTransactionModel(
-                firm_id=firm_id,
-                client_id=client_id,
-                amount=transaction_data.amount,
-                date=transaction_data.date,
-                description=transaction_data.description,
-                account_id=transaction_data.account_id,
-                source=transaction_data.source,
-                status="pending"
-            )
-            
-            # Categorize using policy engine
-            # Permanent comment: This integration ensures transactions are categorized at creation,
-            # linking to suggestions for auditability and compliance.
-            suggestion = self.policy_engine.categorize(
-                firm_id=firm_id,
-                description=transaction_data.description,
-                amount=transaction_data.amount,
-                client_id=client_id
-            )
-            
-            # Link suggestion
-            db_transaction.suggestion_id = suggestion.suggestion_id
-            db_transaction.confidence = suggestion.top_k[0]["confidence"] if suggestion.top_k else 0.0
-            
-            self.db.add(db_transaction)
-            self.db.commit()
-            self.db.refresh(db_transaction)
-            return db_transaction
-            
-        except Exception as e:
-            self.db.rollback()
-            raise ValueError(f"Transaction creation failed: {str(e)}")
-
-    def list_transactions(self, firm_id: str, client_id: Optional[int] = None) -> List[BankTransactionModel]:
-        """
-        List bank transactions with tenant isolation.
-        """
-        query = self.db.query(BankTransactionModel).filter(
-            BankTransactionModel.firm_id == firm_id
-        )
+        Import bank transactions from QBO bank feeds.
         
-        if client_id:
-            query = query.filter(BankTransactionModel.client_id == client_id)
-            
-        return query.all()
-
-    def categorize_transaction(self, firm_id: str, categorize_data: BankTransactionCategorize) -> BankTransactionModel:
+        Phase 3: Replace with real QBO API integration
+        Phase 1-2: Mock data for development
         """
-        Categorize an existing bank transaction using the policy engine.
-        """
-        try:
-            # Fetch transaction with tenant isolation
-            transaction = self.db.query(BankTransactionModel).filter(
-                BankTransactionModel.transaction_id == categorize_data.transaction_id,
-                BankTransactionModel.firm_id == firm_id
-            ).first()
-            
-            if not transaction:
-                raise ValueError("Transaction not found or does not belong to firm")
-            
-            # Categorize using policy engine
-            # Permanent comment: This step re-applies rules to update categorization, ensuring compliance with firm-specific policies.
-            suggestion = self.policy_engine.categorize(
-                firm_id=firm_id,
-                description=transaction.description,
-                amount=transaction.amount,
-                client_id=transaction.client_id
+        imported_transactions = []
+        
+        for qbo_txn in qbo_transactions:
+            transaction = BankTransaction(
+                business_id=self.business_id,
+                qbo_transaction_id=qbo_txn.get('Id'),
+                amount_cents=int(Decimal(str(qbo_txn['Amount'])) * 100),
+                description=qbo_txn.get('Description', ''),
+                transaction_date=datetime.fromisoformat(qbo_txn['Date']),
+                account_name=qbo_txn.get('AccountName', ''),
+                source='qbo_bank_feed'
             )
             
-            # Update transaction with new categorization
-            transaction.suggestion_id = suggestion.suggestion_id
-            transaction.confidence = suggestion.top_k[0]["confidence"] if suggestion.top_k else 0.0
-            transaction.account_id = suggestion.top_k[0]["account"] if suggestion.top_k else transaction.account_id
-            
-            self.db.commit()
-            self.db.refresh(transaction)
-            return transaction
-            
-        except Exception as e:
-            self.db.rollback()
-            raise ValueError(f"Transaction categorization failed: {str(e)}")
-
-    def create_transfer(self, firm_id: str, client_id: str):
-        """Create a transfer between accounts."""
-        # Mock implementation - return a sample transfer
+            self.db.add(transaction)
+            imported_transactions.append(transaction)
+        
+        self.db.commit()
+        return imported_transactions
+    
+    def get_recent_transactions(self, limit: int = 50) -> List[BankTransaction]:
+        """Get recent transactions for cash flow review."""
+        return self.db.query(BankTransaction)\
+            .filter_by(business_id=self.business_id)\
+            .order_by(BankTransaction.transaction_date.desc())\
+            .limit(limit)\
+            .all()
+    
+    def get_uncategorized_transactions(self) -> List[BankTransaction]:
+        """Get transactions that need categorization."""
+        return self.db.query(BankTransaction)\
+            .filter_by(business_id=self.business_id, category=None)\
+            .order_by(BankTransaction.transaction_date.desc())\
+            .all()
+    
+    def categorize_transaction(self, transaction_id: str, category: str) -> BankTransaction:
+        """
+        Simple transaction categorization for business owners.
+        
+        Categories: Office, Travel, Marketing, Equipment, etc.
+        NOT: Complex GL account mapping (that's RowCol complexity)
+        """
+        transaction = self.db.query(BankTransaction)\
+            .filter_by(id=transaction_id, business_id=self.business_id)\
+            .first()
+        
+        if not transaction:
+            raise ValueError(f"Transaction {transaction_id} not found")
+        
+        transaction.category = category
+        self.db.commit()
+        return transaction
+    
+    def get_cash_flow_summary(self, days: int = 30) -> dict:
+        """
+        Get cash flow summary for runway calculations.
+        
+        Returns simple in/out totals, not complex P&L analysis.
+        """
+        from datetime import datetime, timedelta
+        
+        start_date = datetime.now() - timedelta(days=days)
+        
+        transactions = self.db.query(BankTransaction)\
+            .filter_by(business_id=self.business_id)\
+            .filter(BankTransaction.transaction_date >= start_date)\
+            .all()
+        
+        total_in = sum(t.amount_cents for t in transactions if t.amount_cents > 0)
+        total_out = sum(abs(t.amount_cents) for t in transactions if t.amount_cents < 0)
+        
         return {
-            "firm_id": firm_id,
-            "source_transaction_id": 1,
-            "destination_transaction_id": 2,
-            "amount": 1000.0,
-            "description": "Account Transfer"
+            'period_days': days,
+            'total_in_cents': total_in,
+            'total_out_cents': total_out,
+            'net_flow_cents': total_in - total_out,
+            'transaction_count': len(transactions)
         }
 
-    def detect_transfers(self, firm_id: str, client_id: str):
-        """Detect potential transfers between accounts."""
-        # Mock implementation - return a sample transfer
-        return [{"id": 1, "amount": 1000.0, "description": "Transfer detected", "firm_id": firm_id}]
+# TODO: Phase 3 - QBO Bank Feed Integration
+# - Real-time bank feed imports via QBO API
+# - Automatic transaction deduplication
+# - Bank account reconciliation helpers
+
+# TODO: Phase 2 - Smart Categorization  
+# - Simple ML-based category suggestions
+# - Learn from user's categorization patterns
+# - Common expense pattern recognition
+
+# PARKED for RowCol:
+# - Multi-client transaction allocation
+# - Complex GL account mapping
+# - Audit trail and approval workflows
+# - Cross-client expense reporting

@@ -2,8 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 class BusinessEntityBase(BaseModel):
-    firm_id: str
-    client_id: int
+    business_id: str
     name: str
     ein: Optional[str] = None
     tax_classification: str

@@ -1,10 +1,9 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, Dict, Any
 from datetime import datetime
 
 class BillBase(BaseModel):
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: str
     vendor_id: Optional[int] = None
     qbo_bill_id: str
     amount: float
@@ -19,6 +18,15 @@ class BillCreate(BillBase):
 
 class Bill(BillBase):
     bill_id: Optional[int] = None
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+# API Response schemas
+class BillResponse(Bill):
+    """Response schema for Bill API endpoints"""
+    pass
+
+class BillApprovalRequest(BaseModel):
+    """Request schema for bill approval"""
+    bill_id: int
+    approved: bool
+    notes: Optional[str] = None

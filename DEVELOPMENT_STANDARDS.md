@@ -1,170 +1,245 @@
 # Development Standards & Anti-Patterns
 
-*Based on Stage 0-1C implementation experience - critical for avoiding common pitfalls*
-
 ## Quick Reference
-- [Development Plan](dev_plan.md)
-- [Architecture Requirements](docs/Architecture_Requirements_Changes_Updated.markdown)
+- [Build Plan](Oodaloo_v4.5_Build_Plan.md)
 
-## 🚫 **CRITICAL ANTI-PATTERNS TO AVOID**
 
-### **File Naming & Import Chaos**
-- ❌ **Don't:** Use folder names as prefixes in filenames (`models_service.py`, `routes_engagement.py`)
-- ❌ **Don't:** Bulk rename files without updating ALL imports across the codebase
-- ❌ **Don't:** Assume imports will "just work" after file moves
-- ✅ **Do:** Use descriptive, unique filenames (`service.py`, `engagement.py`)
-- ✅ **Do:** Update imports systematically after any file reorganization
 
-### **Schema vs. Model Confusion**
-- ❌ **Don't:** Use SQLAlchemy models as `response_model` in FastAPI routes
-- ❌ **Don't:** Mix Pydantic schemas and SQLAlchemy models in API responses
-- ❌ **Don't:** Assume `from_attributes = True` fixes all serialization issues
-- ✅ **Do:** Create separate Pydantic schemas (`*Base`, `*Create`, full models)
-- ✅ **Do:** Use Pydantic schemas for `response_model`, SQLAlchemy models for database operations
-- ✅ **Do:** Alias SQLAlchemy models in routes: `from models import Service as ServiceModel`
+### Service Abstraction Benefits
 
-### **Database Schema Mismatches**
-- ❌ **Don't:** Create seed data that doesn't match your SQLAlchemy models
-- ❌ **Don't:** Assume database columns exist without checking the actual model definitions
-- ❌ **Don't:** Use hardcoded field names that don't match the database schema
-- ✅ **Do:** Ensure seed data exactly matches your model definitions
-- ✅ **Do:** Use consistent field names across models, schemas, and seed data
-- ✅ **Do:** Test database seeding before building frontend features
+1. **Rapid Development**: No external API setup required for Phases 0-3
+2. **Predictable Testing**: Mock data ensures consistent test results
+3. **Cost Control**: No API usage charges during development
+4. **Offline Development**: Work without internet connectivity
+5. **Easy Productionalization**: Simple environment variable changes
 
-### **Missing Required Fields**
-- ❌ **Don't:** Forget to add required fields like `firm_id` when implementing multi-tenancy
-- ❌ **Don't:** Create models that inherit from mixins but don't implement required fields
-- ❌ **Don't:** Assume optional fields are truly optional without checking business logic
-- ✅ **Do:** Explicitly add all required fields when implementing new features
-- ✅ **Do:** Use database constraints to enforce required fields
-- ✅ **Do:** Validate that seed data includes all required fields
+### Clean Mocking Architecture Standards
 
-### **Route Registration & Import Issues**
-- ❌ **Don't:** Assume all routes will register automatically after adding them to `routes/__init__.py`
-- ❌ **Don't:** Import non-existent modules in `routes/__init__.py` (causes circular imports)
-- ❌ **Don't:** Forget to include new routers in the consolidated router
-- ✅ **Do:** Test route registration after any changes to the consolidated router
-- ✅ **Do:** Verify all imported modules exist before adding them to routes
-- ✅ **Do:** Use minimal working examples to isolate routing issues
+**Core Principle**: Business logic functions must be completely agnostic to whether they're using mock or real data providers.
 
-### **Seed Data & Business Logic Integration**
-- ❌ **Don't:** Hardcode business logic responses in services
-- ❌ **Don't:** Return mock data from services instead of querying the database
-- ❌ **Don't:** Use static responses for dynamic business rules
-- ✅ **Do:** Use seed data tables for configurable business rules
-- ✅ **Do:** Query real data for compliance requirements, task templates, policy rules
-- ✅ **Do:** Make business logic data-driven and configurable
+**Implementation Pattern**:
+```python
+# ✅ GOOD: Clean dependency injection
+class TrayService:
+    def __init__(self, db: Session, data_provider: TrayDataProvider = None):
+        self.data_provider = data_provider or get_tray_data_provider()
+    
+    def calculate_runway_impact(self, item):
+        return self.data_provider.get_runway_impact(item.type)
 
-### **Complex Dependencies in Templates**
-- ❌ **Don't:** Load heavy third-party libraries (drag-and-drop, tour libraries) in basic templates
-- ❌ **Don't:** Assume CDN libraries will load correctly or have the expected global variables
-- ❌ **Don't:** Mix complex JavaScript with Jinja2 template syntax
-- ✅ **Do:** Start with basic React components and add complexity incrementally
-- ✅ **Do:** Test external library loading before building complex features
-- ✅ **Do:** Use raw JavaScript blocks or escape Jinja2 syntax conflicts
-
-### **Database Seeding Issues**
-- ❌ **Don't:** Call seeding functions multiple times without checking if data already exists
-- ❌ **Don't:** Use SQLAlchemy queries to check if tables exist before seeding
-- ❌ **Don't:** Assume seeding will work after table creation without proper error handling
-- ✅ **Do:** Use raw SQL to check table existence and data counts
-- ✅ **Do:** Implement proper error handling in seeding functions
-- ✅ **Do:** Test seeding with fresh databases
-
-## ✅ **GOOD PATTERNS TO REPLICATE**
-
-### **Systematic Problem Solving**
-- ✅ **Do:** Fix one issue at a time, test, then move to the next
-- ✅ **Do:** Use error messages to guide fixes rather than guessing
-- ✅ **Do:** Test APIs directly with `curl` before testing frontend
-- ✅ **Do:** Check server logs for detailed error information
-- ✅ **Do:** Use minimal working examples to isolate complex issues
-
-### **Incremental Template Development**
-- ✅ **Do:** Start with simple templates that just display data
-- ✅ **Do:** Add interactive features only after basic functionality works
-- ✅ **Do:** Use console logging to debug frontend data flow
-- ✅ **Do:** Test templates in isolation before integrating with complex features
-
-### **Proper Test Structure**
-- ✅ **Do:** Use fixtures for reusable test data
-- ✅ **Do:** Mock external API calls to prevent test hangs
-- ✅ **Do:** Test database operations with proper setup/teardown
-- ✅ **Do:** Use descriptive test names and organize tests logically
-- ✅ **Do:** Centralize common mocks (like QBO) in `conftest.py`
-
-### **Multi-Tenant Architecture**
-- ✅ **Do:** Implement `TenantMixin` consistently across all models
-- ✅ **Do:** Add `firm_id` filtering to all list endpoints
-- ✅ **Do:** Use proper foreign key relationships with explicit constraints
-- ✅ **Do:** Test tenant isolation thoroughly
-- ✅ **Do:** Always include `firm_id` in domain objects
-
-### **Code Organization**
-- ✅ **Do:** Use consolidated routers in `routes/__init__.py` to keep `main.py` clean
-- ✅ **Do:** Separate concerns: models (data), schemas (validation), services (logic), routes (API)
-- ✅ **Do:** Use consistent naming conventions across all layers
-- ✅ **Do:** Implement proper error handling with HTTP status codes
-
-## 🔧 **IMPLEMENTATION CHECKLIST**
-
-### **Before Starting New Feature**
-- [ ] Check existing models and schemas for consistency
-- [ ] Verify database schema matches model definitions
-- [ ] Ensure seed data exists for business logic
-- [ ] Plan multi-tenant implementation (`firm_id`, `client_id`)
-
-### **During Development**
-- [ ] Test route registration after adding new endpoints
-- [ ] Verify imports work without circular dependencies
-- [ ] Test database operations with real data
-- [ ] Ensure proper error handling and status codes
-
-### **Before Committing**
-- [ ] Run full test suite: `poetry run pytest tests/ -q --disable-warnings`
-- [ ] Verify all routes are accessible (no 404s)
-- [ ] Check that seed data loads correctly
-- [ ] Ensure multi-tenant isolation works
-
-## 📚 **COMMON COMMANDS**
-
-```bash
-# Database setup
-python create_tables.py
-python load_seed_data.py
-
-# Testing
-poetry run pytest tests/ -q --disable-warnings
-poetry run pytest tests/test_specific.py -v
-
-# Route verification
-poetry run python -c "from routes.specific import router; print(len(router.routes))"
-
-# App startup test
-poetry run python -c "from main import app; print('✅ App imports successfully')"
+# ❌ BAD: Mock data embedded in business logic
+class TrayService:
+    def calculate_runway_impact(self, item):
+        if item.type == "overdue_bill":
+            return {"cash_impact": -1500}  # Hard-coded mock data
 ```
 
-## 🚨 **TROUBLESHOOTING**
+**Provider Pattern Requirements**:
+1. **Abstract Base Class**: Define interface contract
+2. **Mock Provider**: External class with realistic test data
+3. **Production Provider**: Real integration implementation
+4. **Factory Function**: Environment-based provider selection
+5. **Environment Variables**: `USE_MOCK_*=true/false` controls
 
-### **Route Registration Issues**
-1. Check `routes/__init__.py` for missing imports
-2. Verify all imported modules exist
-3. Test minimal route creation
-4. Check for circular imports
+**Mock Data Strategy**:
 
-### **Database Issues**
-1. Recreate tables: `python create_tables.py`
-2. Reload seed data: `python load_seed_data.py`
-3. Check model field names match database
-4. Verify foreign key relationships
+**Mock Email Provider**:
+- Logs emails to console and `logs/mock_emails_*.json`
+- Tracks engagement metrics for testing
+- Simulates delivery success/failure scenarios
+- **Location**: `runway/services/email/mock_provider.py`
 
-### **Import Errors**
-1. Check file paths and naming
-2. Verify `__init__.py` files exist
-3. Test imports individually
-4. Look for circular dependencies
+**Mock QBO Integration**:
+- Returns realistic bill/invoice/balance data
+- Simulates API rate limiting and errors
+- Supports different business scenarios (healthy, cash-strapped, etc.)
+- **Location**: `domains/integrations/qbo/mock_provider.py`
 
----
+**Mock Tray Data**:
+- Priority weights, runway impacts, action results
+- Realistic business scenarios and edge cases
+- **Location**: `runway/tray/providers/mock_data_provider.py`
 
-*Last updated: Stage 1C completion*
-*Next review: After Stage 1D implementation*
+**Mock Payment Processing**:
+- Simulates payment success/failure rates
+- Mock bank account verification
+- Realistic processing delays and confirmations
+- **Location**: `domains/ap/providers/mock_payment_provider.py`
+
+**Benefits of Clean Mocking**:
+- Services work identically with mock/real providers
+- Easy to swap providers via environment variables
+- Mock data can be shared across tests
+- No risk of "fooling ourselves" with embedded test data
+- Production code has zero mock contamination
+
+## Coding Standards for Maintainability
+
+### Core Principle: "Junior Developer Test"
+Every piece of code should be understandable and debuggable by a junior/mid-level developer within 30 seconds.
+
+### Database Transaction Patterns
+
+**✅ GOOD: Transaction Context Managers**
+```python
+from contextlib import contextmanager
+
+@contextmanager
+def db_transaction(db: Session):
+    try:
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+# Usage
+def create_business_and_user(business_data, user_data):
+    with db_transaction(db):
+        business = Business(**business_data)
+        db.add(business)
+        db.flush()  # Get ID without committing
+        
+        user_data["business_id"] = business.business_id
+        user = User(**user_data)
+        db.add(user)
+        # Both saved together or both fail
+```
+
+**❌ BAD: Manual Commits**
+```python
+def create_business_and_user(business_data, user_data):
+    business = Business(**business_data)
+    db.add(business)
+    db.commit()  # Danger: partial state if user creation fails
+    
+    user = User(**user_data)
+    db.add(user)
+    db.commit()
+```
+
+### Exception Handling Patterns
+
+**✅ GOOD: Specific Exceptions with Context**
+```python
+def send_digest_email(business_id: str):
+    try:
+        business = get_business(business_id)
+        digest_data = calculate_runway(business)
+        email_result = send_email(digest_data)
+        return email_result
+    except BusinessNotFoundError as e:
+        logger.error(f"Business {business_id} not found for digest: {e}")
+        raise HTTPException(status_code=404, detail="Business not found")
+    except EmailDeliveryError as e:
+        logger.error(f"Email delivery failed for business {business_id}: {e}")
+        raise HTTPException(status_code=500, detail="Email delivery failed")
+    except Exception as e:
+        logger.error(f"Unexpected error in digest generation for {business_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+```
+
+**❌ BAD: Bare Exception Handling**
+```python
+def send_digest_email(business_id: str):
+    try:
+        # Complex logic here
+        return result
+    except Exception:
+        pass  # Silent failure - impossible to debug
+```
+
+### Configuration and Constants
+
+**✅ GOOD: Named Constants with Business Context**
+```python
+# config/business_rules.py
+class RunwayThresholds:
+    CRITICAL_DAYS = 7      # Less than 1 week = critical
+    WARNING_DAYS = 30      # Less than 1 month = warning
+    HEALTHY_DAYS = 90      # More than 3 months = healthy
+
+class TrayPriorities:
+    URGENT_SCORE = 80      # Requires immediate attention
+    MEDIUM_SCORE = 60      # Should be handled today
+    LOW_SCORE = 40         # Can wait until tomorrow
+
+# Usage
+if runway_days < RunwayThresholds.CRITICAL_DAYS:
+    alert_level = "critical"
+```
+
+**❌ BAD: Magic Numbers**
+```python
+if runway_days < 7:  # Why 7? What does this mean?
+    alert_level = "critical"
+
+if priority_score > 80:  # Why 80? Who decided this?
+    mark_urgent()
+```
+
+### Service Layer Patterns
+
+**✅ GOOD: Clear Dependencies and Error Boundaries**
+```python
+class DigestService:
+    def __init__(self, db: Session, email_provider: EmailProvider, 
+                 runway_calculator: RunwayCalculator):
+        self.db = db
+        self.email_provider = email_provider
+        self.runway_calculator = runway_calculator
+    
+    def generate_weekly_digest(self, business_id: str) -> DigestResult:
+        """Generate weekly runway digest for a business.
+        
+        Args:
+            business_id: UUID of the business
+            
+        Returns:
+            DigestResult with email status and runway data
+            
+        Raises:
+            BusinessNotFoundError: If business doesn't exist
+            RunwayCalculationError: If runway calculation fails
+            EmailDeliveryError: If email sending fails
+        """
+        business = self._get_business_or_raise(business_id)
+        runway_data = self.runway_calculator.calculate(business)
+        email_result = self.email_provider.send_digest(runway_data)
+        return DigestResult(runway_data=runway_data, email_result=email_result)
+```
+
+**❌ BAD: Unclear Dependencies and No Documentation**
+```python
+class DigestService:
+    def generate_digest(self, biz_id):  # What type? What does it return?
+        # Complex logic with no explanation
+        pass
+```
+
+### Why These Standards Matter
+
+1. **Onboarding Speed**: New developers productive in days, not weeks
+2. **Debugging Efficiency**: Find and fix bugs in minutes, not hours  
+3. **Change Velocity**: Business requirement changes don't require rewrites
+4. **Code Reviews**: Reviewers can focus on business logic, not deciphering code
+5. **Technical Debt**: Prevents accumulation of "clever" code that becomes unmaintainable
+
+## Risk Mitigation
+
+### Technical Risks
+- **QBO API Rate Limits**: Implement caching, batch operations, graceful degradation
+- **Email Delivery Issues**: Multiple provider backup (SendGrid + Amazon SES)
+- **Database Performance**: Query optimization, indexing strategy, connection pooling
+- **Integration Complexity**: Comprehensive error handling, retry logic, audit trails
+
+### Product Risks  
+- **User Adoption**: Free digest preview, gradual feature introduction, customer success outreach
+- **Feature Complexity**: Start simple, add complexity based on user feedback
+- **Competitive Response**: Focus on unique runway ritual, build switching costs through data
+
+### Business Risks
+- **Market Validation**: Beta program with real agencies, measure engagement metrics
+- **Pricing Sensitivity**: Modular pricing, clear ROI demonstration, free tier
+- **Sales Channel**: QBO marketplace + direct CAS firm outreach
+

@@ -3,8 +3,7 @@ from typing import Optional, List, Dict
 from datetime import datetime
 
 class InvoiceBase(BaseModel):
-    firm_id: Optional[str] = None  # Made optional since it's passed as route parameter
-    client_id: Optional[int] = None
+    business_id: Optional[int] = None
     customer_id: int
     qbo_id: Optional[str] = None
     issue_date: datetime
@@ -31,3 +30,8 @@ class Invoice(InvoiceBase):
 
     class Config:
         from_attributes = True
+
+# API Response schemas
+class InvoiceResponse(Invoice):
+    """Response schema for Invoice API endpoints"""
+    pass

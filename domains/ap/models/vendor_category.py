@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text
 from domains.core.models.base import Base, TimestampMixin
 
 class VendorCategory(Base, TimestampMixin):

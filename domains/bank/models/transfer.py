@@ -11,9 +11,9 @@ class Transfer(Base, TimestampMixin, TenantMixin):
     __tablename__ = "transfers"
     
     transfer_id = Column(Integer, primary_key=True, index=True)
-    firm_id = Column(String(36), ForeignKey("firms.firm_id"), nullable=False)
-    source_transaction_id = Column(Integer, ForeignKey("bank_transactions.transaction_id"), nullable=False)
-    destination_transaction_id = Column(Integer, ForeignKey("bank_transactions.transaction_id"), nullable=False)
+    business_id = Column(String(36), ForeignKey("businesses.business_id"), nullable=False)
+    source_transaction_id = Column(Integer, ForeignKey("bank_transactions.id"), nullable=False)
+    destination_transaction_id = Column(Integer, ForeignKey("bank_transactions.id"), nullable=False)
     amount = Column(Float, nullable=False)
     date = Column(DateTime, nullable=False)
     description = Column(String(500), nullable=True)

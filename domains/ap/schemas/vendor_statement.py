@@ -3,8 +3,7 @@ from typing import Optional, List
 from datetime import date
 
 class VendorStatementBase(BaseModel):
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: str
     vendor_id: int
     period: date
     file_ref: Optional[str] = None

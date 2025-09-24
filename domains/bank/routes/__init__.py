@@ -1,14 +1,5 @@
-"""
-Consolidated router for Bank domain routes.
-This centralizes Bank route registration.
-"""
 from fastapi import APIRouter
+from . import bank_transaction
 
-# Create Bank domain router
-router = APIRouter(prefix="/api/bank", tags=["Bank"])
-
-# Import and include bank routes
-from . import bank
-
-# Include all bank route modules
-router.include_router(bank.router)
+router = APIRouter(prefix="/api/v1/bank", tags=["Bank"])
+router.include_router(bank_transaction.router)

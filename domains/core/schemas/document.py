@@ -3,8 +3,7 @@ from datetime import datetime
 from typing import Optional, Dict
 
 class DocumentBase(BaseModel):
-    firm_id: str
-    client_id: int
+    business_id: str
     period: str
     type: str
     file_ref: str

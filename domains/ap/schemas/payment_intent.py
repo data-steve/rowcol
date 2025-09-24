@@ -3,8 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 
 class PaymentIntentBase(BaseModel):
-    firm_id: str
-    client_id: Optional[int] = None
+    business_id: str
     bill_ids: Optional[List[int]] = None
     provider: str = "qbo"
     total_amount: float

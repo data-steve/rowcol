@@ -1,0 +1,66 @@
+{
+  "timestamp": "2025-09-17T14:56:41.542309",
+  "qbo_mode": "mock",
+  "scenarios_tested": [
+    "marketing_agency",
+    "construction",
+    "professional_services"
+  ],
+  "validations": [
+    {
+      "test": "mock_data_generation",
+      "scenario": "marketing_agency",
+      "status": "pass",
+      "details": {
+        "mock_transactions_generated": 20,
+        "data_variety": 2,
+        "realistic_amounts": true
+      }
+    },
+    {
+      "test": "mock_data_generation",
+      "scenario": "construction",
+      "status": "pass",
+      "details": {
+        "mock_transactions_generated": 20,
+        "data_variety": 2,
+        "realistic_amounts": true
+      }
+    },
+    {
+      "test": "mock_data_generation",
+      "scenario": "professional_services",
+      "status": "pass",
+      "details": {
+        "mock_transactions_generated": 20,
+        "data_variety": 2,
+        "realistic_amounts": true
+      }
+    }
+  ],
+  "errors": [
+    {
+      "scenario": "marketing_agency",
+      "error": "(sqlite3.OperationalError) no such table: businesses\n[SQL: SELECT businesses.business_id AS businesses_business_id, businesses.name AS businesses_name, businesses.qbo_id AS businesses_qbo_id, businesses.industry AS businesses_industry, businesses.policy_profile_id AS businesses_policy_profile_id, businesses.created_at AS businesses_created_at, businesses.updated_at AS businesses_updated_at \nFROM businesses \nWHERE businesses.business_id = ?\n LIMIT ? OFFSET ?]\n[parameters: ('1', 1, 0)]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+      "timestamp": "2025-09-17T14:56:41.655773"
+    },
+    {
+      "scenario": "construction",
+      "error": "(sqlite3.OperationalError) no such table: businesses\n[SQL: SELECT businesses.business_id AS businesses_business_id, businesses.name AS businesses_name, businesses.qbo_id AS businesses_qbo_id, businesses.industry AS businesses_industry, businesses.policy_profile_id AS businesses_policy_profile_id, businesses.created_at AS businesses_created_at, businesses.updated_at AS businesses_updated_at \nFROM businesses \nWHERE businesses.business_id = ?\n LIMIT ? OFFSET ?]\n[parameters: ('1', 1, 0)]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+      "timestamp": "2025-09-17T14:56:41.657027"
+    },
+    {
+      "scenario": "professional_services",
+      "error": "(sqlite3.OperationalError) no such table: businesses\n[SQL: SELECT businesses.business_id AS businesses_business_id, businesses.name AS businesses_name, businesses.qbo_id AS businesses_qbo_id, businesses.industry AS businesses_industry, businesses.policy_profile_id AS businesses_policy_profile_id, businesses.created_at AS businesses_created_at, businesses.updated_at AS businesses_updated_at \nFROM businesses \nWHERE businesses.business_id = ?\n LIMIT ? OFFSET ?]\n[parameters: ('1', 1, 0)]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+      "timestamp": "2025-09-17T14:56:41.657745"
+    }
+  ],
+  "summary": {
+    "total_scenarios": 3,
+    "total_tests": 3,
+    "passed_tests": 3,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "errors_encountered": 3
+  }
+}

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Text, Float, JSON
 from domains.core.models.base import Base, TimestampMixin
 
 class TaskTemplate(Base, TimestampMixin):
