@@ -17,6 +17,7 @@ that showcase Oodaloo's capabilities across different business types.
 """
 
 import pytest
+import os
 from typing import Dict, Any, List
 from unittest.mock import patch
 
@@ -189,7 +190,7 @@ class TestQBOSandboxIntegration:
             }
             
             # Calculate runway using our service
-            business_id = "test_business_1"  # Mock business ID
+            business_id = os.getenv('QBO_REALM_ID', 'test_realm_id')  # Use real QBO realm ID
             runway_data = digest_service.calculate_runway(business_id)
             
             # Verify accuracy (within 5% tolerance for rounding)
@@ -221,7 +222,10 @@ class TestQBOSandboxIntegration:
         """Test tray item priority scoring with construction business cash flow."""
         scenario = construction_data
         
-        tray_service = TrayService(db_session)
+        # Use mock data provider for unit tests that don't need real QBO data
+        from runway.experiences.tray import MockTrayDataProvider
+        mock_provider = MockTrayDataProvider()
+        tray_service = TrayService(db_session, data_provider=mock_provider)
         
         # Create tray items based on construction scenario challenges
         overdue_municipal_payment = {
@@ -258,7 +262,10 @@ class TestQBOSandboxIntegration:
         # This is the key differentiator for Oodaloo
         # User approves one action, system orchestrates multiple QBO operations
         
-        tray_service = TrayService(db_session)
+        # Use mock data provider for unit tests that don't need real QBO data
+        from runway.experiences.tray import MockTrayDataProvider
+        mock_provider = MockTrayDataProvider()
+        tray_service = TrayService(db_session, data_provider=mock_provider)
         
         # Scenario: Approve overdue bill payment
         approval_action = {

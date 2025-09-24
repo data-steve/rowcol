@@ -94,8 +94,8 @@ class CollectionsService(TenantAwareService):
                         "customer": {
                             "id": customer_id,
                             "name": customer_name,
-                            "email": self._get_customer_email(customer_id),  # TODO: Implement customer lookup
-                            "phone": self._get_customer_phone(customer_id)   # TODO: Implement customer lookup
+                            "email": self._get_customer_email(customer_id),
+                            "phone": self._get_customer_phone(customer_id)
                         },
                         "amount": balance,
                         "original_amount": float(invoice_data.get("TotalAmt", balance)),

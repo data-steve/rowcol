@@ -150,7 +150,7 @@ class TestSmartAPE2E:
         with proper prioritization and runway impact data.
         """
         smart_sync = SmartSyncService(db, ap_business.business_id)
-        tray_service = TrayService(db)
+        tray_service = TrayService(db, ap_business.business_id)
         # Get real QBO data
         qbo_data = await smart_sync.get_qbo_data_for_digest()
         

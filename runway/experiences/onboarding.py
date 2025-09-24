@@ -44,7 +44,7 @@ class OnboardingService:
     # QBO connection logic moved to domains/integrations/qbo/
     # Onboarding now delegates to QBOAuthService
 
-    def get_onboarding_status(self, business_id: str) -> Dict[str, Any]:
+    async def get_onboarding_status(self, business_id: str) -> Dict[str, Any]:
         """Get comprehensive onboarding status for a business."""
         business = self.db.query(Business).filter(
             Business.business_id == business_id
@@ -66,9 +66,9 @@ class OnboardingService:
         steps = {
             "business_created": bool(business),
             "qbo_connected": bool(qbo_integration and qbo_integration.status == "connected"),
-            "initial_sync": self._check_initial_sync_completed(business_id),
+            "initial_sync": await self._check_initial_sync_completed(business_id),
             "digest_configured": self._check_digest_configured(business_id),
-            "first_tray_review": self._check_first_tray_review(business_id)
+            "first_tray_review": await self._check_first_tray_review(business_id)
         }
         
         steps_completed = sum(steps.values())
@@ -199,12 +199,12 @@ class OnboardingService:
     # Test drive generation delegated to TestDriveService
     # Use TestDriveService.generate_test_drive() directly when needed
     
-    def _check_initial_sync_completed(self, business_id: str) -> bool:
+    async def _check_initial_sync_completed(self, business_id: str) -> bool:
         """Check if initial QBO data sync has been completed."""
         try:
             from domains.integrations import SmartSyncService
             smart_sync = SmartSyncService(self.db, business_id)
-            qbo_data = smart_sync.get_qbo_data_for_digest()
+            qbo_data = await smart_sync.get_qbo_data_for_digest()
             
             # Check if we have meaningful data (bills, invoices, or cash data)
             has_bills = len(qbo_data.get("bills", [])) > 0
@@ -232,14 +232,14 @@ class OnboardingService:
             logger.warning(f"Error checking digest configuration for business {business_id}: {e}")
             return False
     
-    def _check_first_tray_review(self, business_id: str) -> bool:
+    async def _check_first_tray_review(self, business_id: str) -> bool:
         """Check if user has reviewed tray items."""
         try:
             # For now, assume tray has been reviewed if we have QBO data
             # In the future, this could check for specific user interactions
             from domains.integrations import SmartSyncService
             smart_sync = SmartSyncService(self.db, business_id)
-            qbo_data = smart_sync.get_qbo_data_for_digest()
+            qbo_data = await smart_sync.get_qbo_data_for_digest()
             
             # If we have bills or invoices, assume user has seen them in the tray
             has_bills = len(qbo_data.get("bills", [])) > 0
