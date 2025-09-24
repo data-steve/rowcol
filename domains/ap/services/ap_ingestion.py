@@ -48,7 +48,7 @@ class IngestionService(TenantAwareService):
             from domains.ap.services.bill_ingestion import BillService
 
             smart_sync = SmartSyncService(self.db, business_id)
-            bill_service = BillService(self.db, business_id)
+            BillService(self.db, business_id)
             
             sync_result = await smart_sync.bulk_sync_qbo_data()
             

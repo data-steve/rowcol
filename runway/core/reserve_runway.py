@@ -284,7 +284,7 @@ class RunwayReserveService:
         # TODO: Replace with actual QBO financial data
         monthly_revenue = self._get_monthly_revenue(business_id)
         monthly_expenses = self._get_monthly_expenses(business_id)
-        employee_count = self._get_employee_count(business_id)
+        self._get_employee_count(business_id)
         
         recommendations = []
         

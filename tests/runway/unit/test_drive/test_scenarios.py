@@ -218,36 +218,18 @@ class TestQBOSandboxIntegration:
         assert len(vendor_names) >= 3  # Multiple variations of same vendor
         assert any("Google" in name for name in vendor_names)  # Common duplicate pattern
     
-    def test_tray_priority_scoring_with_real_data(self, db_session, construction_data):
+    def test_tray_priority_scoring_with_real_data(self, construction_data, real_qbo_business_with_prod_session):
         """Test tray item priority scoring with construction business cash flow."""
-        scenario = construction_data
         
-        # Use mock data provider for unit tests that don't need real QBO data
-        from runway.experiences.tray import MockTrayDataProvider
-        mock_provider = MockTrayDataProvider()
-        tray_service = TrayService(db_session, data_provider=mock_provider)
+        # Use centralized fixture that provides both business data AND production session
+        business, realm_id, prod_session = real_qbo_business_with_prod_session
+        
+        # Use real QBO data - no more mocking!
+        TrayService(prod_session, business.business_id)
         
         # Create tray items based on construction scenario challenges
-        overdue_municipal_payment = {
-            "type": "overdue_invoice",
-            "amount": 85000,  # Large municipal invoice
-            "days_overdue": 15,
-            "client": "City of San Francisco"
-        }
         
-        equipment_payment_due = {
-            "type": "overdue_bill", 
-            "amount": 4500,   # Equipment financing
-            "days_overdue": 2,
-            "vendor": "CAT Financial"
-        }
         
-        material_payment_needed = {
-            "type": "overdue_bill",
-            "amount": 8000,   # Materials for active project
-            "days_overdue": 0,  # Due today
-            "vendor": "Home Depot Pro"
-        }
         
         # Test priority scoring logic
         # Equipment financing should be highest priority (affects operations)
@@ -257,23 +239,18 @@ class TestQBOSandboxIntegration:
         # This validates that our priority scoring understands construction cash flow
         # where operational continuity (equipment) trumps even large receivables
     
-    def test_single_approval_multiple_actions_workflow(self, db_session):
+    def test_single_approval_multiple_actions_workflow(self, real_qbo_business_with_prod_session):
         """Test the core 'single approval → multiple actions' workflow."""
         # This is the key differentiator for Oodaloo
         # User approves one action, system orchestrates multiple QBO operations
         
-        # Use mock data provider for unit tests that don't need real QBO data
-        from runway.experiences.tray import MockTrayDataProvider
-        mock_provider = MockTrayDataProvider()
-        tray_service = TrayService(db_session, data_provider=mock_provider)
+        # Use centralized fixture that provides both business data AND production session
+        business, realm_id, prod_session = real_qbo_business_with_prod_session
+        
+        # Use real QBO data - no more mocking!
+        TrayService(prod_session, business.business_id)
         
         # Scenario: Approve overdue bill payment
-        approval_action = {
-            "action": "approve_payment",
-            "bill_id": "QBO_BILL_123",
-            "amount": 5000,
-            "vendor": "Critical Supplier"
-        }
         
         # Expected orchestrated actions:
         # 1. Mark bill as approved in QBO

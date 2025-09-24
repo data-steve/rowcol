@@ -38,8 +38,8 @@ def db():
     connection = engine.connect()
     transaction = connection.begin()
     
-    # Clean up and create tables
-    Base.metadata.drop_all(bind=connection)
+    # Clean up and create tables with proper foreign key handling
+    Base.metadata.drop_all(bind=connection, checkfirst=True)
     Base.metadata.create_all(bind=connection)
     
     db_session = SessionLocal(bind=connection)
@@ -74,6 +74,103 @@ def test_business(db):
     db.commit()
     db.refresh(business)
     return business
+
+@pytest.fixture
+def qbo_connected_business(db_session):
+    """Business fixture with real QBO realm ID for integration tests."""
+    import os
+    business = Business(
+        business_id=os.getenv('QBO_REALM_ID', 'test_realm_id'),
+        name="QBO Test Business",
+        qbo_id=os.getenv('QBO_REALM_ID', 'test_realm_id'),
+        industry="construction"
+    )
+    db_session.add(business)
+    db_session.commit()
+    db_session.refresh(business)
+    return business
+
+@pytest.fixture
+def real_qbo_business_from_prod():
+    """
+    Get real QBO business from production database for integration tests.
+    
+    This fixture provides access to actual QBO integration data without
+    duplicating database connection logic across tests.
+    """
+    import os
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from domains.core.models.integration import Integration
+    
+    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
+    engine = create_engine(database_url)
+    Session = sessionmaker(bind=engine)
+    
+    with Session() as prod_session:
+        # Get real QBO integration from production database
+        integration = prod_session.query(Integration).filter(
+            Integration.platform == 'qbo'
+        ).first()
+        
+        if not integration:
+            pytest.skip("No QBO integration found in production database")
+        
+        # Get the business associated with this integration
+        business = prod_session.query(Business).filter(
+            Business.business_id == integration.business_id
+        ).first()
+        
+        if not business:
+            pytest.skip(f"Business {integration.business_id} not found for QBO integration")
+        
+        # Get realm_id from environment or integration
+        realm_id = os.getenv('QBO_REALM_ID')
+        if not realm_id:
+            pytest.skip("QBO_REALM_ID environment variable not set")
+        
+        yield business, realm_id
+
+@pytest.fixture
+def real_qbo_business_with_prod_session():
+    """
+    Get real QBO business AND production database session for integration tests.
+    
+    This fixture provides both the business data and the production database session
+    to eliminate the need for tests to manually create database connections.
+    """
+    import os
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from domains.core.models.integration import Integration
+    
+    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
+    engine = create_engine(database_url)
+    Session = sessionmaker(bind=engine)
+    
+    with Session() as prod_session:
+        # Get real QBO integration from production database
+        integration = prod_session.query(Integration).filter(
+            Integration.platform == 'qbo'
+        ).first()
+        
+        if not integration:
+            pytest.skip("No QBO integration found in production database")
+        
+        # Get the business associated with this integration
+        business = prod_session.query(Business).filter(
+            Business.business_id == integration.business_id
+        ).first()
+        
+        if not business:
+            pytest.skip(f"Business {integration.business_id} not found for QBO integration")
+        
+        # Get realm_id from environment or integration
+        realm_id = os.getenv('QBO_REALM_ID')
+        if not realm_id:
+            pytest.skip("QBO_REALM_ID environment variable not set")
+        
+        yield business, realm_id, prod_session
 
 @pytest.fixture
 def test_balance(db, test_business):

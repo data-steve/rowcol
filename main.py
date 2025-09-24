@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from contextlib import asynccontextmanager
 from db import create_db_and_tables
 from domains import router as domains_router
 from runway import router as runway_router
@@ -14,12 +15,21 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    create_db_and_tables()
+    logging.info("Oodaloo Runway API started successfully")
+    yield
+    # Shutdown (if needed in the future)
+
 app = FastAPI(
     title="Oodaloo Runway API",
     description="Cash runway management for single-business agencies",
     version="4.3.0",
     docs_url="/docs" if os.getenv("ENVIRONMENT") != "production" else None,
     redoc_url="/redoc" if os.getenv("ENVIRONMENT") != "production" else None,
+    lifespan=lifespan,
 )
 
 # Setup CORS
@@ -33,11 +43,6 @@ app.add_middleware(AuthMiddleware)
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="runway/templates")
-
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
-    logging.info("Oodaloo Runway API started successfully")
 
 # Include routers - clean cascading import pattern
 app.include_router(runway_router)  # All runway product APIs

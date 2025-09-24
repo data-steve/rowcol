@@ -115,7 +115,7 @@ async def create_vendor(
         smart_sync.record_user_activity("vendor_created")
         
         # Get enhanced vendor data
-        payment_summary = vendor_service.get_vendor_payment_history_summary(vendor.vendor_id)
+        vendor_service.get_vendor_payment_history_summary(vendor.vendor_id)
         
         return {
             "vendor_id": vendor.vendor_id,
@@ -236,7 +236,7 @@ async def update_vendor(
         smart_sync.record_user_activity("vendor_updated")
         
         # Get updated summary
-        payment_summary = vendor_service.get_vendor_payment_history_summary(vendor_id)
+        vendor_service.get_vendor_payment_history_summary(vendor_id)
         
         return {
             "vendor_id": vendor.vendor_id,

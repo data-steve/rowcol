@@ -62,7 +62,7 @@ def main():
     create_parser.add_argument("description", help="Task description")
     
     # Archive command
-    archive_parser = subparsers.add_parser("archive", help="Archive the current task")
+    subparsers.add_parser("archive", help="Archive the current task")
     
     args = parser.parse_args()
     

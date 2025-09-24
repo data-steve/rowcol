@@ -226,7 +226,7 @@ class QBOScenarioTester:
             if self.use_real_qbo:
                 # Test with real QBO
                 is_healthy = await self.connection_manager.ensure_healthy_connection(business_id)
-                health = self.connection_manager.get_connection_health(business_id)
+                self.connection_manager.get_connection_health(business_id)
                 
                 if is_healthy:
                     print("   ✅ Connection healthy")

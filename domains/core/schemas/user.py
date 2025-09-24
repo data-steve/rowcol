@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, Dict
 
 class UserBase(BaseModel):
@@ -15,9 +15,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     user_id: str
     is_active: Optional[bool] = True
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # API Request/Response schemas  
 class UserUpdate(BaseModel):

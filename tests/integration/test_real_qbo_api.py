@@ -71,7 +71,7 @@ class TestRealQBOApi:
             return business, integration.realm_id
 
     @pytest.mark.asyncio
-    async def test_connect_and_get_bills_from_real_qbo_sandbox(self, db: Session, real_qbo_business: tuple[Business, str]):
+    async def test_connect_and_get_bills_from_real_qbo_sandbox(self, real_qbo_business: tuple[Business, str]):
         """
         THE PROOF: This test connects to the real QBO sandbox and fetches bills.
         If this passes, our connection, authentication, and basic API calls are working.
@@ -80,19 +80,29 @@ class TestRealQBOApi:
         
         business, realm_id = real_qbo_business
         
-        qbo_client = get_real_qbo_client(
-            business_id=business.business_id, 
-            db=db,
-            realm_id=realm_id
-        )
+        # Create production database session for QBO client
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        import os
         
-        # This will raise an exception if the API call fails for any reason.
-        bills_response = await qbo_client.get_bills()
+        database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
+        engine = create_engine(database_url)
+        Session = sessionmaker(bind=engine)
+        
+        with Session() as prod_session:
+            qbo_client = get_real_qbo_client(
+                business_id=business.business_id, 
+                db=prod_session,  # Use production database session
+                realm_id=realm_id
+            )
+            
+            # This will raise an exception if the API call fails for any reason.
+            bills_response = await qbo_client.get_bills()
 
-        # The assertion is simple: did we get a list back?
-        # A sandbox might have 0 bills, so we just check the type.
-        assert isinstance(bills_response, list)
-        
-        print(f"✅ SUCCESS: Successfully connected to REAL QBO Sandbox for Realm ID: {qbo_client.realm_id}")
-        print(f"✅ Found {len(bills_response)} bills in the sandbox.")
+            # The assertion is simple: did we get a list back?
+            # A sandbox might have 0 bills, so we just check the type.
+            assert isinstance(bills_response, list)
+            
+            print(f"✅ SUCCESS: Successfully connected to REAL QBO Sandbox for Realm ID: {qbo_client.realm_id}")
+            print(f"✅ Found {len(bills_response)} bills in the sandbox.")
         print("--- TEST COMPLETE ---")

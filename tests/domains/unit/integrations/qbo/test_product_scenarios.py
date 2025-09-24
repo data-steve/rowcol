@@ -191,7 +191,7 @@ class TestSmartInsights:
         
         assert patterns["trend"] == "growing"
         assert patterns["avg_weekly_growth"] > 0
-        assert patterns["seasonality_detected"] == False
+        assert not patterns["seasonality_detected"]
         assert len(patterns["insights"]) > 0
     
     def test_runway_risk_assessment(self):

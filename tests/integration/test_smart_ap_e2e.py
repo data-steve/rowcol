@@ -229,8 +229,8 @@ class TestSmartAPE2E:
             db.refresh(bill)
             
             # Schedule payment for the bill
-            payment_date = datetime.now() + timedelta(days=1)
-            amount = float(bill.amount_cents / 100.0) if bill.amount_cents else 0.0
+            datetime.now() + timedelta(days=1)
+            float(bill.amount_cents / 100.0) if bill.amount_cents else 0.0
             account_id = db.query(Balance).filter(
                 Balance.business_id == ap_business.business_id
             ).first().qbo_account_id if db.query(Balance).filter(

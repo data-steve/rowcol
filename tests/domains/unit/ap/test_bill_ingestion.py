@@ -74,7 +74,7 @@ def test_is_bill_overdue(db, test_business):
 
 def test_ingest_document(db, test_business):
     """Test document ingestion functionality."""
-    bill_service = BillService(db, test_business.business_id, validate_business=False)
+    BillService(db, test_business.business_id, validate_business=False)
     
     # Test document ingestion with mock document processor
     file_data = b"fake pdf content"

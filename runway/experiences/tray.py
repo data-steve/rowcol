@@ -89,7 +89,7 @@ class QBOTrayDataProvider(TrayDataProvider):
     def _calculate_bill_priority(self, bill: Dict[str, Any]) -> str:
         """Calculate priority for a bill based on amount and due date."""
         amount = float(bill.get("total_amount", 0))
-        due_date = bill.get("due_date")
+        bill.get("due_date")
         
         if amount > 5000:
             return "high"
@@ -124,73 +124,15 @@ class QBOTrayDataProvider(TrayDataProvider):
         return {"bill": 30, "invoice": 25, "payment": 35}
 
 
-class MockTrayDataProvider(TrayDataProvider):
-    """Data provider that uses mock data for testing."""
-    
-    def get_tray_items(self, business_id: str) -> List[TrayItem]:
-        """Get mock tray items."""
-        # Return realistic mock data for testing
-        from datetime import datetime, timedelta
-        
-        mock_items = [
-            TrayItem(
-                business_id=business_id,
-                type="bill",
-                qbo_id="bill_123",
-                due_date=datetime.now() + timedelta(days=5),
-                priority="high",
-                status="pending"
-            ),
-            TrayItem(
-                business_id=business_id,
-                type="invoice",
-                qbo_id="invoice_456",
-                due_date=datetime.now() + timedelta(days=12),
-                priority="medium",
-                status="pending"
-            ),
-            TrayItem(
-                business_id=business_id,
-                type="bill",
-                qbo_id="bill_789",
-                due_date=datetime.now() + timedelta(days=2),
-                priority="high",
-                status="pending"
-            ),
-            TrayItem(
-                business_id=business_id,
-                type="invoice",
-                qbo_id="invoice_101",
-                due_date=datetime.now() + timedelta(days=8),
-                priority="medium",
-                status="pending"
-            )
-        ]
-        
-        return mock_items
-    
-    def get_runway_impact(self, item_type: str) -> Dict[str, Any]:
-        """Get mock runway impact."""
-        return {"cash_impact": 1000, "days_impact": 5, "urgency": "medium"}
-    
-    def get_action_result(self, action: str, item_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Get mock action result."""
-        return {"processed": True, "mock_result": True}
-    
-    def get_priority_weights(self) -> Dict[str, int]:
-        """Get mock priority weights."""
-        return {"bill": 30, "invoice": 25, "payment": 35}
+# MockTrayDataProvider removed - all tests now use real QBO sandbox data
 
 
 def get_tray_data_provider(provider_type: str = "qbo", db: Session = None, business_id: str = None) -> TrayDataProvider:
-    """Get the appropriate tray data provider based on configuration."""
-    if provider_type == "mock":
-        return MockTrayDataProvider()
-    elif provider_type == "qbo" and db and business_id:
+    """Get the QBO tray data provider - no more mocking!"""
+    if provider_type == "qbo" and db and business_id:
         return QBOTrayDataProvider(db, business_id)
     else:
-        # CRITICAL: No more defaulting to mock! Force explicit provider selection
-        raise ValueError("TrayDataProvider requires explicit provider_type='qbo' with db and business_id, or provider_type='mock'. No more mock defaults!")
+        raise ValueError("TrayDataProvider requires db and business_id for QBO provider. No mocking allowed!")
 """
 TrayService - Refactored to use Canonical Calculation Services
 
@@ -222,17 +164,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 class TrayService:
-    def __init__(self, db: Session, business_id: str = None, data_provider: Optional[TrayDataProvider] = None):
+    def __init__(self, db: Session, business_id: str, data_provider: Optional[TrayDataProvider] = None):
         self.db = db
         self.business_id = business_id
         
-        # CRITICAL: Force explicit provider selection - no more mock defaults!
+        # No more mocking - always use QBO provider!
         if data_provider is None:
             if business_id:
-                # Use QBO provider when business_id is provided
                 self.data_provider = get_tray_data_provider("qbo", db, business_id)
             else:
-                raise ValueError("TrayService requires either explicit data_provider or business_id for QBO provider. No mock defaults!")
+                raise ValueError("TrayService requires business_id for QBO provider. No mocking allowed!")
         else:
             self.data_provider = data_provider
         self.smart_sync = SmartSyncService(db, business_id) if business_id else None

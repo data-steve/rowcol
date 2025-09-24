@@ -5,7 +5,7 @@ from domains.core.models.user import User
 from domains.core.models.integration import Integration
 from domains.core.services.audit_log import AuditLogService
 from domains.integrations import SmartSyncService
-from runway.experiences.test_drive import TestDriveService
+from runway.experiences.test_drive import DemoTestDriveService
 from db.transaction import db_transaction
 from common.exceptions import (
     OnboardingError, 
@@ -196,8 +196,8 @@ class OnboardingService:
             logger.error(f"Onboarding qualification failed: {str(e)}", exc_info=True)
             raise OnboardingError("Onboarding failed", {"error": str(e)})
     
-    # Test drive generation delegated to TestDriveService
-    # Use TestDriveService.generate_test_drive() directly when needed
+    # Test drive generation delegated to DemoTestDriveService
+    # Use DemoTestDriveService.generate_test_drive() directly when needed
     
     async def _check_initial_sync_completed(self, business_id: str) -> bool:
         """Check if initial QBO data sync has been completed."""

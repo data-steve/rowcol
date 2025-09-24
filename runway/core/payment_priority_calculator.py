@@ -259,7 +259,7 @@ class PaymentPriorityCalculator(TenantAwareService):
             # Get current runway data for scenarios
             runway_data = self.runway_calculator.calculate_current_runway({})
             current_runway = runway_data.get('base_runway_days', 0)
-            daily_burn = runway_data.get('burn_rate', {}).get('daily_burn', 1)
+            runway_data.get('burn_rate', {}).get('daily_burn', 1)
             available_cash = runway_data.get('cash_position', 0)
             
             amount = float(bill_data.get('amount', 0))

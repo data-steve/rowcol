@@ -181,7 +181,7 @@ class RunwayReserve(Base):
         
         # Reduce both current and allocated amounts
         utilization_from_allocated = min(amount, self.allocated_amount)
-        utilization_from_available = amount - utilization_from_allocated
+        amount - utilization_from_allocated
         
         self.allocated_amount -= utilization_from_allocated
         self.current_amount -= amount

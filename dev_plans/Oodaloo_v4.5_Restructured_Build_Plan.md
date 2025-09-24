@@ -140,6 +140,138 @@ This plan provides the architectural rigor and detailed task breakdown needed fo
   - **[ ] Implement 'Latest Safe Pay Date' calculation in `BillService`**: For each bill, calculate the last possible payment date without incurring late fees or vendor relationship damage, based on terms and due dates. *Effort: 6h*
   - **[ ] Add 'Runway Impact Suggestions' to payment scheduling**: When scheduling payments, show impact on runway (e.g., 'Paying now costs 4 days of runway; delaying to Latest Safe Pay Date protects those days'). *Effort: 5h*
 
+### Stage 1.21: Comprehensive QBO Sandbox Test Data Service (36h)
+
+**Problem**: Multiple fragmented test data systems create inconsistent, incomplete test scenarios. Tests skip due to empty QBO sandbox, providers are scattered across codebase, and realistic business scenarios aren't properly represented in QBO format.
+
+**Goal**: Create a unified, comprehensive QBO sandbox test data service that supports all test scenarios with realistic, industry-specific business data that works directly with QBO sandbox API.
+
+#### **🔍 Current Test Data Audit** *Effort: 4h*
+- **[ ] Inventory all existing test data sources** *Effort: 2h*
+  - `runway/experiences/test_drive.py` (TestDriveService, TestDriveDemoDataService)
+  - `runway/core/scenario_data.py` (BusinessScenarioProvider with 5 industry scenarios)
+  - `domains/integrations/qbo/client.py` (_get_mock_response methods)
+  - `domains/integrations/qbo/scenario_runner.py` (QBOScenarioTester)
+  - `tests/conftest.py` (scattered fixture data)
+  - Various provider mocks and demo data generators
+- **[ ] Document test data gaps and inconsistencies** *Effort: 2h*
+  - Identify which tests skip due to insufficient data
+  - Map business logic requirements to data needs
+  - Document QBO API response format requirements
+
+#### **🏗️ Unified QBO Sandbox Data Architecture** *Effort: 12h*
+- **[ ] Design centralized QBO test data service** *Effort: 4h*
+  - **Location**: `domains/integrations/qbo/sandbox_data_service.py`
+  - **Interface**: Consistent with existing `BusinessScenarioProvider` patterns
+  - **Output**: Valid QBO API response format for all entity types
+  - **Configurability**: Business size, industry, complexity levels
+  
+- **[ ] Enhanced business scenario data model** *Effort: 4h*
+  - **Extend `BusinessScenario` dataclass** with QBO-specific fields:
+    - `qbo_company_info`: Company metadata matching QBO CompanyInfo API
+    - `qbo_chart_of_accounts`: Full chart of accounts with proper QBO structure
+    - `qbo_tax_settings`: Tax rates, jurisdictions, compliance settings
+    - `qbo_preferences`: QBO preferences that affect data structure
+    - `data_quality_scenarios`: Intentional data quality issues for testing
+  - **Add business complexity levels**:
+    - `micro` (1-5 employees): 10-50 transactions/month
+    - `small` (6-25 employees): 100-500 transactions/month  
+    - `medium` (26-100 employees): 500-2000 transactions/month
+  
+- **[ ] QBO API response format compliance** *Effort: 4h*
+  - **Bills**: Complete QBO Bill entity structure with all required fields
+  - **Invoices**: Full Invoice entities with line items, taxes, payments
+  - **Vendors/Customers**: Complete contact records with addresses, terms
+  - **Accounts**: Chart of accounts with proper hierarchy and types
+  - **Items**: Service/inventory items with pricing and tax settings
+  - **Payments**: Payment records linking to bills/invoices
+
+#### **🎯 Industry-Specific Scenario Enhancement** *Effort: 8h*
+- **[ ] Marketing Agency (Enhanced)** *Effort: 2h*
+  - **Seasonal cash flow**: Q4 surge, Q1 dip pattern
+  - **High software costs**: 25+ SaaS subscriptions with varying terms
+  - **Project-based billing**: Mix of retainer and milestone invoicing
+  - **Data quality issues**: Duplicate vendors, missing due dates
+  - **Cash position**: $75K operating + $25K payroll accounts
+  
+- **[ ] Construction Contractor (Enhanced)** *Effort: 2h*
+  - **Equipment financing**: Large equipment purchases with payment plans
+  - **Progress billing**: Percentage-of-completion invoicing
+  - **Material costs**: Volatile material pricing and bulk purchases
+  - **Subcontractor payments**: Complex 1099 tracking requirements
+  - **Cash position**: $150K operating + $50K equipment reserve
+  
+- **[ ] Professional Services (Enhanced)** *Effort: 1h*
+  - **Recurring revenue**: Monthly retainer stability
+  - **Low inventory**: Service-based with minimal material costs
+  - **Predictable expenses**: Office, software, professional development
+  - **Cash position**: $45K operating, steady monthly flow
+  
+- **[ ] E-commerce Business (Enhanced)** *Effort: 2h*
+  - **Inventory management**: Cost of goods sold, inventory valuation
+  - **High transaction volume**: Hundreds of small transactions
+  - **Payment processing**: Credit card fees, chargebacks, refunds
+  - **Seasonal inventory**: Holiday buildup, post-season clearance
+  - **Cash position**: $85K operating + $35K inventory financing
+  
+- **[ ] Consulting Firm (Enhanced)** *Effort: 1h*
+  - **Project-based billing**: Time and materials tracking
+  - **Travel expenses**: Complex expense reporting and reimbursement
+  - **Contractor payments**: Mix of W2 and 1099 workforce
+  - **Cash position**: $60K operating, project-dependent flow
+
+#### **🔧 QBO Sandbox Data Population Service** *Effort: 8h*
+- **[ ] Enhanced create_sandbox_data.py** *Effort: 4h*
+  - **Scenario-based data creation**: Generate complete business scenarios in QBO
+  - **Incremental data loading**: Add data without destroying existing records
+  - **Data validation**: Ensure all created data passes QBO validation rules
+  - **Rollback capability**: Clean slate functionality for test isolation
+  - **Progress tracking**: Detailed logging of data creation process
+  
+- **[ ] QBO API batch operations** *Effort: 2h*
+  - **Batch entity creation**: Use QBO batch API for efficient data loading
+  - **Dependency management**: Handle entity relationships (vendor → bill)
+  - **Error handling**: Graceful handling of QBO API limits and errors
+  - **Rate limiting**: Respect QBO API rate limits during data creation
+  
+- **[ ] Test data validation and verification** *Effort: 2h*
+  - **Data integrity checks**: Verify all relationships are properly created
+  - **Financial balance validation**: Ensure accounting equation balances
+  - **QBO sync verification**: Confirm data appears correctly in QBO UI
+  - **Test scenario coverage**: Validate all test requirements are met
+
+#### **🧪 Test Integration and Fixture Enhancement** *Effort: 4h*
+- **[ ] Unified test fixture system** *Effort: 2h*
+  - **Replace scattered fixtures** with centralized scenario-based fixtures
+  - **QBO business fixture**: Real QBO business with populated data
+  - **Scenario fixtures**: Per-industry fixtures with complete data sets
+  - **Data isolation**: Ensure tests don't interfere with each other
+  
+- **[ ] Test skip elimination** *Effort: 2h*
+  - **Fix `test_qbo_data_retrieval_works`**: Ensure sufficient data for validation
+  - **Fix reserve allocation tests**: Provide cash positions for allocation testing
+  - **Data-dependent test support**: All tests have required data available
+  - **Graceful degradation**: Fallback scenarios when sandbox is unavailable
+
+#### **🚀 Success Criteria & Validation**
+- **Zero test skips** due to insufficient QBO sandbox data
+- **All 5 industry scenarios** fully represented in QBO sandbox format
+- **Complete QBO entity coverage**: Bills, Invoices, Vendors, Customers, Accounts, Items
+- **Realistic data quality issues** for testing data quality analyzer
+- **Performance**: Full scenario creation in <2 minutes
+- **Reliability**: 95%+ success rate for sandbox data population
+- **Maintainability**: Clear documentation and extension patterns
+
+#### **📋 Deliverables**
+1. **`QBOSandboxDataService`**: Centralized service for QBO test data management
+2. **Enhanced scenario data**: 5 complete industry scenarios with QBO format
+3. **Improved `create_sandbox_data.py`**: Robust, scenario-based data population
+4. **Unified test fixtures**: Consistent, reliable test data across all tests
+5. **Documentation**: Complete guide for extending and maintaining test scenarios
+6. **Validation suite**: Automated verification of test data completeness
+
+**Impact**: Eliminates test data fragmentation, enables comprehensive QBO integration testing, and provides foundation for reliable CI/CD pipeline with real QBO API validation.
+
 ### Stage 1.3: Smart AP UI/UX (36h)
 - **[✅] AP API Endpoints**: `/runway/ap/` endpoints for bills, payments, and vendors are complete.
 - **[✅] Enhanced Tray Integration**: 'Must Pay' vs. 'Can Delay' categorization and runway impact visualization are complete.

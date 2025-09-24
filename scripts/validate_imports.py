@@ -289,7 +289,7 @@ def verify_critical_imports():
     critical_imports = [
         ("domains.integrations.qbo", ["QBOAPIClient", "get_qbo_client"], "QBO Integration"),
         ("runway.experiences.tray", ["TrayService"], "Tray Service"),
-        ("runway.experiences.test_drive", ["TestDriveService"], "Test Drive Service"),
+        ("runway.experiences.test_drive", ["DemoTestDriveService"], "Test Drive Service"),
         ("domains.ap.services.payment", ["PaymentService"], "Payment Service"),
         ("domains.ap.services.bill_ingestion", ["BillService"], "Bill Service"),
         ("runway.core.runway_calculator", ["RunwayCalculator"], "Runway Calculator"),
@@ -331,7 +331,7 @@ def verify_comprehensive_imports():
         # Runway - Experiences
         ("runway.experiences.onboarding", ["OnboardingService"], "Onboarding Service"),
         ("runway.experiences.tray", ["TrayService", "QBOTrayDataProvider"], "Tray Service"),
-        ("runway.experiences.test_drive", ["TestDriveService"], "Test Drive Service"),
+        ("runway.experiences.test_drive", ["DemoTestDriveService"], "Test Drive Service"),
         
         # Runway - Routes
         ("runway.routes.bills", ["router"], "Bills Routes"),

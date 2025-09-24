@@ -29,6 +29,52 @@ from common.exceptions import IntegrationError
 from .config import qbo_config
 from domains.integrations.qbo.auth import QBOEnvironment
 
+def get_production_qbo_business():
+    """
+    Get real QBO business from production database.
+    
+    This centralizes the logic for accessing production QBO data
+    instead of duplicating database connection code across tests and services.
+    
+    Returns:
+        tuple: (business, realm_id) from production database
+        
+    Raises:
+        IntegrationError: If no QBO integration found
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from domains.core.models.integration import Integration
+    from domains.core.models.business import Business
+    
+    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
+    engine = create_engine(database_url)
+    Session = sessionmaker(bind=engine)
+    
+    with Session() as prod_session:
+        # Get real QBO integration from production database
+        integration = prod_session.query(Integration).filter(
+            Integration.platform == 'qbo'
+        ).first()
+        
+        if not integration:
+            raise IntegrationError("No QBO integration found in production database")
+        
+        # Get the business associated with this integration
+        business = prod_session.query(Business).filter(
+            Business.business_id == integration.business_id
+        ).first()
+        
+        if not business:
+            raise IntegrationError(f"Business {integration.business_id} not found for QBO integration")
+        
+        # Get realm_id from environment
+        realm_id = os.getenv('QBO_REALM_ID')
+        if not realm_id:
+            raise IntegrationError("QBO_REALM_ID environment variable not set")
+        
+        return business, realm_id
+
 logger = logging.getLogger(__name__)
 
 # Error message for token refresh manual intervention

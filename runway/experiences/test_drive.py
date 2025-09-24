@@ -29,7 +29,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class TestDriveService:
+class DemoTestDriveService:
     """Centralized service for test drive demonstrations and historical analysis."""
     
     def __init__(self, db: Session):
@@ -416,7 +416,7 @@ from typing import Dict, Any, Optional
 from runway.core.scenario_data import BusinessScenarioProvider, BusinessScenario
 
 
-class TestDriveDemoDataService:
+class DemoDataService:
     """
     Service for providing demo data for test drive experiences.
     

@@ -67,31 +67,93 @@ def test_integration_creation(db: Session, test_business: Business):
 
 
 @pytest.mark.asyncio
-async def test_qbo_provider_get_bills_real(db: Session, test_business: Business):
-    """Test QBO provider can get bills using real provider"""
-    provider = get_qbo_client(test_business.business_id, db)
+async def test_qbo_provider_get_bills_real():
+    """Test QBO provider can get bills using real provider with production database"""
+    import os
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from domains.core.models.integration import Integration, IntegrationStatuses
+    from domains.core.models.business import Business
     
-    # Test that provider can get bills (will fail with 401 due to invalid tokens, but that's expected)
-    try:
-        bills = await provider.get_bills()
-        assert isinstance(bills, list)
-    except Exception as e:
-        # Expected to fail due to invalid test tokens
-        assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
+    # Connect to MAIN database (not test database) to get real QBO integration
+    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
+    engine = create_engine(database_url)
+    Session = sessionmaker(bind=engine)
+    
+    with Session() as session:
+        # Look for existing QBO integration in MAIN database
+        integration = session.query(Integration).filter(
+            Integration.platform == "qbo",
+            Integration.status == IntegrationStatuses.CONNECTED.value
+        ).first()
+
+        if not integration:
+            pytest.skip("SKIPPING: No QBO integration found. Run token refresh script.")
+
+        if not all([integration.access_token, integration.refresh_token, integration.realm_id]):
+            pytest.skip("SKIPPING: QBO integration missing required tokens.")
+
+        # Get the associated business
+        business = session.query(Business).filter(Business.business_id == integration.business_id).first()
+        if not business:
+            pytest.skip("SKIPPING: Business not found for QBO integration.")
+
+        # Test with real QBO provider
+        provider = get_qbo_client(business.business_id, session)
+        
+        # Test that provider can get bills (should work with valid tokens)
+        try:
+            bills = await provider.get_bills()
+            assert isinstance(bills, list)
+            print(f"✅ Successfully retrieved {len(bills)} bills from QBO")
+        except Exception as e:
+            # If it fails, it should be with a proper error message
+            assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
 
 
 @pytest.mark.asyncio
-async def test_qbo_provider_get_invoices_real(db: Session, test_business: Business):
-    """Test QBO provider can get invoices using real provider"""
-    provider = get_qbo_client(test_business.business_id, db)
+async def test_qbo_provider_get_invoices_real():
+    """Test QBO provider can get invoices using real provider with production database"""
+    import os
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from domains.core.models.integration import Integration, IntegrationStatuses
+    from domains.core.models.business import Business
     
-    # Test that provider can get invoices (will fail with 401 due to invalid tokens, but that's expected)
-    try:
-        invoices = await provider.get_invoices()
-        assert isinstance(invoices, list)
-    except Exception as e:
-        # Expected to fail due to invalid test tokens
-        assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
+    # Connect to MAIN database (not test database) to get real QBO integration
+    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
+    engine = create_engine(database_url)
+    Session = sessionmaker(bind=engine)
+    
+    with Session() as session:
+        # Look for existing QBO integration in MAIN database
+        integration = session.query(Integration).filter(
+            Integration.platform == "qbo",
+            Integration.status == IntegrationStatuses.CONNECTED.value
+        ).first()
+
+        if not integration:
+            pytest.skip("SKIPPING: No QBO integration found. Run token refresh script.")
+
+        if not all([integration.access_token, integration.refresh_token, integration.realm_id]):
+            pytest.skip("SKIPPING: QBO integration missing required tokens.")
+
+        # Get the associated business
+        business = session.query(Business).filter(Business.business_id == integration.business_id).first()
+        if not business:
+            pytest.skip("SKIPPING: Business not found for QBO integration.")
+
+        # Test with real QBO provider
+        provider = get_qbo_client(business.business_id, session)
+        
+        # Test that provider can get invoices (should work with valid tokens)
+        try:
+            invoices = await provider.get_invoices()
+            assert isinstance(invoices, list)
+            print(f"✅ Successfully retrieved {len(invoices)} invoices from QBO")
+        except Exception as e:
+            # If it fails, it should be with a proper error message
+            assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
 
 
 def test_qbo_provider_business_relationship(db: Session, test_business: Business):

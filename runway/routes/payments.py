@@ -85,7 +85,7 @@ async def get_payment(
         
         # Add enhanced analysis
         reserve_service = services["reserve_service"]
-        runway_calc = reserve_service.calculate_runway_with_reserves()
+        reserve_service.calculate_runway_with_reserves()
         
         payment_dict["execution_analysis"] = {
             "can_execute": payment_service.can_payment_be_executed(payment),
@@ -118,7 +118,7 @@ async def execute_payment(
     try:
         payment_service = services["payment_service"]
         smart_sync = services["smart_sync"]
-        reserve_service = services["reserve_service"]
+        services["reserve_service"]
         
         # Execute the payment workflow
         payment = payment_service.execute_payment_workflow(

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 from db.session import get_db
-from runway.experiences.test_drive import TestDriveService
+from runway.experiences.test_drive import DemoTestDriveService
 
 router = APIRouter(prefix="/test-drive", tags=["test-drive"])
 
@@ -22,7 +22,7 @@ async def get_test_drive(business_id: str, db: Session = Depends(get_db)) -> Dic
     Returns a 4-week retrospective analysis of what Oodaloo would have 
     recommended based on the business's QBO data.
     """
-    service = TestDriveService(db)
+    service = DemoTestDriveService(db)
     return await service.generate_test_drive(business_id)
 
 @router.get("/{business_id}/hygiene-score")
@@ -33,7 +33,7 @@ def get_hygiene_score(business_id: str, db: Session = Depends(get_db)) -> Dict[s
     Demonstrates value by showing how fixing data quality improves 
     runway accuracy.
     """
-    service = TestDriveService(db)
+    service = DemoTestDriveService(db)
     return service.generate_hygiene_score(business_id)
 
 @router.get("/demo/{industry}")
@@ -44,5 +44,5 @@ def get_qbo_sandbox_demo(industry: str = "software_agency", db: Session = Depend
     Uses realistic sample data from QBO sandbox to demonstrate
     Oodaloo's capabilities without requiring real business data.
     """
-    service = TestDriveService(db)
+    service = DemoTestDriveService(db)
     return service.generate_qbo_sandbox_test_drive(industry)

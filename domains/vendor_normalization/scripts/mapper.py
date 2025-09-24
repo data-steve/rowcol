@@ -43,7 +43,6 @@ def build_vendor_mapping(vendor_table: pd.DataFrame, mcc_ref: pd.DataFrame, naic
 
 def emit_rules_yaml(vendor_map: pd.DataFrame, out_path: str = "data/out/rules.yaml"):
     # Emit deterministic contains/exact rules for Escher Autocode.
-    exact_rules = []
     contains_rules = []
 
     for _, r in vendor_map.dropna(subset=["coa_category"]).iterrows():

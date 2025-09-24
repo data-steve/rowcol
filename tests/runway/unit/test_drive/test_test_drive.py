@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 
-from runway.experiences.test_drive import TestDriveService
+from runway.experiences.test_drive import DemoTestDriveService
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
 from common.exceptions import BusinessNotFoundError
@@ -40,7 +40,7 @@ class TestTestDrive:
     def setup_method(self):
         """Set up test fixtures."""
         self.mock_db = Mock(spec=Session)
-        self.service = TestDriveService(self.mock_db)
+        self.service = DemoTestDriveService(self.mock_db)
         
         # Mock business
         self.mock_business = Mock(spec=Business)
@@ -120,9 +120,9 @@ class TestTestDrive:
     
     def test_weekly_analysis_generation(self, mock_qbo_data):
         """Test individual week analysis generation."""
-        # Test the TestDriveService since that's where _generate_weekly_analysis now lives after reorganization
-        from runway.experiences.test_drive import TestDriveService
-        service = TestDriveService(self.mock_db)
+        # Test the DemoTestDriveService since that's where _generate_weekly_analysis now lives after reorganization
+        from runway.experiences.test_drive import DemoTestDriveService
+        service = DemoTestDriveService(self.mock_db)
         
         week_start = datetime.now() - timedelta(weeks=2)
         week_end = week_start + timedelta(days=6)
@@ -219,7 +219,7 @@ class TestHygieneScore:
     def setup_method(self):
         """Set up test fixtures."""
         self.mock_db = Mock(spec=Session)
-        self.service = TestDriveService(self.mock_db)
+        self.service = DemoTestDriveService(self.mock_db)
         
         # Mock business
         self.mock_business = Mock(spec=Business)
@@ -379,15 +379,15 @@ class TestHygieneScore:
         
         # Test future invoice
         future_invoice = {"due_date": "2025-12-31"}
-        assert analyzer._is_overdue(future_invoice) == False
+        assert not analyzer._is_overdue(future_invoice)
         
         # Test missing due date
         no_due_date = {"amount": 1000}
-        assert analyzer._is_overdue(no_due_date) == False
+        assert not analyzer._is_overdue(no_due_date)
         
         # Test invalid date format
         invalid_date = {"due_date": "invalid-date"}
-        assert analyzer._is_overdue(invalid_date) == False
+        assert not analyzer._is_overdue(invalid_date)
     
     def test_hygiene_summary_generation(self):
         """Test hygiene summary statement generation."""

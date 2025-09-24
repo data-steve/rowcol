@@ -163,7 +163,7 @@ def refresh_token(refresh_data: TokenRefreshRequest):
 @router.post('/auth/password-reset')
 def request_password_reset(reset_data: PasswordResetRequest, db: Session = Depends(get_db)):
     """Request password reset (placeholder - would send email in production)"""
-    user = db.query(User).filter(User.email == reset_data.email).first()
+    db.query(User).filter(User.email == reset_data.email).first()
     
     # Always return success to prevent email enumeration
     return {"message": "If an account with this email exists, a password reset link has been sent"}
