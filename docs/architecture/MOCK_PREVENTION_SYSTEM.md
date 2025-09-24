@@ -137,7 +137,7 @@ def get_payment_provider(use_mock: bool = None) -> PaymentProvider:
 **MANDATORY**: Production environment MUST reject mock providers.
 
 ```python
-def get_qbo_provider(business_id: str) -> QBOProvider:
+def get_qbo_client(business_id: str) -> QBOAPIClient:
     environment = os.getenv("ENVIRONMENT", "development")
     use_mock = os.getenv("USE_MOCK_QBO", "true").lower() == "true"
     
@@ -149,11 +149,11 @@ def get_qbo_provider(business_id: str) -> QBOProvider:
         )
     
     if use_mock:
-        logger.warning("Using MOCK QBO provider - not hitting real QuickBooks API")
-        return MockQBOProvider(business_id)
+        logger.warning("Using MOCK QBO client - not hitting real QuickBooks API")
+        return MockQBOClient(business_id)
     
-    logger.info("Using REAL QBO provider - hitting QuickBooks API")
-    return RealQBOProvider(business_id)
+    logger.info("Using REAL QBO client - hitting QuickBooks API")
+    return RealQBOClient(business_id)
 ```
 
 ## Implementation Checklist

@@ -124,14 +124,14 @@ class TestDriveService:
             data_quality_analyzer = self._get_data_quality_analyzer(business_id)
             
             # Get QBO data for analysis using QBOAPIClient directly
-            qbo_provider = get_qbo_client(business_id, self.db)
+            qbo_client = get_qbo_client(business_id, self.db)
             qbo_data = {
-                "bills": qbo_provider.get_bills(),
-                "invoices": qbo_provider.get_invoices(),
-                "vendors": qbo_provider.get_vendors(),
-                "customers": qbo_provider.get_customers(),
-                "accounts": qbo_provider.get_accounts(),
-                "company_info": qbo_provider.get_company_info()
+                "bills": qbo_client.get_bills(),
+                "invoices": qbo_client.get_invoices(),
+                "vendors": qbo_client.get_vendors(),
+                "customers": qbo_client.get_customers(),
+                "accounts": qbo_client.get_accounts(),
+                "company_info": qbo_client.get_company_info()
             }
             
             # Use core service for hygiene score calculation

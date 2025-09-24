@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration, IntegrationStatuses
-from domains.integrations.qbo.client import get_real_qbo_provider
+from domains.integrations.qbo.client import get_real_qbo_client
 from tests.conftest import test_business  # Re-using the basic business fixture
 
 @pytest.mark.qbo_real_api
@@ -43,7 +43,6 @@ class TestRealQBOApi:
         """
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        import os
         
         # Connect to MAIN database (not test database)
         database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
@@ -81,19 +80,19 @@ class TestRealQBOApi:
         
         business, realm_id = real_qbo_business
         
-        qbo_provider = get_real_qbo_provider(
+        qbo_client = get_real_qbo_client(
             business_id=business.business_id, 
             db=db,
             realm_id=realm_id
         )
         
         # This will raise an exception if the API call fails for any reason.
-        bills_response = await qbo_provider.get_bills()
+        bills_response = await qbo_client.get_bills()
 
         # The assertion is simple: did we get a list back?
         # A sandbox might have 0 bills, so we just check the type.
         assert isinstance(bills_response, list)
         
-        print(f"✅ SUCCESS: Successfully connected to REAL QBO Sandbox for Realm ID: {qbo_provider.realm_id}")
+        print(f"✅ SUCCESS: Successfully connected to REAL QBO Sandbox for Realm ID: {qbo_client.realm_id}")
         print(f"✅ Found {len(bills_response)} bills in the sandbox.")
         print("--- TEST COMPLETE ---")

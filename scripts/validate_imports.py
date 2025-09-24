@@ -9,6 +9,8 @@ Usage:
     poetry run python scripts/validate_imports.py
     poetry run python scripts/validate_imports.py --fix-violations
     poetry run python scripts/validate_imports.py --verbose
+    poetry run python scripts/validate_imports.py --verify-imports
+    poetry run python scripts/validate_imports.py --verify-all
 
 Import Rules:
     ✅ runway/ can import from domains/
@@ -332,7 +334,6 @@ def verify_comprehensive_imports():
         ("runway.experiences.test_drive", ["TestDriveService"], "Test Drive Service"),
         
         # Runway - Routes
-        ("runway.routes", ["bills", "payments", "vendors", "invoices"], "Runway Routes"),
         ("runway.routes.bills", ["router"], "Bills Routes"),
         ("runway.routes.payments", ["router"], "Payments Routes"),
         ("runway.routes.vendors", ["router"], "Vendors Routes"),

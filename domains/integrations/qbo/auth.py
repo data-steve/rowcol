@@ -118,8 +118,8 @@ class QBOAuthService(TenantAwareService):
     def _generate_real_auth_url(self, state: str) -> str:
         """Generate real QBO auth URL."""
         try:
-            from intuitoauth import AuthClient
-            from intuitoauth import Scopes
+            from intuitlib.client import AuthClient
+            from intuitlib.enums import Scopes
             
             auth_client = AuthClient(
                 client_id=self.client_id,
@@ -201,7 +201,7 @@ class QBOAuthService(TenantAwareService):
     def _exchange_real_tokens(self, authorization_code: str) -> Tuple[str, str]:
         """Exchange authorization code for real QBO tokens."""
         try:
-            from intuitoauth import AuthClient
+            from intuitlib.client import AuthClient
             
             auth_client = AuthClient(
                 client_id=self.client_id,

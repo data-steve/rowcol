@@ -57,7 +57,7 @@ When QBO returns 401 (unauthorized), the system will:
 ## Architecture
 
 ```
-QBOAuthService (auth.py) → QBOAPIProvider (client.py) → QBO REST API
+QBOAuthService (auth.py) → QBOAPIClient (client.py) → QBO REST API
                     ↓
               Database (tokens)
 ```

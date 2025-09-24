@@ -60,7 +60,7 @@ class BillService(TenantAwareService):
         
         # NOTE: Providers parked for future strategy - using QBOAPIClient directly
         from domains.integrations.qbo.client import get_qbo_client
-        self.qbo_provider = qbo_provider or get_qbo_client(business_id, self.db)
+        self.qbo_client = qbo_provider or get_qbo_client(business_id, self.db)
         self.document_processor = document_processor  # TODO: Implement when provider strategy decided
         self.runway_reserve_service = runway_reserve_service
         
@@ -211,7 +211,7 @@ class BillService(TenantAwareService):
             
             # Get bills from QBO
             since_date = datetime.utcnow() - timedelta(days=days_back)
-            qbo_bills = self.qbo_provider.get_bills(since_date=since_date)
+            qbo_bills = self.qbo_client.get_bills(since_date=since_date)
             
             synced_bills = []
             for qbo_bill_data in qbo_bills:
