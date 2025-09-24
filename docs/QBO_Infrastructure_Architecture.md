@@ -204,7 +204,7 @@ All existing QBO integration code continues to work unchanged. The new infrastru
 All new QBO operations should use the QBOConnectionManager:
 
 ```python
-from domains.integrations.qbo.qbo_connection_manager import get_qbo_connection_manager
+from domains.integrations.qbo.client import get_qbo_connection_manager
 
 # In your service
 connection_manager = get_qbo_connection_manager(db)
@@ -218,7 +218,7 @@ data = await connection_manager.make_qbo_request(business_id, endpoint)
 python -c "
 import asyncio
 from db.session import SessionLocal
-from domains.integrations.qbo.qbo_connection_manager import QBOConnectionManager
+from domains.integrations.qbo.client import QBOConnectionManager
 
 async def test():
     db = SessionLocal()

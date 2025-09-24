@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice
 from domains.policy.services.policy_engine import PolicyEngineService
-from domains.integrations.smart_sync import SmartSyncService
+from domains.integrations import SmartSyncService
 from datetime import datetime, timedelta
 from domains.core.services.base_service import TenantAwareService
 import logging

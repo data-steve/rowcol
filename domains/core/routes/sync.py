@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from db.session import get_db
-from domains.integrations.smart_sync import SmartSyncService, SyncStrategy, SyncPriority
+from domains.integrations import SmartSyncService
 from typing import Dict, Any
 
 router = APIRouter()

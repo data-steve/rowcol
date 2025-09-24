@@ -6,7 +6,7 @@ Focus on basic tray item management without complex relationships.
 """
 import pytest
 from sqlalchemy.orm import Session
-from runway.tray.models.tray_item import TrayItem
+from runway.models.tray_item import TrayItem
 from domains.core.models import Business
 
 
@@ -49,7 +49,7 @@ def test_tray_item_creation_basic(db: Session, test_business: Business):
 def test_tray_service_import():
     """Test that TrayService can be imported without errors"""
     try:
-        from runway.tray.services.tray import TrayService
+        from runway.experiences.tray import TrayService
         assert TrayService is not None
     except ImportError as e:
         pytest.skip(f"TrayService not available in Phase 0: {e}")
@@ -58,7 +58,7 @@ def test_tray_service_import():
 def test_tray_routes_import():
     """Test that tray routes can be imported without errors"""
     try:
-        from runway.tray.routes.tray import router
+        from runway.routes.tray import router
         assert router is not None
     except ImportError as e:
         pytest.skip(f"Tray routes not available in Phase 0: {e}")

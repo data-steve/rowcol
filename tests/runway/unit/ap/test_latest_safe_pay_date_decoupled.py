@@ -11,7 +11,7 @@ from unittest.mock import Mock
 
 from domains.ap.services.bill_ingestion import BillService
 from domains.ap.models.bill import Bill
-from tests.domains.core.services.test_service_base import TestServiceFactory, InMemoryTestService
+from tests.domains.unit.core.test_service_base import TestServiceFactory, InMemoryTestService
 
 
 class TestLatestSafePayDateDecoupled:

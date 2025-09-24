@@ -21,8 +21,7 @@ from fastapi import UploadFile, HTTPException
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.bill import Bill, BillStatus, BillPriority
 from domains.ap.models.vendor import Vendor
-from domains.integrations.qbo.qbo_api_provider import QBOAPIProvider
-from domains.integrations.qbo.qbo_connection_manager import get_qbo_connection_manager
+from domains.integrations.qbo.client import QBOAPIProvider
 from common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -60,7 +59,7 @@ class BillService(TenantAwareService):
         super().__init__(db, business_id, validate_business=validate_business)
         
         # NOTE: Providers parked for future strategy - using QBOAPIProvider directly
-        from domains.integrations.qbo.qbo_api_provider import get_qbo_provider
+        from domains.integrations.qbo.client import get_qbo_provider
         self.qbo_provider = qbo_provider or get_qbo_provider(business_id, self.db)
         self.document_processor = document_processor  # TODO: Implement when provider strategy decided
         self.runway_reserve_service = runway_reserve_service

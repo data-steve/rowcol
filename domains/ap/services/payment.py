@@ -49,7 +49,7 @@ class PaymentService(TenantAwareService):
         super().__init__(db, business_id)
         
         # NOTE: Providers parked for future strategy - using QBOAPIProvider directly
-        from domains.integrations.qbo.qbo_api_provider import get_qbo_provider
+        from domains.integrations.qbo.client import get_qbo_provider
         self.qbo_provider = qbo_provider or get_qbo_provider(business_id, self.db)
         self.runway_reserve_service = runway_reserve_service
         

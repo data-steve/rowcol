@@ -60,40 +60,7 @@ This plan provides the architectural rigor and detailed task breakdown needed fo
   - ✅ **Models = Data Only Policy**: Business logic in services, not models (enforced system-wide)
   - ✅ **Clean Import Pattern**: Cascading imports via `__init__.py` files (main.py → runway → domains)
 
-## Architecture Overview
 
-### Domains/ Structure (QBO-Facing Primitives)
-```
-domains/
-├── core/           # Business, User, Document models/services (simplified)
-│                   # Key services: KPIService, DocumentReviewService, DocumentStorageService
-├── integrations/   # External API coordination (NEW CENTRALIZED LAYER)
-│   ├── smart_sync.py        # Unified integration coordinator (moved from core)
-│   ├── identity_graph/      # Cross-platform deduplication (moved from root)
-│   ├── qbo/                # QBO integration with centralized auth
-│   └── plaid/              # Banking integration
-├── ap/             # Bill, Vendor, Payment models/services  
-├── ar/             # Invoice, Customer, Payment models/services
-├── bank/           # BankTransaction, Transfer models/services
-├── policy/         # Rule, Correction, Suggestion models/services
-└── vendor_normalization/  # VendorCanonical models/services (cross-cutting)
-```
-
-**Synthesized Audit Findings & Recent Refactoring**:
-- **SmartSyncService**: Moved to `domains/integrations/smart_sync.py` for better architectural clarity.
-- **Identity Graph**: Moved to `domains/integrations/identity_graph/` as it's pure integration deduplication logic.
-- **Centralized QBO Auth**: `QBOAuth` now handles all token refresh logic, eliminating duplication across services.AR
-- **Clean Integration Layer**: All external API coordination now centralized in `domains/integrations/`.
-
-### Runway/ Structure (Product Orchestration)
-```
-runway/
-├── digest/         # Weekly email generation and delivery
-├── tray/           # Prep tray UI logic and workflows
-├── console/        # Cash console dashboard and controls
-├── onboarding/     # Business setup and QBO connection
-└── routes/         # API orchestration layer
-```
 
 ## Phase 0: Foundation & Core Ritual (78h, Weeks 1-2) - ✅ FULLY COMPLETED
 
@@ -290,89 +257,77 @@ runway/
     - Ensure all AR visualizations have accessible list alternatives
     - Maintain identical actions between visual and list modes
 
-### Stage 2.99: Product Experience Architecture & Trust Surfaces** *Effort: 24h*
-  - **[ ] CRITICAL: Product Experience Architecture Definition** *Effort: 8h* - **BLOCKING ALL ONBOARDING WORK**
-    - **Problem**: Current test_drive vs onboarding vs ongoing usage is confusing and creates poor UX
-    - **Solution**: Define clear product experience boundaries and user journeys
-    - **Deliverables**:
-      - **Test Drive Experience**: Lightweight demo using QBO sandbox or curated demo data
-        - No QBO connection required
-        - Uses `ProofOfValueService` with demo/sandbox data
-        - Shows "What Oodaloo would have done for you" messaging
-        - Single-page experience with clear "Get Started" CTA
-      - **Onboarding Experience**: Real business setup with actual QBO connection
-        - Requires QBO OAuth connection
-        - Uses real business data for analysis
-        - Shows "What we actually accomplished" messaging
-        - Multi-step setup process with validation
-      - **Ongoing Experience**: Regular digest/tray/console usage
-        - Uses real business data
-        - Focuses on current state and actionable insights
-        - No "would have done" messaging
-    - **User Journey Mapping**:
-      - **Prospect**: Test Drive → Sign Up → Onboarding → Ongoing Usage
-      - **Direct Sign Up**: Onboarding → Ongoing Usage
-      - **No Test Drive**: Onboarding → Ongoing Usage
-    - **Data Flow Architecture**:
-      - Test Drive: Demo data → `ProofOfValueService` → Demo results
-      - Onboarding: Real QBO data → `DataQualityAnalyzer` → Real results
-      - Ongoing: Real QBO data → `DataQualityAnalyzer` → Current insights
-  - **[ ] Hygiene Score Contextualization** *Effort: 6h*
-    - **Core Method**: `DataQualityAnalyzer.calculate_hygiene_score()` (unchanged)
-    - **Context-Specific Interpretation**:
-      - **Test Drive**: "Oodaloo would have identified X issues worth Y days of runway protection"
-      - **Onboarding**: "We found X issues that could impact your runway by Y days"
-      - **Ongoing**: "Your data quality is X/100 with Y issues to address"
-    - **Implementation**: Add `context` parameter to `generate_summary_for_context()`
-  - **[ ] Test Drive vs Onboarding Separation** *Effort: 6h*
-    - **Remove test drive functionality from onboarding service**
-    - **Ensure test drive is standalone experience**
-    - **Clarify when each should be used**
-    - **Update routing and navigation**
-
-### Stage 2.100: Runway Subdomain Architecture Audit** *Effort: 16h* - **CRITICAL ARCHITECTURAL FOUNDATION**
-  - **[ ] CRITICAL: Runway Product Architecture Audit** *Effort: 8h* - **BLOCKING ALL RUNWAY WORK**
-    - **Problem**: Runway subdomains (tray, digest, test_drive, onboarding) contain business logic that should be in core
-    - **Solution**: Establish clear separation between product experience and calculation logic
-    - **Architecture Principles**:
-      - **Core/Calculations**: All shared calculations, data analysis, and business logic
-      - **Runway Subdomains**: Product experience delivery, UI orchestration, user workflows
-      - **QBO Integration**: Managed by `domains/integrations/qbo/`, leveraged by onboarding
-    - **Audit Requirements**:
-      1. **All shared calculations** must be in `runway/core/` (or `runway/calculations/`)
-      2. **All "summary" presentations** of calculations must be in core
-      3. **Subdomains** focus on delivering product experiences, not calculations
-      4. **QBO authentication** managed by `domains/integrations/qbo/`, not onboarding
-    - **Deliverables**:
-      - **Architecture Decision Record**: Clear boundaries between core and subdomains
-      - **Refactoring Plan**: Move calculations from subdomains to core
-      - **Service Contracts**: Define how subdomains interact with core calculations
-      - **QBO Integration Strategy**: Centralized QBO management approach
-  - **[ ] Runway Subdomain Refactoring** *Effort: 8h* - **IMPLEMENTATION**
-    - **Move Calculations to Core**:
-      - Move hygiene score logic from onboarding to `DataQualityAnalyzer`
-      - Move runway replay logic from onboarding to `ProofOfValueService`
-      - Move weekly analysis logic from onboarding to `RunwayCalculator`
-      - Move proof statement generation to core services
-    - **Refactor Subdomain Services**:
-      - OnboardingService: Focus on onboarding experience, delegate to core
-      - TrayService: Focus on tray UI logic, delegate to core
-      - DigestService: Focus on email delivery, delegate to core
-      - ProofOfValueService: Focus on test drive experience, delegate to core
-    - **Update Imports and Dependencies**:
-      - Fix all imports after moving calculations to core
-      - Ensure subdomains use core services for calculations
-      - Remove duplicate business logic from subdomains
-  
-
 ## Phase 3: Smart Analytics & Insights (100h, Week 8)
 
 *Goal*: Build actionable analytics foundation that enables informed budget planning and goal setting. Focus on insights from actual QBO data, not external benchmarks.*
+
+### **🔍 DEDICATED DATA QUALITY & HYGIENE ENHANCEMENT SESSION** *Effort: 12h*
+
+**Problem**: Current mock data and data quality thresholds are simplistic and don't reflect real-world business complexity across different business sizes and industries.
+
+**Scope**: Comprehensive audit and enhancement of all data generation systems, quality scoring, and business scenario realism.
+
+**Key Areas**:
+- **Data Generator Consolidation**: Audit all mock data providers (`create_sandbox_data.py`, `scenario_runner.py`, `conftest.py` fixtures, QBO client mock data) and consolidate into unified, realistic data generation system
+- **Business Size Awareness**: Enhance data generation to properly represent small (1-10 employees), medium (11-50 employees), and large (50+ employees) business scenarios with appropriate financial ratios and transaction volumes
+- **Industry-Specific Patterns**: Create realistic data patterns for different industries (marketing agency, construction, professional services, e-commerce, consulting) with proper seasonal variations and cash flow characteristics
+- **Data Quality Threshold Refinement**: Redesign scoring algorithms to be more nuanced and business-context aware, moving beyond simple percentage thresholds to multi-dimensional quality assessment
+- **Real-World Validation**: Test data quality scoring against actual QBO sandbox data to ensure thresholds are realistic and actionable
+
+**Deliverables**:
+- Consolidated data generation architecture with clear separation of concerns
+- Enhanced business scenario data that reflects real-world complexity
+- Improved data quality scoring that provides meaningful insights
+- Comprehensive test suite validating data quality across business sizes and industries
 
 ### Stage 3.1: Analytics Foundation (35h)
 - **[ ] CRITICAL: Integration Tests** *Effort: 20h* - **BLOCKING PHASE 1 SMART AP**  
   - **[ ] Fix QBO sandbox integration test** (`tests/domains/unit/integrations/test_scenarios.py`) *Effort: 4h*
   - **[✅] Fix runway calculation in digest service** (AttributeError in integration test) *Effort: 4h*
+
+### **🚨 P0 CRITICAL FIXES** *Effort: 8h* - **BLOCKING PRODUCTION**
+
+**Problem**: Critical incomplete implementations that break core functionality and create security vulnerabilities.
+
+**P0 Issues**:
+- **Authentication Context Security Risk**: Hardcoded `"api_user"` in `runway/routes/bills.py` and `runway/routes/reserve_runway.py` instead of getting from auth context
+- **Data Ingestion Service Broken**: `domains/core/services/data_ingestion.py` raises `NotImplementedError` 
+- **Tray Experience Non-Functional**: `runway/experiences/tray.py` returns empty lists instead of real data
+
+**Tasks**:
+- **[ ] Fix Authentication Context** *Effort: 3h*
+  - Replace hardcoded `"api_user"` with proper auth context retrieval
+  - Update `runway/routes/bills.py` lines 172, 253
+  - Update `runway/routes/reserve_runway.py` lines 66, 111, 164, 279
+- **[ ] Fix Data Ingestion Service** *Effort: 2h*
+  - Remove `NotImplementedError` from `domains/core/services/data_ingestion.py`
+  - Implement basic QBO data ingestion using existing `QBOAPIProvider`
+- **[ ] Fix Tray Data Provider** *Effort: 3h*
+  - Implement real data retrieval in `runway/experiences/tray.py`
+  - Connect to QBO data for bills, invoices, and runway items
+  - Ensure tray experience shows actual business data
+
+**Success Criteria**: All P0 issues resolved, no hardcoded auth, tray shows real data
+
+### **🧪 REAL QBO API UNIT TESTS** *Effort: 6h* - **TESTING FOUNDATION**
+
+**Problem**: Current tests rely heavily on mocks. Need real QBO API unit tests to validate actual integration behavior.
+
+**Tasks**:
+- **[ ] QBOAuthService Real API Tests** *Effort: 3h*
+  - Test token refresh with real QBO sandbox
+  - Test token expiration handling
+  - Test OAuth flow with real authorization codes
+  - Location: `tests/domains/unit/integrations/qbo/test_auth_real_api.py`
+- **[ ] QBOAPIProvider Real API Tests** *Effort: 3h*
+  - Test API calls with real QBO sandbox
+  - Test rate limiting and retry logic
+  - Test batch operations with real data
+  - Test error handling with real API responses
+  - Location: `tests/domains/unit/integrations/qbo/test_client_real_api.py`
+
+**Success Criteria**: Real QBO API unit tests pass consistently, validate actual integration behavior
+
   - **[ ] Runway Reserve E2E Integration Test** (`tests/integration/test_runway_reserve_e2e.py`) *Effort: 8h* - **FOUNDATION VALIDATION**
     - Proves runway calculations work with real QBO data (not mocks)
     - Validates data quality issues actually affect business calculations  

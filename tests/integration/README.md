@@ -1,128 +1,396 @@
-# Integration Testing Strategy
-## End-to-End Validation of Core Oodaloo Functionality
+# QBO Integration Testing Suite
+## Comprehensive Testing for Production-Grade QBO Infrastructure
 
-**Purpose**: Prove that our Phase 0 foundation can support Phase 1+ features by testing complete workflows with real QBO data.
-
----
-
-## **Critical Integration Tests Needed**
-
-### **1. Runway Reserve Integration** (`test_runway_reserve_e2e.py`)
-**Goal**: Prove runway reserve calculations work with real QBO data, not just mocks.
-
-**Test Scenarios**:
-- [ ] **Real QBO → Runway Calculation**: Connect to QBO sandbox, pull actual bills/invoices, calculate runway
-- [ ] **Reserve Allocation**: Test reserve allocation logic with real cash flow patterns  
-- [ ] **Runway Impact**: Verify runway impact calculations match expected business logic
-- [ ] **Data Quality Integration**: Test how data quality issues affect runway accuracy
-
-**Success Criteria**: Runway reserves calculated from real QBO data match manual calculations within 5%
-
-### **2. Smart AP Workflow Integration** (`test_smart_ap_e2e.py`)
-**Goal**: Validate complete AP workflow from QBO bill ingestion to payment scheduling.
-
-**Test Scenarios**:
-- [ ] **QBO Bill Ingestion**: Real bills from QBO → Oodaloo bill processing
-- [ ] **Payment Priority**: Test payment prioritization with real vendor data
-- [ ] **Runway Impact**: Verify payment timing affects runway calculations correctly
-- [ ] **Tray Integration**: Bills appear in prep tray with correct prioritization
-
-**Success Criteria**: Complete AP workflow processes real QBO bills without mock dependencies
-
-### **3. Data Quality → Business Logic Integration** (`test_data_quality_impact.py`)
-**Goal**: Prove data quality issues actually affect business calculations as expected.
-
-**Test Scenarios**:
-- [ ] **Missing Due Dates**: Test runway calculations with bills missing due dates
-- [ ] **Uncategorized Transactions**: Verify impact on cash flow analysis
-- [ ] **Vendor Normalization**: Test vendor matching with real QBO vendor data
-- [ ] **Hygiene Score Accuracy**: Compare calculated vs. manual hygiene assessment
-
-**Success Criteria**: Data quality issues impact calculations predictably and measurably
-
-### **4. QBO Sync → Product Feature Integration** (`test_qbo_sync_e2e.py`)
-**Goal**: Validate that QBO data synchronization feeds product features correctly.
-
-**Test Scenarios**:
-- [ ] **Real-time Sync**: QBO changes → Oodaloo feature updates
-- [ ] **Bulk Data Import**: Large QBO datasets → Product feature performance
-- [ ] **Error Recovery**: QBO API failures → Graceful product degradation
-- [ ] **Token Refresh**: OAuth token refresh → Uninterrupted service
-
-**Success Criteria**: Product features work seamlessly with live QBO data synchronization
+This testing suite validates the QBO integration infrastructure with real-world business scenarios and production-grade reliability testing.
 
 ---
 
 ## **Test Architecture**
 
-### **Test Data Strategy**
-1. **QBO Sandbox Companies**: 3 pre-configured sandbox companies with different complexity levels
-2. **Known Data Sets**: Predictable test data for assertion validation
-3. **Real API Calls**: No mocks for QBO integration layer
-4. **Isolated Environments**: Each test uses fresh QBO sandbox state
+### **Core Test Components**
 
-### **Test Execution Levels**
-```
-Level 1: Unit Tests (Mocked)     ✅ EXISTS
-Level 2: Integration Tests       🚨 MISSING - THIS IS THE GAP
-Level 3: E2E Tests              📋 FUTURE
-Level 4: Performance Tests      📋 FUTURE
-```
+#### **1. Unit Tests** (`test_qbo_integration.py`)
+- **QBOConnectionManager** functionality
+- **QBOHealthMonitor** operations  
+- **SmartSyncService** integration
+- Token refresh and authentication flows
+- Circuit breaker patterns
+- Error handling and recovery
 
-### **Success Metrics**
-- **Coverage**: Core features tested end-to-end with real data
-- **Performance**: Integration tests complete within 2 minutes
-- **Reliability**: 95% pass rate with real QBO API calls
-- **Foundation Validation**: Phase 1 features can be built with confidence
+#### **2. Scenario Tests** (`test_scenarios.py`)
+- **Business Scenario Validation**: 5 real-world business types
+- **End-to-End Testing**: Complete data flow validation
+- **Production Simulation**: Load testing and resilience
+- **Data Quality Analysis**: QBO data structure validation
 
----
-
-## **Implementation Priority**
-
-### **Phase 1: Foundation Validation** (Critical for Phase 1 Smart AP)
-1. **Runway Reserve Integration** - Proves core runway calculations work
-2. **QBO Sync Integration** - Validates data pipeline reliability  
-3. **Data Quality Integration** - Confirms business logic accuracy
-
-### **Phase 2: Feature Validation** (Before Phase 2 Smart AR)
-4. **Smart AP Workflow** - End-to-end AP processing
-5. **Tray Integration** - User interface data flow
-6. **Error Handling** - Graceful degradation testing
+#### **3. Integration Tests** (Built-in)
+- **Real QBO Sandbox**: Live API testing
+- **Mock Data Testing**: Isolated unit testing
+- **Performance Testing**: Response time and throughput
+- **Failure Simulation**: Recovery and resilience testing
 
 ---
 
-## **Running Integration Tests**
+## **Business Scenarios**
 
+### **1. Marketing Agency**
 ```bash
-# Run all integration tests (requires QBO sandbox access)
-pytest tests/integration/ -v --tb=short
+python domains/integrations/qbo/tests/test_scenarios.py --scenario marketing_agency
+```
+**Profile**: High AR, seasonal cash flow, 15 employees, $85k monthly revenue  
+**Tests**: High-volume invoices, AR aging, payment timing optimization  
+**Success Criteria**: 92% accuracy, 85% data quality, 120 days expected runway
 
-# Run specific integration test suite
-pytest tests/integration/test_runway_reserve_e2e.py -v
+### **2. Construction Company**
+```bash
+python domains/integrations/qbo/tests/test_scenarios.py --scenario construction_company
+```
+**Profile**: Large projects, equipment purchases, 45 employees, $250k monthly revenue  
+**Tests**: Large transactions, progress billing, project-based cash flow  
+**Success Criteria**: 88% accuracy, 80% data quality, 90 days expected runway
 
-# Run with real QBO API calls (no mocks)
-pytest tests/integration/ -v --qbo-real-api
+### **3. Professional Services**
+```bash
+python domains/integrations/qbo/tests/test_scenarios.py --scenario professional_services
+```
+**Profile**: Law firm, recurring revenue, 25 employees, $150k monthly revenue  
+**Tests**: Recurring patterns, retainer handling, time-based billing  
+**Success Criteria**: 95% accuracy, 90% data quality, 180 days expected runway
 
-# Performance timing for integration tests  
-pytest tests/integration/ -v --benchmark-only
+### **4. E-commerce Business**
+```bash
+python domains/integrations/qbo/tests/test_scenarios.py --scenario ecommerce_business
+```
+**Profile**: High transaction volume, inventory, 12 employees, $180k monthly revenue  
+**Tests**: High-volume processing, inventory expenses, seasonal patterns  
+**Success Criteria**: 85% accuracy, 75% data quality, 100 days expected runway
+
+### **5. Consulting Firm**
+```bash
+python domains/integrations/qbo/tests/test_scenarios.py --scenario consulting_firm
+```
+**Profile**: Project-based billing, 8 employees, $120k monthly revenue  
+**Tests**: Project revenue, contractor payments, milestone billing  
+**Success Criteria**: 93% accuracy, 88% data quality, 200 days expected runway
+
+---
+
+## **Running Tests**
+
+### **Prerequisites**
+```bash
+# Install dependencies
+pip install pytest pytest-asyncio
+
+# Set up environment (for real QBO testing)
+export QBO_CLIENT_ID="your_client_id"
+export QBO_CLIENT_SECRET="your_client_secret"
+export QBO_REALM_ID="your_sandbox_realm_id"
+export QBO_ACCESS_TOKEN="your_access_token"
+export QBO_REFRESH_TOKEN="your_refresh_token"
+```
+
+### **Unit Tests**
+```bash
+# Run all unit tests
+python -m pytest domains/integrations/qbo/tests/test_qbo_integration.py -v
+
+# Run specific test class
+python -m pytest domains/integrations/qbo/tests/test_qbo_integration.py::TestQBOConnectionManager -v
+
+# Run with coverage
+python -m pytest domains/integrations/qbo/tests/test_qbo_integration.py --cov=domains.integrations.qbo
+```
+
+### **Scenario Tests**
+```bash
+# Run all scenarios (mock data)
+python domains/integrations/qbo/tests/test_scenarios.py --all
+
+# Run specific scenario (mock data)
+python domains/integrations/qbo/tests/test_scenarios.py --scenario marketing_agency
+
+# Run with real QBO sandbox
+QBO_TEST_MODE=sandbox python domains/integrations/qbo/tests/test_scenarios.py --scenario marketing_agency --real-qbo
+
+# Save results to file
+python domains/integrations/qbo/tests/test_scenarios.py --all --output qbo_test_results.json
+```
+
+### **Integration Tests**
+```bash
+# Run integration tests with real QBO
+QBO_TEST_MODE=sandbox python -m pytest domains/integrations/qbo/tests/test_qbo_integration.py::TestProductionScenarios -v
+
+# Run load testing simulation
+python -m pytest domains/integrations/qbo/tests/test_qbo_integration.py::TestProductionScenarios::test_load_testing_simulation -v
 ```
 
 ---
 
-## **Risk Mitigation**
+## **Test Results Interpretation**
 
-### **If Integration Tests Fail**
-1. **Data Assumptions Invalid**: QBO API behavior differs from documentation
-2. **Performance Issues**: Real API calls too slow for product features
-3. **Error Handling Gaps**: Product fails ungracefully with real data issues
-4. **Business Logic Flaws**: Calculations wrong when tested with real data
+### **Success Criteria**
 
-### **Success Validation**
-✅ **Phase 0 foundation proven solid**  
-✅ **Phase 1 Smart AP can be built with confidence**  
-✅ **QBO integration reliable under real conditions**  
-✅ **Business logic validated with actual data**
+#### **QBO Health Score** (0-100%)
+- **90-100%**: Excellent - Production ready
+- **80-89%**: Good - Minor issues to address
+- **70-79%**: Fair - Significant issues present
+- **<70%**: Poor - Major problems require attention
+
+#### **Data Quality Score** (0-100%)
+- **90-100%**: Excellent - Clean, complete data
+- **80-89%**: Good - Minor data issues
+- **70-79%**: Fair - Some data quality problems
+- **<70%**: Poor - Significant data issues
+
+#### **Runway Accuracy** (0-100%)
+- **95-100%**: Excellent - Highly accurate calculations
+- **90-94%**: Good - Acceptable accuracy
+- **85-89%**: Fair - Some calculation drift
+- **<85%**: Poor - Inaccurate runway calculations
+
+### **Common Issues and Solutions**
+
+#### **Connection Health Issues**
+```
+Issue: QBO connection unhealthy
+Solution: Check credentials, network connectivity, token expiration
+Command: Check /integrations/qbo/health/business/{business_id}
+```
+
+#### **Data Quality Issues**
+```
+Issue: Missing or incomplete QBO data
+Solution: Verify QBO setup, permissions, data completeness
+Command: Review QBO sandbox data via QBO web interface
+```
+
+#### **Runway Accuracy Issues**
+```
+Issue: Runway calculations inaccurate
+Solution: Review calculation logic, QBO data mapping
+Command: Debug with SmartSyncService.get_qbo_data_for_digest()
+```
+
+#### **Token Refresh Issues**
+```
+Issue: Token refresh failing
+Solution: Verify client credentials, refresh token validity
+Command: Test with QBOConnectionManager._refresh_token()
+```
 
 ---
 
-**This integration testing strategy will prove our foundation is ready for production and Phase 1+ development.**
+## **Continuous Integration**
+
+### **CI/CD Integration**
+```yaml
+# .github/workflows/qbo-tests.yml
+name: QBO Integration Tests
+on: [push, pull_request]
+
+jobs:
+  qbo-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+      
+      - name: Run QBO unit tests
+        run: |
+          python -m pytest domains/integrations/qbo/tests/test_qbo_integration.py -v --cov=domains.integrations.qbo
+      
+      - name: Run QBO scenario tests (mock)
+        run: |
+          python domains/integrations/qbo/tests/test_scenarios.py --all
+      
+      - name: Run QBO integration tests (if sandbox credentials available)
+        env:
+          QBO_TEST_MODE: sandbox
+          QBO_CLIENT_ID: ${{ secrets.QBO_CLIENT_ID }}
+          QBO_CLIENT_SECRET: ${{ secrets.QBO_CLIENT_SECRET }}
+          QBO_REALM_ID: ${{ secrets.QBO_REALM_ID }}
+          QBO_ACCESS_TOKEN: ${{ secrets.QBO_ACCESS_TOKEN }}
+          QBO_REFRESH_TOKEN: ${{ secrets.QBO_REFRESH_TOKEN }}
+        run: |
+          if [ ! -z "$QBO_CLIENT_ID" ]; then
+            python domains/integrations/qbo/tests/test_scenarios.py --scenario marketing_agency --real-qbo
+          fi
+```
+
+### **Pre-commit Hooks**
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Add to .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: qbo-tests
+        name: QBO Integration Tests
+        entry: python -m pytest domains/integrations/qbo/tests/test_qbo_integration.py -x
+        language: system
+        pass_filenames: false
+```
+
+---
+
+## **Development Workflow**
+
+### **Adding New Tests**
+1. **Unit Tests**: Add to `test_qbo_integration.py`
+   - Follow existing test patterns
+   - Use proper mocking for external dependencies
+   - Test both success and failure scenarios
+
+2. **Scenario Tests**: Add to `test_scenarios.py`
+   - Create realistic business scenario
+   - Define clear success criteria
+   - Include data quality validation
+
+### **Test Data Management**
+```python
+# Create test fixtures in test_qbo_integration.py
+@pytest.fixture
+def sample_qbo_data():
+    return {
+        "bills": [...],
+        "invoices": [...],
+        "accounts": [...]
+    }
+```
+
+### **Debugging Failed Tests**
+```bash
+# Run with verbose output
+python -m pytest domains/integrations/qbo/tests/ -v -s
+
+# Run specific failing test
+python -m pytest domains/integrations/qbo/tests/test_qbo_integration.py::TestQBOConnectionManager::test_token_refresh_success -v -s
+
+# Use pdb for debugging
+python -m pytest domains/integrations/qbo/tests/ --pdb
+```
+
+---
+
+## **Production Monitoring Integration**
+
+### **Health Check Endpoints**
+```bash
+# Test health monitoring endpoints
+curl http://localhost:8000/integrations/qbo/health/summary
+curl http://localhost:8000/integrations/qbo/health/business/{business_id}
+curl http://localhost:8000/integrations/qbo/health/dashboard
+```
+
+### **Prometheus Metrics**
+```bash
+# Get metrics for monitoring
+curl http://localhost:8000/integrations/qbo/health/metrics/prometheus
+```
+
+### **Status Page**
+```bash
+# Client-facing status
+curl http://localhost:8000/integrations/qbo/health/status-page
+```
+
+---
+
+## **Best Practices**
+
+### **Test Organization**
+- ✅ **Separate concerns**: Unit tests, integration tests, scenario tests
+- ✅ **Use fixtures**: Reusable test data and setup
+- ✅ **Mock external dependencies**: Isolate QBO API calls for unit tests
+- ✅ **Test failure scenarios**: Error handling and recovery paths
+
+### **Test Data**
+- ✅ **Realistic scenarios**: Based on actual business patterns
+- ✅ **Edge cases**: Empty data, large datasets, malformed responses
+- ✅ **Consistent data**: Reproducible test results
+- ✅ **Clean up**: Remove test data after tests complete
+
+### **Performance Testing**
+- ✅ **Response times**: API calls should complete within reasonable time
+- ✅ **Concurrent access**: Multiple businesses accessing QBO simultaneously
+- ✅ **Rate limiting**: Respect QBO API rate limits
+- ✅ **Memory usage**: Monitor memory consumption during tests
+
+### **Security Testing**
+- ✅ **Token security**: Ensure tokens are not logged or exposed
+- ✅ **Input validation**: Test with malformed QBO responses
+- ✅ **Error information**: Don't leak sensitive information in errors
+- ✅ **Access controls**: Verify business isolation
+
+---
+
+## **Troubleshooting**
+
+### **Common Test Failures**
+
+#### **Import Errors**
+```bash
+# Add project root to Python path
+export PYTHONPATH="${PYTHONPATH}:/path/to/oodaloo"
+```
+
+#### **Database Connection Issues**
+```bash
+# Verify database configuration
+python -c "from db.session import SessionLocal; db = SessionLocal(); print('DB connected')"
+```
+
+#### **QBO Sandbox Issues**
+```bash
+# Verify QBO credentials
+python -c "
+import os
+from domains.integrations.qbo.client import QBOConnectionManager
+from db.session import SessionLocal
+import asyncio
+
+async def test():
+    db = SessionLocal()
+    manager = QBOConnectionManager(db)
+    healthy = await manager.ensure_healthy_connection('test-business-123')
+    print(f'QBO Health: {healthy}')
+
+asyncio.run(test())
+"
+```
+
+### **Getting Help**
+- **Documentation**: Review QBO API documentation
+- **Logs**: Check application logs for detailed error information
+- **Health Endpoints**: Use health monitoring endpoints for diagnostics
+- **Support**: Contact QBO developer support for API issues
+
+---
+
+## **Future Enhancements**
+
+### **Planned Improvements**
+- **Visual Test Reports**: HTML test result dashboards
+- **Performance Benchmarking**: Historical performance tracking
+- **Automated Data Generation**: QBO sandbox data seeding
+- **Multi-Region Testing**: Geographic redundancy validation
+
+### **Integration Opportunities**
+- **Monitoring Systems**: Grafana/Prometheus integration
+- **Alerting**: PagerDuty/Slack notifications for test failures
+- **Documentation**: Auto-generated API documentation
+- **Load Testing**: JMeter/Artillery integration for stress testing
+
+This comprehensive testing suite ensures our QBO integration meets production-grade reliability and performance standards.

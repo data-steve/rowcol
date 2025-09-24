@@ -8,8 +8,8 @@ Follows cascading import pattern for clean main.py integration.
 from fastapi import APIRouter
 
 # Import all models for SQLAlchemy registration
-from .reserves import models as reserves_models
-from .tray import models as tray_models
+from .models import runway_reserve
+from .models import tray_item
 
 from .routes import router as runway_routes_router
 

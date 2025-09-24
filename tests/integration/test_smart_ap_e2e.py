@@ -22,10 +22,10 @@ from domains.ap.models.bill import Bill, BillStatus
 from domains.ap.models.vendor import Vendor
 from domains.ap.services.bill_ingestion import BillService  # Available service
 from domains.ap.services.payment import PaymentService
-from domains.integrations.smart_sync import SmartSyncService
-from runway.core.services.runway_calculator import RunwayCalculator
-from runway.tray.services.tray import TrayService
-from runway.core.services.payment_priority_calculator import PaymentPriorityCalculator
+from domains.integrations import SmartSyncService
+from runway.core.runway_calculator import RunwayCalculator
+from runway.experiences.tray import TrayService
+from runway.core.payment_priority_calculator import PaymentPriorityCalculator
 from domains.core.models.balance import Balance
 
 @pytest.mark.integration

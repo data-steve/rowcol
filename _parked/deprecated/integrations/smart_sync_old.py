@@ -251,7 +251,7 @@ class SmartSyncService(TenantAwareService):
         """Perform the actual sync for a platform using proper domain services."""
         if platform == "qbo":
             # Use domain services with QBO API provider (following ADR-002)
-            from domains.integrations.qbo.qbo_api_provider import get_qbo_provider
+            from domains.integrations.qbo.client import get_qbo_provider
             from domains.integrations.qbo.qbo_auth import qbo_auth
             from domains.core.models.business import Business
             from domains.core.models.integration import Integration

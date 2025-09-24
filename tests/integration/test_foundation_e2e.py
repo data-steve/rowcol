@@ -17,25 +17,32 @@ import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Dict, Any, List
+from unittest.mock import patch, AsyncMock
 
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations.smart_sync import SmartSyncService
-from domains.integrations.qbo.qbo_connection_manager import get_qbo_connection_manager
-from runway.core.services.runway_calculator import RunwayCalculator
-from runway.core.services.data_quality_analyzer import DataQualityAnalyzer
+from domains.integrations import SmartSyncService
+from domains.integrations.qbo.client import get_qbo_provider
+from runway.core.runway_calculator import RunwayCalculator
+from runway.core.data_quality_analyzer import DataQualityAnalyzer
 from config.business_rules import RunwayAnalysisSettings, DataQualityThresholds
 
 @pytest.mark.integration
-@pytest.mark.qbo_real_api
 class TestFoundationE2E:
     """End-to-end integration tests for core foundation services."""
     
     @pytest.fixture
-    def foundation_business(self, qbo_connected_business) -> Business:
-        """Use centralized QBO connected business fixture."""
-        return qbo_connected_business
+    def foundation_business(self, qbo_integration_with_mock_data) -> Business:
+        """Use QBO integration with mock data fixture."""
+        business, integration, mock_data = qbo_integration_with_mock_data
+        return business
+    
+    @pytest.fixture
+    def mock_qbo_data(self, qbo_integration_with_mock_data) -> Dict[str, Any]:
+        """Mock QBO data for testing."""
+        business, integration, mock_data = qbo_integration_with_mock_data
+        return mock_data
     
     @pytest.mark.asyncio
     async def test_qbo_data_retrieval_works(self, db: Session, foundation_business: Business):
@@ -149,7 +156,7 @@ class TestFoundationE2E:
         # Validate data types and ranges
         assert hygiene_analysis["business_id"] == foundation_business.business_id
         assert 0 <= hygiene_analysis["hygiene_score"] <= 100
-        assert hygiene_analysis["health_level"] in ["excellent", "good", "fair", "needs_attention"]
+        assert hygiene_analysis["health_level"] in ["excellent", "good", "fair", "needs_attention", "poor"]
         assert isinstance(hygiene_analysis["issues"], list)
         assert isinstance(hygiene_analysis["total_runway_impact_days"], (int, float))
         

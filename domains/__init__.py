@@ -26,3 +26,4 @@ router.include_router(ar_router, prefix="/ar", tags=["ar"])
 router.include_router(bank_router, prefix="/bank", tags=["bank"])
 router.include_router(vendor_normalization_router, prefix="/vendor_normalization", tags=["vendor_normalization"])
 router.include_router(policy_router, prefix="/policy", tags=["policy"])
+# router.include_router(qbo_router, prefix="/integrations", tags=["qbo"])  # TODO: QBO routes moved to runway/infrastructure

@@ -19,12 +19,12 @@ from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations.qbo.qbo_connection_manager import get_qbo_connection_manager
-from domains.integrations.smart_sync import SmartSyncService
-from runway.core.services.runway_calculator import RunwayCalculator
-from runway.core.services.data_quality_analyzer import DataQualityAnalyzer
-from runway.reserves.services.runway_reserve_service import RunwayReserveService
-from runway.reserves.schemas.runway_reserve import RunwayReserveCreate, ReserveTypeEnum, ReserveAllocationCreate
+from domains.integrations.qbo.client import get_qbo_provider
+from domains.integrations import SmartSyncService
+from runway.core.runway_calculator import RunwayCalculator
+from runway.core.data_quality_analyzer import DataQualityAnalyzer
+from runway.core.reserve_runway import RunwayReserveService
+from runway.schemas.runway_reserve import RunwayReserveCreate, ReserveTypeEnum, ReserveAllocationCreate
 from config.business_rules import RunwayAnalysisSettings
 
 # Test configuration
@@ -241,22 +241,21 @@ class TestRunwayReserveE2E:
         This proves our QBO infrastructure can handle the API load that
         Smart AP features will generate.
         """
-        connection_manager = get_qbo_connection_manager(db)
+        qbo_provider = get_qbo_provider(qbo_business.business_id, db)
         smart_sync = SmartSyncService(db, qbo_business.business_id)
         
         # Test multiple rapid API calls (simulating Smart AP usage)
         api_calls = []
         for i in range(10):
             try:
-                # Test both SmartSync and direct connection manager
+                # Test both SmartSync and direct QBO provider
                 if i % 2 == 0:
                     # Test through SmartSync service
                     qbo_data = await smart_sync.get_qbo_data_for_digest()
                 else:
-                    # Test direct API call through connection manager
-                    realm_id = qbo_business.integrations[0].realm_id if qbo_business.integrations else "test_realm"
-                    company_info = await connection_manager.make_qbo_api_call(realm_id, "companyinfo", method="GET")
-                    qbo_data = {"api_test": True, "company_info": company_info}
+                    # Test direct API call through QBO provider
+                    bills_data = await qbo_provider.get_bills()
+                    qbo_data = {"api_test": True, "bills": bills_data}
                 api_calls.append({
                     "call": i + 1,
                     "success": qbo_data is not None,
@@ -331,21 +330,4 @@ class TestRunwayReserveE2E:
 
 
 # Test data setup utilities
-@pytest.fixture(scope="module")
-def qbo_sandbox_setup():
-    """
-    Set up QBO sandbox data for integration testing.
-    
-    This would create predictable test data in QBO sandbox
-    that our integration tests can rely on.
-    """
-    # This would use QBO API to create test bills, invoices, etc.
-    # For now, assumes sandbox is manually configured
-    pass
-
-@pytest.fixture(scope="module") 
-def cleanup_qbo_sandbox():
-    """Clean up QBO sandbox after integration tests."""
-    yield
-    # Clean up any test data created during integration tests
-    pass
+# Removed fake fixtures - implement when QBO sandbox setup is needed

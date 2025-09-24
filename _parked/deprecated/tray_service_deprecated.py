@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from runway.tray.models.tray_item import TrayItem
 from runway.tray.providers import TrayDataProvider, get_tray_data_provider
-from domains.integrations.smart_sync import SmartSyncService
+from domains.integrations.qbo.service import SmartSyncService
 from runway.reserves.services.runway_reserve_service import RunwayReserveService
 from runway.core.services.payment_priority_calculator import PaymentPriorityCalculator
 from runway.core.services.tray_priority_calculator import TrayPriorityCalculator

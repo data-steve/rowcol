@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 from sqlalchemy.orm import Session
-from domains.integrations.smart_sync import SmartSyncService
+from domains.integrations.qbo.service import SmartSyncService
 from domains.ap.models.bill import Bill as BillModel
 from domains.vendor_normalization.models import VendorCanonical as VendorCanonicalModel
 from domains.vendor_normalization.services import VendorNormalizationService

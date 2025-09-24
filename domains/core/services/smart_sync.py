@@ -246,12 +246,13 @@ class SmartSyncService(TenantAwareService):
         """Perform the actual sync for a platform using proper domains/integrations."""
         if platform == "qbo":
             # Use the proper QBO integration from domains/integrations
-            from domains.integrations.qbo.qbo_integration import QBOIntegration
-            from domains.integrations.qbo.qbo_auth import qbo_auth
+            from domains.integrations.qbo.service import QBOBulkScheduledService
+            from domains.integrations.qbo.auth import QBOAuthService
             from domains.core.models.business import Business
             
             # Check if business has valid QBO connection
-            if not qbo_auth.is_connected(self.business_id):
+            auth_service = QBOAuthService(self.db, self.business_id)
+            if not auth_service.is_connected():
                 raise ValueError(f"Business {self.business_id} not connected to QBO")
             
             # Get business for this tenant

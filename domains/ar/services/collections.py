@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from domains.integrations.smart_sync import SmartSyncService
+from domains.integrations import SmartSyncService
 from domains.core.services.base_service import TenantAwareService
 from common.exceptions import ValidationError
 import logging

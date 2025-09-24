@@ -1,7 +1,7 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
-from domains.integrations.smart_sync import SmartSyncService
+from domains.integrations import SmartSyncService
 from domains.ap.models.bill import Bill as BillModel, BillStatus
 from domains.vendor_normalization.models import VendorCanonical as VendorCanonicalModel
 from domains.ap.schemas.bill import Bill
@@ -41,26 +41,31 @@ class IngestionService(TenantAwareService):
                 return None
         return None
 
-    async def sync_bills(self, business_id: str, full_sync: bool = False) -> Dict:
+    async def sync_bills(self, business_id: str) -> Dict[str, Any]:
         """Sync bills from QBO using SmartSyncService and process them via BillService."""
         try:
-            from domains.integrations.smart_sync import SmartSyncService
+            from domains.integrations import SmartSyncService
             from domains.ap.services.bill_ingestion import BillService
+
             smart_sync = SmartSyncService(self.db, business_id)
             bill_service = BillService(self.db, business_id)
-            sync_result = await smart_sync.sync_qbo_data()
+            
+            sync_result = await smart_sync.bulk_sync_qbo_data()
             
             if sync_result.get('status') != 'success':
-                return {"status": "error", "message": sync_result.get('reason', 'Unknown error')}
+                return {"status": "error", "message": sync_result.get('error', 'Unknown error')}
             
-            # No need for additional processing here as BillService handles ingestion via SmartSync
+            # The bulk_sync_qbo_data method in the service now handles the ingestion.
+            # We can return the statistics from the sync.
             return {
                 "status": "success",
-                "synced_bills": sync_result.get('synced_bills', 0),
-                "bills": []  # SmartSync and BillService handle the ingestion
+                "synced_count": sync_result.get("bills", {}).get("synced", 0),
+                "skipped_count": sync_result.get("bills", {}).get("skipped", 0),
+                "errors": sync_result.get("bills", {}).get("errors", 0)
             }
         except Exception as e:
-            self.db.rollback()
+            self.logger.error(f"Error syncing bills for business {business_id}: {e}", exc_info=True)
+            # Re-raising as ValueError is not ideal, but keeping consistent with original code
             raise ValueError(f"QBO bill sync failed: {str(e)}")
 
     def ingest_document(self, file_path: str, business_id: int) -> Bill:

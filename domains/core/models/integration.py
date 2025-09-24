@@ -1,6 +1,15 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
+from enum import Enum
 from domains.core.models.base import Base, TimestampMixin, TenantMixin
+
+class IntegrationStatuses(Enum):
+    """Integration status enumeration."""
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    ERROR = "error"
+    EXPIRED = "expired"
 
 class Integration(Base, TimestampMixin, TenantMixin):
     __tablename__ = "integrations"
@@ -30,7 +39,7 @@ class Integration(Base, TimestampMixin, TenantMixin):
     error_message = Column(String, nullable=True)  # Error details if failed
     created_by = Column(String, nullable=True)  # User who initiated connection
     platform_metadata = Column(String, nullable=True)  # JSON string for platform-specific data
-    runway_replay_data = Column(JSON, nullable=True)  # Store runway replay results
+    test_drive_data = Column(JSON, nullable=True)  # Store test drive results
     
     # Relationships
     business = relationship("Business", back_populates="integrations")

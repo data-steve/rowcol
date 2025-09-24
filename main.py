@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from db import create_db_and_tables
 from domains import router as domains_router
 from runway import router as runway_router
-from runway.auth.middleware import setup_cors, AuthMiddleware, LoggingMiddleware, ErrorHandlingMiddleware
+from runway.infrastructure.auth.middleware import setup_cors, AuthMiddleware, LoggingMiddleware, ErrorHandlingMiddleware
 import logging
 import os
 

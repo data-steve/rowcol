@@ -1,5 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
+
+# Pytest configuration is now handled in pytest.ini
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
@@ -10,7 +13,7 @@ from domains.ap.models import Bill, Vendor
 from domains.ap.models.payment import Payment as APPayment
 from domains.ar.models import Invoice, Customer
 from domains.ar.models.payment import Payment as ARPayment
-from runway.tray.models.tray_item import TrayItem
+from runway.models.tray_item import TrayItem
 
 from main import app
 from db.session import SessionLocal, get_db
@@ -298,15 +301,158 @@ def qbo_connected_business(db):
 @pytest.fixture(scope="function") 
 def qbo_auth_setup():
     """Setup QBO auth service for tests without creating a business."""
-    from domains.integrations.qbo.qbo_auth import qbo_auth
+    from domains.integrations.qbo.auth import QBOAuthService
     
-    # Clear any existing tokens
-    qbo_auth.tokens.clear()
+    # Create a mock auth service for testing
+    auth_service = QBOAuthService(None, "test-business")
     
-    yield qbo_auth
+    yield auth_service
     
-    # Cleanup
-    qbo_auth.tokens.clear()
+    # Cleanup - no longer needed with new auth service
+
+@pytest.fixture
+def qbo_integration_with_mock_data(db, test_business):
+    """Create QBO integration with realistic test data and mock HTTP responses."""
+    from domains.core.models.integration import Integration, IntegrationStatuses
+    from unittest.mock import patch, AsyncMock, MagicMock
+    import json
+    
+    # Create QBO integration in database
+    integration = Integration(
+        business_id=test_business.business_id,
+        platform="qbo",
+        status=IntegrationStatuses.CONNECTED.value,
+        access_token="test_access_token_12345",
+        refresh_token="test_refresh_token_67890",
+        realm_id="test_realm_id_12345",
+        expires_at=datetime.utcnow() + timedelta(hours=1)
+    )
+    db.add(integration)
+    db.commit()
+    db.refresh(integration)
+    
+    # Mock QBO API responses with realistic data
+    mock_qbo_data = {
+        "bills": [
+            {
+                "Id": "bill_001",
+                "VendorRef": {"name": "Test Vendor 1", "value": "vendor_001"},
+                "TotalAmt": 1500.00,
+                "Balance": 1500.00,
+                "DueDate": "2025-10-15",
+                "TxnDate": "2025-09-15",
+                "DocNumber": "BILL-001",
+                "Line": [
+                    {
+                        "Id": "1",
+                        "Amount": 1500.00,
+                        "DetailType": "AccountBasedExpenseLineDetail",
+                        "AccountBasedExpenseLineDetail": {
+                            "AccountRef": {"name": "Office Supplies", "value": "account_001"}
+                        }
+                    }
+                ]
+            },
+            {
+                "Id": "bill_002", 
+                "VendorRef": {"name": "Test Vendor 2", "value": "vendor_002"},
+                "TotalAmt": 2500.00,
+                "Balance": 2500.00,
+                "DueDate": "2025-11-01",
+                "TxnDate": "2025-09-20",
+                "DocNumber": "BILL-002",
+                "Line": [
+                    {
+                        "Id": "2",
+                        "Amount": 2500.00,
+                        "DetailType": "AccountBasedExpenseLineDetail",
+                        "AccountBasedExpenseLineDetail": {
+                            "AccountRef": {"name": "Professional Services", "value": "account_002"}
+                        }
+                    }
+                ]
+            }
+        ],
+        "invoices": [
+            {
+                "Id": "invoice_001",
+                "CustomerRef": {"name": "Test Customer 1", "value": "customer_001"},
+                "TotalAmt": 3000.00,
+                "Balance": 3000.00,
+                "DueDate": "2025-10-20",
+                "TxnDate": "2025-09-20",
+                "DocNumber": "INV-001",
+                "Line": [
+                    {
+                        "Id": "3",
+                        "Amount": 3000.00,
+                        "DetailType": "SalesItemLineDetail",
+                        "SalesItemLineDetail": {
+                            "ItemRef": {"name": "Consulting Services", "value": "item_001"}
+                        }
+                    }
+                ]
+            }
+        ],
+        "customers": [
+            {
+                "Id": "customer_001",
+                "Name": "Test Customer 1",
+                "Active": True,
+                "Email": "customer1@test.com"
+            }
+        ],
+        "vendors": [
+            {
+                "Id": "vendor_001", 
+                "Name": "Test Vendor 1",
+                "Active": True,
+                "Email": "vendor1@test.com"
+            },
+            {
+                "Id": "vendor_002",
+                "Name": "Test Vendor 2", 
+                "Active": True,
+                "Email": "vendor2@test.com"
+            }
+        ]
+    }
+    
+    # Mock the httpx.AsyncClient to return our test data
+    async def mock_http_call(*args, **kwargs):
+        """Mock HTTP call to return QBO data based on endpoint."""
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        
+        # Check if this is a batch call (POST) or individual call (GET)
+        if kwargs.get('method') == 'POST' or args[0] == 'post':
+            # Return batch response structure
+            batch_response = {
+                "BatchItemResponse": [
+                    {"bId": "bills", "QueryResponse": {"Bill": mock_qbo_data["bills"]}},
+                    {"bId": "invoices", "QueryResponse": {"Invoice": mock_qbo_data["invoices"]}},
+                    {"bId": "customers", "QueryResponse": {"Customer": mock_qbo_data["customers"]}},
+                    {"bId": "vendors", "QueryResponse": {"Vendor": mock_qbo_data["vendors"]}}
+                ]
+            }
+            mock_response.json = AsyncMock(return_value=batch_response)
+        else:
+            # Return individual query response
+            mock_response.json = AsyncMock(return_value={"QueryResponse": mock_qbo_data})
+        
+        # Make raise_for_status a regular method, not async
+        mock_response.raise_for_status = MagicMock()
+        return mock_response
+    
+    # Mock both the context manager and the methods
+    with patch('httpx.AsyncClient') as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client.get = mock_http_call
+        mock_client.post = mock_http_call
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client_class.return_value = mock_client
+        yield test_business, integration, mock_qbo_data
 
 
 def _add_test_data(db, business: Business):

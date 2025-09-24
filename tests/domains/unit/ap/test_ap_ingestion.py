@@ -1,37 +1,29 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from domains.ap.services.ap_ingestion import IngestionService
+import asyncio
+from domains.core.models import Business
 
-@pytest.mark.asyncio
-async def test_sync_bills_from_qbo(db, test_business):
-    """Test syncing bills from QBO via SmartSyncService."""
-    ingestion_service = IngestionService(db, test_business.business_id)
-    
-    # Mock SmartSyncService to return QBO bills data
-    with patch('domains.integrations.smart_sync.SmartSyncService.sync_qbo_data') as mock_sync:
-        mock_sync.return_value = {
-            "status": "success",
-            "synced_bills": 2,
-            "synced_invoices": 0,
-            "timestamp": "2025-09-22T23:00:00"
-        }
-        
-        # Mock VendorNormalizationService
-        with patch.object(ingestion_service.vendor_service, 'normalize_vendor') as mock_normalize:
-            mock_normalize.return_value = MagicMock(id=1)
-            
-            # Call the method under test
-            result = await ingestion_service.sync_bills(test_business.business_id)
-            
-            # Verify the result
-            assert result["status"] == "success"
-            assert result["synced_bills"] == 2
-            
-            # Verify SmartSyncService was called
-            mock_sync.assert_called_once()
-            
-            # Note: Current implementation doesn't call vendor normalization directly
-            # as it delegates to BillService for individual bill processing
+
+@patch('domains.integrations.SmartSyncService.bulk_sync_qbo_data')
+def test_sync_bills_from_qbo(mock_bulk_sync, test_business, db):
+    """Test syncing bills from QBO."""
+    # Setup mock return value for the sync service
+    mock_bulk_sync.return_value = {
+        "status": "success",
+        "bills": {"synced": 10, "skipped": 2, "errors": 0}
+    }
+
+    # Initialize the service and call the method
+    ingestion_service = IngestionService(db, business_id=test_business.business_id)
+    result = asyncio.run(ingestion_service.sync_bills(test_business.business_id))
+
+    # Assertions
+    assert result['status'] == 'success'
+    assert result['synced_count'] == 10
+    assert result['skipped_count'] == 2
+    mock_bulk_sync.assert_called_once()
+
 
 def test_ingestion_service_initialization(db, test_business):
     """Test IngestionService initialization."""
