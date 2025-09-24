@@ -34,7 +34,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
-from domains.integrations.qbo.client import QBOAPIProvider
+from domains.integrations.qbo.client import QBOAPIClient
 from domains.integrations import SmartSyncService
 
 

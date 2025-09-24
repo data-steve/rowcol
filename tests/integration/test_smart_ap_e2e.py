@@ -285,8 +285,10 @@ class TestSmartAPE2E:
             assert len(prioritized_bills) > 0, "Payment priority logic failed"
             assert "priority_score" in prioritized_bills[0], "Payment priority logic failed"
     
-            # Test 5: Tray Integration
-            tray_service = TrayService(db)
+            # Test 5: Tray Integration - Use QBO data provider, not mocks!
+            from runway.experiences.tray import QBOTrayDataProvider
+            qbo_tray_provider = QBOTrayDataProvider(db, ap_business.business_id)
+            tray_service = TrayService(db, ap_business.business_id, data_provider=qbo_tray_provider)
             tray_items = tray_service.get_tray_items(ap_business.business_id)
             # Tray should work even if empty
             assert isinstance(tray_items, list), "Tray integration failed"

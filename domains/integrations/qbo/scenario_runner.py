@@ -37,7 +37,7 @@ sys.path.insert(0, project_root)
 
 from sqlalchemy.orm import Session
 from db.session import SessionLocal
-from domains.integrations.qbo.client import QBOAPIProvider, get_qbo_provider
+from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
 from domains.integrations.qbo.health import QBOHealthMonitor, get_qbo_health_monitor
 from domains.integrations import SmartSyncService
 from domains.core.models.business import Business
@@ -76,7 +76,7 @@ class QBOScenarioTester:
     def __init__(self, use_real_qbo: bool = False):
         self.use_real_qbo = use_real_qbo
         self.db = SessionLocal()
-        self.qbo_provider = get_qbo_provider("test-business", self.db)
+        self.qbo_provider = get_qbo_client("test-business", self.db)
         self.health_monitor = get_qbo_health_monitor(self.db)
         
         print("🧪 QBO Scenario Tester initialized")

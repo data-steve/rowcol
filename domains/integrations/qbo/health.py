@@ -23,7 +23,7 @@ import json
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations.qbo.client import QBOAPIProvider
+from domains.integrations.qbo.client import QBOAPIClient
 
 logger = logging.getLogger(__name__)
 

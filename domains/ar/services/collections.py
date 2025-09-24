@@ -389,14 +389,16 @@ class CollectionsService(TenantAwareService):
         logger.info(f"Reminder sent for invoice {invoice_id}: {reminder_type}")
     
     def _get_customer_email(self, customer_id: str) -> Optional[str]:
-        """Get customer email from QBO customer data."""
-        # TODO: Implement customer lookup from QBO
-        return None
+        """Get customer email from database."""
+        from domains.ar.services.customer import CustomerService
+        customer_service = CustomerService(self.db, self.business_id)
+        return customer_service.get_customer_email(customer_id)
     
     def _get_customer_phone(self, customer_id: str) -> Optional[str]:
-        """Get customer phone from QBO customer data."""
-        # TODO: Implement customer lookup from QBO
-        return None
+        """Get customer phone from database."""
+        from domains.ar.services.customer import CustomerService
+        customer_service = CustomerService(self.db, self.business_id)
+        return customer_service.get_customer_phone(customer_id)
     
     def _analyze_payment_behavior(self, invoices: List[Dict]) -> Dict[str, Any]:
         """Analyze customer payment behavior patterns."""

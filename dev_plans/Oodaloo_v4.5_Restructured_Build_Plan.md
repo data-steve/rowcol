@@ -484,6 +484,9 @@ This plan provides the architectural rigor and detailed task breakdown needed fo
 - **[ ] Confirm Audit Logging Coverage**:
   - [ ] Confirm we have the audit logging strategy we want. *Effort: 4h*.
   - [ ] Review all state mutating service methods to confirm they have correct audit logging. *Effort: 4h*.
+- **[ ] Rotate all the keys **:
+  - [ ] LLM has seen .env file so we need to get new secrets and figure out how to not let gen ai coders see it
+  - [ ] get all refresh tokens to be stored in DB rather than local files now that we're moving to production persistent db access.
 - **[ ] Database Migration**:
   - [ ] PostgreSQL setup and configuration. *Effort: 4h*.
   - [ ] Alembic migration system implementation. *Effort: 6h*.

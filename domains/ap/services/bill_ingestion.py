@@ -21,7 +21,7 @@ from fastapi import UploadFile, HTTPException
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.bill import Bill, BillStatus, BillPriority
 from domains.ap.models.vendor import Vendor
-from domains.integrations.qbo.client import QBOAPIProvider
+from domains.integrations.qbo.client import QBOAPIClient
 from common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -58,9 +58,9 @@ class BillService(TenantAwareService):
         """
         super().__init__(db, business_id, validate_business=validate_business)
         
-        # NOTE: Providers parked for future strategy - using QBOAPIProvider directly
-        from domains.integrations.qbo.client import get_qbo_provider
-        self.qbo_provider = qbo_provider or get_qbo_provider(business_id, self.db)
+        # NOTE: Providers parked for future strategy - using QBOAPIClient directly
+        from domains.integrations.qbo.client import get_qbo_client
+        self.qbo_provider = qbo_provider or get_qbo_client(business_id, self.db)
         self.document_processor = document_processor  # TODO: Implement when provider strategy decided
         self.runway_reserve_service = runway_reserve_service
         
@@ -264,6 +264,10 @@ class BillService(TenantAwareService):
         """
         try:
             qbo_id = qbo_bill_data.get('qbo_id')
+            
+            # Extract and create/find vendor from QBO vendor_ref
+            vendor_id = self._get_or_create_vendor_from_qbo_data(qbo_bill_data)
+            
             bill = self.db.query(Bill).filter(
                 Bill.qbo_bill_id == qbo_id,
                 Bill.business_id == business_id
@@ -276,14 +280,14 @@ class BillService(TenantAwareService):
                     amount_cents=int(qbo_bill_data.get('amount', 0) * 100),  # Convert dollars to cents
                     due_date=datetime.fromisoformat(qbo_bill_data.get('due_date')) if qbo_bill_data.get('due_date') else None,
                     status=BillStatus.PENDING if isinstance(qbo_bill_data.get('status'), str) else qbo_bill_data.get('status', BillStatus.PENDING),
-                    vendor_id=qbo_bill_data.get('vendor_id')
+                    vendor_id=vendor_id
                 )
                 self.db.add(bill)
             else:
                 bill.amount_cents = int(qbo_bill_data.get('amount', 0) * 100)
                 bill.due_date = datetime.fromisoformat(qbo_bill_data.get('due_date')) if qbo_bill_data.get('due_date') else None
                 bill.status = BillStatus.PENDING if isinstance(qbo_bill_data.get('status'), str) else qbo_bill_data.get('status', BillStatus.PENDING)
-                bill.vendor_id = qbo_bill_data.get('vendor_id')
+                bill.vendor_id = vendor_id
             
             self.db.commit()
             self.db.refresh(bill)
@@ -515,6 +519,62 @@ class BillService(TenantAwareService):
             Vendor.name.ilike(f"%{vendor_name}%")
         ).first()
     
+    def _get_or_create_vendor_from_qbo_data(self, qbo_bill_data: Dict[str, Any]) -> Optional[int]:
+        """
+        Extract vendor information from QBO bill data and create/find vendor in our database.
+        
+        Args:
+            qbo_bill_data: QBO bill data containing vendor_ref
+            
+        Returns:
+            vendor_id if found/created, None otherwise
+        """
+        try:
+            vendor_ref = qbo_bill_data.get('vendor_ref', {})
+            if not vendor_ref:
+                return None
+                
+            vendor_name = vendor_ref.get('name')
+            qbo_vendor_id = vendor_ref.get('value')
+            
+            if not vendor_name:
+                return None
+            
+            # Try to find existing vendor by QBO ID first
+            from domains.ap.models.vendor import Vendor
+            vendor = self.db.query(Vendor).filter(
+                Vendor.business_id == self.business_id,
+                Vendor.qbo_vendor_id == qbo_vendor_id
+            ).first()
+            
+            if vendor:
+                return vendor.vendor_id
+            
+            # Try to find by name (fuzzy match)
+            vendor = self._find_vendor_by_name(vendor_name)
+            if vendor:
+                # Update with QBO ID if found by name
+                vendor.qbo_vendor_id = qbo_vendor_id
+                self.db.flush()
+                return vendor.vendor_id
+            
+            # Create new vendor
+            vendor = Vendor(
+                business_id=self.business_id,
+                name=vendor_name,
+                qbo_vendor_id=qbo_vendor_id,
+                is_active=True
+            )
+            self.db.add(vendor)
+            self.db.flush()
+            
+            logger.info(f"Created vendor {vendor.vendor_id}: {vendor_name} from QBO data")
+            return vendor.vendor_id
+            
+        except Exception as e:
+            logger.warning(f"Failed to create vendor from QBO data: {e}")
+            return None
+
     def _requires_approval(self, bill: Bill) -> bool:
         """Determine if a bill requires approval based on business rules."""
         if bill.amount >= Decimal(str(BillApprovalRules.AUTO_APPROVAL_THRESHOLD)):

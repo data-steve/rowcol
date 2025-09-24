@@ -11,7 +11,7 @@ Handles payment operations from creation through reconciliation:
 Enhanced from basic APPaymentService to include comprehensive functionality.
 """
 
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from sqlalchemy.orm import Session
 from datetime import datetime
 from decimal import Decimal
@@ -20,7 +20,7 @@ import logging
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.payment import Payment, PaymentStatus, PaymentType
 from domains.ap.models.bill import Bill as BillModel
-# NOTE: Providers parked for future strategy - using QBOAPIProvider directly
+# NOTE: Providers parked for future strategy - using QBOAPIClient directly
 from common.exceptions import ValidationError, BusinessRuleViolationError
 
 logger = logging.getLogger(__name__)
@@ -48,9 +48,9 @@ class PaymentService(TenantAwareService):
         """
         super().__init__(db, business_id)
         
-        # NOTE: Providers parked for future strategy - using QBOAPIProvider directly
-        from domains.integrations.qbo.client import get_qbo_provider
-        self.qbo_provider = qbo_provider or get_qbo_provider(business_id, self.db)
+        # NOTE: Providers parked for future strategy - using QBOAPIClient directly
+        from domains.integrations.qbo.client import get_qbo_client
+        self.qbo_provider = qbo_provider or get_qbo_client(business_id, self.db)
         self.runway_reserve_service = runway_reserve_service
         
         logger.info(f"Initialized PaymentService for business {business_id}")
@@ -75,6 +75,15 @@ class PaymentService(TenantAwareService):
             return None
         delta = datetime.utcnow() - payment.execution_date
         return delta.days
+    
+    def get_payments(self, status_filter: Optional[str] = None, limit: int = 50, offset: int = 0) -> List[Payment]:
+        """Get payments with optional filtering and pagination."""
+        query = self.db.query(Payment).filter(Payment.business_id == self.business_id)
+        
+        if status_filter:
+            query = query.filter(Payment.status == status_filter)
+        
+        return query.offset(offset).limit(limit).all()
     
     def can_payment_be_executed(self, payment: Payment) -> bool:
         """Check if payment can be executed."""

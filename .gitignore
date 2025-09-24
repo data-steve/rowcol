@@ -156,3 +156,14 @@ keys/*.json
 # secrets
 *_tokens.json
 keys/*.json
+
+# Ignore local QBO dev tokens
+domains/integrations/qbo/dev_tokens.json
+
+# Agent-based workflow files
+dev/agent/runs/
+.cursor_taskmem.json
+PLAN.json
+
+# VCR Cassettes
+tests/cassettes/

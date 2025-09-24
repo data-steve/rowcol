@@ -282,12 +282,113 @@ class ImportValidator:
             print("✅ No circular dependencies detected")
             print("✅ Architecture ready for production")
 
+def verify_critical_imports():
+    """Verify that all critical imports are working correctly after refactoring."""
+    critical_imports = [
+        ("domains.integrations.qbo", ["QBOAPIClient", "get_qbo_client"], "QBO Integration"),
+        ("runway.experiences.tray", ["TrayService"], "Tray Service"),
+        ("runway.experiences.test_drive", ["TestDriveService"], "Test Drive Service"),
+        ("domains.ap.services.payment", ["PaymentService"], "Payment Service"),
+        ("domains.ap.services.bill_ingestion", ["BillService"], "Bill Service"),
+        ("runway.core.runway_calculator", ["RunwayCalculator"], "Runway Calculator"),
+        ("runway.core.data_quality_analyzer", ["DataQualityAnalyzer"], "Data Quality Analyzer"),
+        ("domains.integrations", ["SmartSyncService"], "Smart Sync Service"),
+    ]
+    
+    return _run_import_tests(critical_imports, "Critical Imports")
+
+def verify_comprehensive_imports():
+    """Verify comprehensive imports across all domains and runway modules."""
+    comprehensive_imports = [
+        # Domains - Core
+        ("domains.core.services", ["KPIService", "UserService"], "Core Services"),
+        ("domains.core.models", ["Business", "User"], "Core Models"),
+        
+        # Domains - AP (Accounts Payable)
+        ("domains.ap.services.bill_ingestion", ["BillService"], "Bill Service"),
+        ("domains.ap.services.payment", ["PaymentService"], "Payment Service"),
+        ("domains.ap.services.vendor", ["VendorService"], "Vendor Service"),
+        ("domains.ap.models", ["Bill", "Payment", "Vendor"], "AP Models"),
+        
+        # Domains - AR (Accounts Receivable)
+        ("domains.ar.services", ["CollectionsService", "CustomerService", "InvoiceService"], "AR Services"),
+        ("domains.ar.models", ["Invoice", "Customer"], "AR Models"),
+        
+        # Domains - Integrations
+        ("domains.integrations.qbo", ["QBOAPIClient", "QBOAuthService"], "QBO Integration"),
+        ("domains.integrations", ["SmartSyncService"], "Smart Sync"),
+        
+        # Domains - Policy
+        ("domains.policy.services", ["PolicyEngineService"], "Policy Services"),
+        
+        # Runway - Core
+        ("runway.core.runway_calculator", ["RunwayCalculator"], "Runway Calculator"),
+        ("runway.core.data_quality_analyzer", ["DataQualityAnalyzer"], "Data Quality Analyzer"),
+        ("runway.core.reserve_runway", ["RunwayReserveService"], "Reserve Runway"),
+        
+        # Runway - Experiences
+        ("runway.experiences.onboarding", ["OnboardingService"], "Onboarding Service"),
+        ("runway.experiences.tray", ["TrayService", "QBOTrayDataProvider"], "Tray Service"),
+        ("runway.experiences.test_drive", ["TestDriveService"], "Test Drive Service"),
+        
+        # Runway - Routes
+        ("runway.routes", ["bills", "payments", "vendors", "invoices"], "Runway Routes"),
+        ("runway.routes.bills", ["router"], "Bills Routes"),
+        ("runway.routes.payments", ["router"], "Payments Routes"),
+        ("runway.routes.vendors", ["router"], "Vendors Routes"),
+        ("runway.routes.invoices", ["router"], "Invoices Routes"),
+        
+        # Runway - Infrastructure
+        ("runway.infrastructure.qbo_setup.qbo_setup_service", ["QBOSetupService"], "QBO Setup Service"),
+        
+        # Config
+        ("config.business_rules", ["RunwayAnalysisSettings"], "Business Rules"),
+    ]
+    
+    return _run_import_tests(comprehensive_imports, "Comprehensive Imports")
+
+def _run_import_tests(imports_list, test_name):
+    """Run import tests for a given list of imports."""
+    passed = 0
+    total = len(imports_list)
+    
+    print(f"🔍 Running {test_name}...\n")
+    
+    for module_path, items, test_name in imports_list:
+        try:
+            # Add current directory to path
+            import sys
+            import os
+            sys.path.insert(0, os.getcwd())
+            
+            module = __import__(module_path, fromlist=items)
+            for item in items:
+                if not hasattr(module, item):
+                    print(f"❌ {test_name}: Missing {item}")
+                    break
+            else:
+                print(f"✅ {test_name}: All imports working")
+                passed += 1
+        except Exception as e:
+            print(f"❌ {test_name}: {e}")
+    
+    print(f"\n📊 {test_name} Results: {passed}/{total} tests passed")
+    
+    if passed == total:
+        print(f"🎉 All {test_name.lower()} working correctly!")
+        return True
+    else:
+        print(f"⚠️  Some {test_name.lower()} failed - check errors above")
+        return False
+
 def main():
     """Main validation script entry point."""
     parser = argparse.ArgumentParser(description="Validate Oodaloo import rules")
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     parser.add_argument("--fix-violations", action="store_true", help="Attempt to fix violations automatically")
     parser.add_argument("--project-root", default=".", help="Project root directory")
+    parser.add_argument("--verify-imports", action="store_true", help="Verify critical imports are working")
+    parser.add_argument("--verify-all", action="store_true", help="Verify comprehensive imports across all domains and runway modules")
     
     args = parser.parse_args()
     
@@ -303,6 +404,15 @@ def main():
     print(f"Timestamp: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     try:
+        # Handle verify-imports options
+        if args.verify_imports:
+            success = verify_critical_imports()
+            sys.exit(0 if success else 1)
+        elif args.verify_all:
+            success = verify_comprehensive_imports()
+            sys.exit(0 if success else 1)
+        
+        # Run normal import validation
         validator = ImportValidator(project_root)
         report = validator.validate_all()
         validator.print_report(report, verbose=args.verbose)

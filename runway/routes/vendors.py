@@ -47,8 +47,7 @@ async def list_vendors(
         if search:
             vendors = vendor_service.find_vendors_by_name(search, fuzzy_match=True)
         else:
-            # We'll need to implement a general list method
-            vendors = []  # TODO: Implement list_vendors method
+            vendors = vendor_service.list_vendors(active_only=active_only)
         
         enhanced_vendors = []
         for vendor in vendors:

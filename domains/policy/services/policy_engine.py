@@ -19,7 +19,7 @@ class PolicyEngineService:
         """Categorize a transaction using real policy rules from database."""
         # Get applicable policy rules for this transaction
         rules = self.db.query(PolicyRuleTemplate).filter(
-            PolicyRuleTemplate.is_active == True,
+            PolicyRuleTemplate.is_active,
             PolicyRuleTemplate.rule_type == "categorization"
         ).order_by(PolicyRuleTemplate.priority).all()
         

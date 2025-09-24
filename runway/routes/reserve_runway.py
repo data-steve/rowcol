@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.auth.middleware.auth import get_current_business_id, get_current_user
 from runway.core.reserve_runway import RunwayReserveService
 from runway.schemas.runway_reserve import (
     RunwayReserveCreate, RunwayReserveUpdate, RunwayReserve,
@@ -52,7 +52,8 @@ async def list_reserves(
 @router.post("/", response_model=RunwayReserve)
 async def create_reserve(
     reserve_data: RunwayReserveCreate,
-    reserve_service: RunwayReserveService = Depends(get_reserve_service)
+    reserve_service: RunwayReserveService = Depends(get_reserve_service),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Create a new runway reserve.
@@ -63,7 +64,7 @@ async def create_reserve(
     try:
         reserve = reserve_service.create_reserve(
             reserve_data=reserve_data,
-            created_by="api_user"  # TODO: Get from auth context
+            created_by=current_user["user_id"]
         )
         return reserve
     except ValidationError as e:
@@ -101,14 +102,15 @@ async def get_reserve(
 async def update_reserve(
     reserve_id: int,
     reserve_data: RunwayReserveUpdate,
-    reserve_service: RunwayReserveService = Depends(get_reserve_service)
+    reserve_service: RunwayReserveService = Depends(get_reserve_service),
+    current_user: dict = Depends(get_current_user)
 ):
     """Update a runway reserve."""
     try:
         reserve = reserve_service.update_reserve(
             reserve_id=reserve_id,
             reserve_data=reserve_data,
-            updated_by="api_user"  # TODO: Get from auth context
+            updated_by=current_user["user_id"]
         )
         return reserve
     except ValidationError as e:
@@ -149,7 +151,8 @@ async def delete_reserve(
 async def allocate_reserve(
     reserve_id: int,
     allocation_data: ReserveAllocationCreate,
-    reserve_service: RunwayReserveService = Depends(get_reserve_service)
+    reserve_service: RunwayReserveService = Depends(get_reserve_service),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Allocate reserve funds to a specific bill or expense.
@@ -161,7 +164,7 @@ async def allocate_reserve(
         allocation = reserve_service.allocate_reserve(
             reserve_id=reserve_id,
             allocation_data=allocation_data,
-            allocated_by="api_user"  # TODO: Get from auth context
+            allocated_by=current_user["user_id"]
         )
         return allocation
     except ValidationError as e:
@@ -266,7 +269,8 @@ async def get_reserve_recommendations(
 @router.post("/recommendations/{recommendation_id}/accept")
 async def accept_reserve_recommendation(
     recommendation_id: str,
-    reserve_service: RunwayReserveService = Depends(get_reserve_service)
+    reserve_service: RunwayReserveService = Depends(get_reserve_service),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Accept and implement a reserve recommendation.
@@ -276,7 +280,7 @@ async def accept_reserve_recommendation(
     try:
         reserve = reserve_service.implement_recommendation(
             recommendation_id=recommendation_id,
-            implemented_by="api_user"  # TODO: Get from auth context
+            implemented_by=current_user["user_id"]
         )
         return {"message": "Recommendation implemented", "reserve_id": reserve.reserve_id}
     except ValidationError as e:

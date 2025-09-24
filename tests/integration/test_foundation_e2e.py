@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
 from domains.integrations import SmartSyncService
-from domains.integrations.qbo.client import get_qbo_provider
+from domains.integrations.qbo.client import get_qbo_client
 from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
 from config.business_rules import RunwayAnalysisSettings, DataQualityThresholds
@@ -185,7 +185,7 @@ class TestFoundationE2E:
         qbo_data = await smart_sync.get_qbo_data_for_digest()
         
         # Test runway presentation formatting
-        weeks_data = runway_calculator.calculate_historical_runway(weeks_back=2)  # Shorter for testing
+        weeks_data = await runway_calculator.calculate_historical_runway(weeks_back=2)  # Shorter for testing
         
         # Test different presentation formats
         standard_format = runway_calculator.format_for_presentation(weeks_data, format_type="standard")
@@ -293,7 +293,7 @@ class TestFoundationE2E:
             assert "hygiene_score" in hygiene_analysis, "Data quality analysis failed"
             
             # Test 4: Presentation Formatting
-            weeks_data = runway_calculator.calculate_historical_runway(weeks_back=1)
+            weeks_data = await runway_calculator.calculate_historical_runway(weeks_back=1)
             formatted_data = runway_calculator.format_for_presentation(weeks_data, format_type="test_drive")
             assert len(formatted_data) > 0, "Presentation formatting failed"
             

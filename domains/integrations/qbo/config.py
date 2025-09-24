@@ -18,7 +18,7 @@ class QBOConfig:
     
     def __init__(self):
         self.environment = os.getenv("QBO_ENVIRONMENT", "sandbox")
-        self.use_mock = os.getenv("USE_MOCK_QBO", "true").lower() == "true"
+        self.use_mock = os.getenv("USE_MOCK_QBO", "false").lower() == "true"
         
         # Client credentials
         self.client_id = os.getenv("QBO_CLIENT_ID", "mock_client_id")

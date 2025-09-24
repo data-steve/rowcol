@@ -46,9 +46,12 @@ async def list_payments(
     try:
         payment_service = services["payment_service"]
         
-        # Get payments (we'll need to implement this method)
-        # For now, return empty list with proper structure
-        payments = []  # TODO: Implement get_payments method
+        # Get payments using the payment service
+        payments = payment_service.get_payments(
+            status_filter=status_filter,
+            limit=limit,
+            offset=offset
+        )
         
         enhanced_payments = []
         for payment in payments:
@@ -203,9 +206,8 @@ async def get_pending_payments(
     try:
         payment_service = services["payment_service"]
         
-        # This would need to be implemented in PaymentService
-        # For now, return structure showing what would be returned
-        pending_payments = []  # TODO: Implement get_pending_payments method
+        # Get pending payments using the payment service
+        pending_payments = payment_service.get_payments(status_filter="pending")
         
         enhanced_payments = []
         for payment in pending_payments:

@@ -13,6 +13,7 @@ No redirect URI configuration needed.
 
 import os
 import sys
+import json
 import webbrowser
 from datetime import datetime, timedelta
 from intuitlib.client import AuthClient
@@ -24,8 +25,26 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
 load_dotenv()
 
+TOKEN_FILE = os.path.join(os.path.dirname(__file__), 'dev_tokens.json')
+
+
+def save_tokens_to_file(auth_client: AuthClient, realm_id: str):
+    """Saves tokens to a durable JSON file for development."""
+    token_data = {
+        'access_token': auth_client.access_token,
+        'refresh_token': auth_client.refresh_token,
+        'realm_id': realm_id,
+        'token_expires_at': (datetime.utcnow() + timedelta(seconds=auth_client.expires_in)).isoformat(),
+        'refresh_token_expires_at': (datetime.utcnow() + timedelta(seconds=auth_client.x_refresh_token_expires_in)).isoformat(),
+        'updated_at': datetime.utcnow().isoformat()
+    }
+    with open(TOKEN_FILE, 'w') as f:
+        json.dump(token_data, f, indent=4)
+    print(f"✅ Tokens saved to durable file: {TOKEN_FILE}")
+
+
 def save_tokens_to_database(access_token: str, refresh_token: str, realm_id: str) -> bool:
-    """Save tokens to database"""
+    """Save tokens to database for runtime use (secondary to file storage)"""
     try:
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
@@ -60,7 +79,7 @@ def save_tokens_to_database(access_token: str, refresh_token: str, realm_id: str
                 integration.connected_at = datetime.utcnow()
                 integration.token_expires_at = datetime.utcnow() + timedelta(hours=1)
                 integration.expires_at = datetime.utcnow() + timedelta(days=101)
-                print("✅ Updated existing QBO integration")
+                print("✅ Updated existing QBO integration in database")
             else:
                 # Create new integration
                 integration = Integration(
@@ -75,12 +94,9 @@ def save_tokens_to_database(access_token: str, refresh_token: str, realm_id: str
                     expires_at=datetime.utcnow() + timedelta(days=101)
                 )
                 session.add(integration)
-                print("✅ Created new QBO integration")
+                print("✅ Created new QBO integration in database")
             
             session.commit()
-            print(f"✅ Tokens saved to database for business: {business.business_id}")
-            print(f"🏢 Realm ID: {realm_id}")
-            print("⏰ Access token expires in 1 hour, refresh token in 101 days")
             return True
             
     except Exception as e:
@@ -121,6 +137,7 @@ def main():
     
     print("\n2️⃣ After authorizing, you'll be redirected to the OAuth playground.")
     print("   Copy the 'code' and 'realmId' from the URL parameters.")
+    print("\n⚠️  IMPORTANT: DO NOT click any 'GET TOKEN' buttons - just copy the code from the URL!")
     print()
     
     # Get input from user
@@ -129,10 +146,12 @@ def main():
         print("❌ No authorization code provided. Exiting.")
         return
     
-    realm_id = input("📝 Paste the realm ID (company ID): ").strip()
+    # Get realm_id from environment (it's persistent for the app)
+    realm_id = os.getenv("QBO_REALM_ID")
     if not realm_id:
-        print("❌ No realm ID provided. Exiting.")
+        print("❌ QBO_REALM_ID not found in .env file. Please add it.")
         return
+    print(f"✅ Using realm ID from .env: {realm_id}")
     
     print("\n3️⃣ Exchanging authorization code for tokens...")
     
@@ -146,15 +165,20 @@ def main():
         print(f"✅ Got access token: {access_token[:20]}...")
         print(f"✅ Got refresh token: {refresh_token[:20]}...")
         
-        # Save to database
+        # Save to durable file first
+        save_tokens_to_file(auth_client, realm_id)
+
+        # Then, save to database for immediate use by the running application
         if save_tokens_to_database(access_token, refresh_token, realm_id):
             print("\n🎉 QBO Setup Complete!")
-            print("✅ Tokens saved to database")
             print("✅ Your QBO integration is ready to use")
+            print("✅ Tokens saved to both database and dev_tokens.json")
+            print("✅ System will self-heal from dev_tokens.json on future runs")
             print("\nTest it with:")
-            print("   poetry run pytest tests/integration/test_real_qbo_api.py -m qbo_real_api")
+            print("   poetry run pytest tests/integration/test_qbo_api_direct.py -m qbo_real_api")
         else:
             print("\n❌ Setup failed - could not save to database")
+            print("💡 Tokens were saved to dev_tokens.json, so the system can still self-heal")
             
     except Exception as e:
         print(f"❌ Token exchange failed: {str(e)}")

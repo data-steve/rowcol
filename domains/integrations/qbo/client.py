@@ -31,8 +31,39 @@ from domains.integrations.qbo.auth import QBOEnvironment
 
 logger = logging.getLogger(__name__)
 
+# Error message for token refresh manual intervention
+QBO_TOKEN_REFRESH_ERROR_MESSAGE = """
+🚨 QBO TOKEN REFRESH REQUIRED - MANUAL INTERVENTION NEEDED
 
-class QBOAPIProvider:
+The QBO access token has expired and automatic refresh failed. Follow these exact steps:
+
+1. RUN THE TOKEN REFRESH SCRIPT:
+   poetry run python domains/integrations/qbo/get_qbo_tokens.py
+
+2. WHEN PROMPTED FOR AUTHORIZATION CODE:
+   - Go to the QBO OAuth URL that appears
+   - Sign in to QuickBooks Online
+   - Copy the authorization code from the redirect URL
+   - Paste it here (DO NOT click "GET TOKEN" button - that uses up the code)
+
+3. THE SCRIPT WILL AUTOMATICALLY:
+   - Use QBO_REALM_ID from your .env file
+   - Save tokens to both database and dev_tokens.json
+   - Complete the refresh process
+
+4. VERIFY THE FIX:
+   poetry run pytest tests/integration/test_qbo_api_direct.py -m qbo_real_api
+
+The system will self-heal from dev_tokens.json on future runs, so this should be a one-time fix.
+
+If you continue to see this error, check:
+- QBO_REALM_ID is correct in .env
+- QBO_CLIENT_ID and QBO_CLIENT_SECRET are valid
+- You have internet connectivity to QBO API
+"""
+
+
+class QBOAPIClient:
     """
     Production QBO API provider that makes real API calls.
     
@@ -803,7 +834,15 @@ class QBOAPIProvider:
                     raise ValueError(f"Unsupported HTTP method: {method}")
                 
                 response.raise_for_status()
-                return await response.json()
+                # Debug: Check response type and json method
+                logger.debug(f"Response type: {type(response)}, json method: {type(response.json)}")
+                json_data = response.json()
+                logger.debug(f"JSON data type: {type(json_data)}")
+                # Handle both sync and async response.json() patterns
+                if hasattr(json_data, '__await__'):
+                    return await json_data
+                else:
+                    return json_data
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 401:
@@ -811,8 +850,10 @@ class QBOAPIProvider:
                 try:
                     new_access_token = auth_service.force_refresh_and_get_new_token()
                     if not new_access_token:
-                        logger.error("Failed to refresh token. Aborting.")
-                        raise IntegrationError("QBO token refresh failed.") from e
+                        # Provide clear error message with exact steps for manual intervention
+                        error_msg = self._generate_token_refresh_error_message()
+                        logger.error(f"QBO token refresh failed. Manual intervention required:\n{error_msg}")
+                        raise IntegrationError(f"QBO token refresh failed. {error_msg}") from e
 
                     logger.info("Token refreshed successfully. Retrying API call...")
                     headers["Authorization"] = f"Bearer {new_access_token}"
@@ -824,7 +865,12 @@ class QBOAPIProvider:
                             raise ValueError(f"Unsupported HTTP method: {method}")
                         
                         response.raise_for_status()
-                        return response.json()
+                        # Handle both sync and async response.json() patterns
+                        json_data = response.json()
+                        if hasattr(json_data, '__await__'):
+                            return await json_data
+                        else:
+                            return json_data
 
                 except Exception as retry_exc:
                     logger.error(f"QBO API call failed on retry after token refresh: {retry_exc}")
@@ -1116,7 +1162,15 @@ class QBOAPIProvider:
             async with httpx.AsyncClient(timeout=20.0) as client:  # Reduced from 60s to 20s for batch
                 response = await client.post(url, headers=headers, json=batch_request)
                 response.raise_for_status()
-                return await response.json()
+                # Debug: Check response type and json method
+                logger.debug(f"Batch response type: {type(response)}, json method: {type(response.json)}")
+                json_data = response.json()
+                logger.debug(f"Batch JSON data type: {type(json_data)}")
+                # Handle both sync and async response.json() patterns
+                if hasattr(json_data, '__await__'):
+                    return await json_data
+                else:
+                    return json_data
                 
         except httpx.HTTPStatusError as e:
             logger.error(f"QBO batch API call failed: {e.response.status_code} - {e.response.text}")
@@ -1138,10 +1192,17 @@ class QBOAPIProvider:
             "company_info": await self.get_company_info()
         }
 
+    def _generate_token_refresh_error_message(self) -> str:
+        """
+        Generate a clear, actionable error message for manual token refresh.
+        
+        This provides exact steps for the LLM coder to follow when manual intervention is needed.
+        """
+        return QBO_TOKEN_REFRESH_ERROR_MESSAGE
 
 
-
-def get_qbo_provider(business_id: str, db: Session, realm_id: str = None) -> 'QBOAPIProvider':
+# Factory functions for QBO provider creation
+def get_qbo_client(business_id: str, db: Session, realm_id: str = None) -> 'QBOAPIClient':
     """
     Factory function to get QBO provider for real API calls.
     
@@ -1151,14 +1212,14 @@ def get_qbo_provider(business_id: str, db: Session, realm_id: str = None) -> 'QB
         realm_id: QBO realm/company ID (if None, will be looked up from database)
     
     Returns:
-        QBOAPIProvider instance for real QBO API calls
+        QBOAPIClient instance for real QBO API calls
     """
     # If realm_id not provided, look it up (for convenience)
     if realm_id is None:
         realm_id = _get_realm_id_for_business(business_id, db)
     
     # Always use real QBO API provider - no more mocks
-    return QBOAPIProvider(business_id, realm_id, db)
+    return QBOAPIClient(business_id, realm_id, db)
 
 
 def _get_realm_id_for_business(business_id: str, db: Session) -> str:
@@ -1187,13 +1248,13 @@ def _get_realm_id_for_business(business_id: str, db: Session) -> str:
         return "mock_realm"  # Fallback for development
 
 
-def get_real_qbo_provider(business_id: str, db: Session, realm_id: str) -> 'QBOAPIProvider':
+def get_real_qbo_client(business_id: str, db: Session, realm_id: str) -> 'QBOAPIClient':
     """
     CRITICAL: Factory function that ALWAYS returns a QBO provider configured
     to hit the REAL Sandbox API, ignoring any mock environment variables.
     This is used by the proof-of-life test to guarantee a real connection.
     """
-    provider = QBOAPIProvider(business_id, realm_id, db)
+    provider = QBOAPIClient(business_id, realm_id, db)
     # Explicitly override the base URL to prevent mocking
     provider.base_url = qbo_config.sandbox_api_url
     return provider

@@ -58,7 +58,7 @@ def test_core_imports_work():
         from domains.core.models import Business, User, Balance, Transaction
         # Temporarily disabled as per note in code
         # from domains.core.services import DataIngestionService
-        from domains.integrations.qbo.client import QBOAPIProvider, get_qbo_provider
+        from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
         from runway.models.tray_item import TrayItem
         # These imports should work for Phase 0
         assert True

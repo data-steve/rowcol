@@ -64,6 +64,19 @@ class VendorService(TenantAwareService):
         except Exception as e:
             logger.error(f"Failed to get active vendors: {e}")
             return []
+
+    def list_vendors(self, active_only: bool = True) -> List[Vendor]:
+        """Get all vendors with optional filtering."""
+        try:
+            query = self.db.query(Vendor).filter(Vendor.business_id == self.business_id)
+            
+            if active_only:
+                query = query.filter(Vendor.is_active)
+            
+            return query.all()
+        except Exception as e:
+            logger.error(f"Error listing vendors for business {self.business_id}: {e}")
+            return []
     
     def get_vendors_for_digest(self) -> List[Dict[str, Any]]:
         """Get vendors formatted for digest generation."""

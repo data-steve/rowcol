@@ -41,12 +41,73 @@ class QBOTrayDataProvider(TrayDataProvider):
     def __init__(self, db: Session, business_id: str):
         self.db = db
         self.business_id = business_id
+        # Initialize QBO integration
+        from domains.integrations import SmartSyncService
+        self.smart_sync = SmartSyncService(db, business_id)
     
     def get_tray_items(self, business_id: str) -> List[TrayItem]:
         """Get tray items from QBO data."""
-        # This would query QBO and convert to TrayItem objects
-        # For now, return empty list as placeholder
-        return []
+        try:
+            # Get QBO data
+            qbo_data = self.smart_sync.get_qbo_data_for_digest()
+            
+            tray_items = []
+            
+            # Convert QBO bills to tray items
+            if "bills" in qbo_data:
+                for bill in qbo_data["bills"]:
+                    tray_items.append(TrayItem(
+                        business_id=business_id,
+                        type="bill",
+                        qbo_id=str(bill.get("qbo_id", bill.get("id", ""))),
+                        due_date=bill.get("due_date"),
+                        priority=self._calculate_bill_priority(bill),
+                        status="pending"
+                    ))
+            
+            # Convert QBO invoices to tray items
+            if "invoices" in qbo_data:
+                for invoice in qbo_data["invoices"]:
+                    tray_items.append(TrayItem(
+                        business_id=business_id,
+                        type="invoice",
+                        qbo_id=str(invoice.get("qbo_id", invoice.get("id", ""))),
+                        due_date=invoice.get("due_date"),
+                        priority=self._calculate_invoice_priority(invoice),
+                        status="pending"
+                    ))
+            
+            return tray_items
+            
+        except Exception as e:
+            # Log error and return empty list as fallback
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to fetch QBO tray items for business {business_id}: {e}")
+            return []
+    
+    def _calculate_bill_priority(self, bill: Dict[str, Any]) -> str:
+        """Calculate priority for a bill based on amount and due date."""
+        amount = float(bill.get("total_amount", 0))
+        due_date = bill.get("due_date")
+        
+        if amount > 5000:
+            return "high"
+        elif amount > 1000:
+            return "medium"
+        else:
+            return "low"
+    
+    def _calculate_invoice_priority(self, invoice: Dict[str, Any]) -> str:
+        """Calculate priority for an invoice based on amount and age."""
+        amount = float(invoice.get("total_amount", 0))
+        
+        if amount > 10000:
+            return "high"
+        elif amount > 2000:
+            return "medium"
+        else:
+            return "low"
     
     def get_runway_impact(self, item_type: str) -> Dict[str, Any]:
         """Calculate runway impact from QBO data."""
@@ -68,8 +129,45 @@ class MockTrayDataProvider(TrayDataProvider):
     
     def get_tray_items(self, business_id: str) -> List[TrayItem]:
         """Get mock tray items."""
-        # Return mock data for testing
-        return []
+        # Return realistic mock data for testing
+        from datetime import datetime, timedelta
+        
+        mock_items = [
+            TrayItem(
+                business_id=business_id,
+                type="bill",
+                qbo_id="bill_123",
+                due_date=datetime.now() + timedelta(days=5),
+                priority="high",
+                status="pending"
+            ),
+            TrayItem(
+                business_id=business_id,
+                type="invoice",
+                qbo_id="invoice_456",
+                due_date=datetime.now() + timedelta(days=12),
+                priority="medium",
+                status="pending"
+            ),
+            TrayItem(
+                business_id=business_id,
+                type="bill",
+                qbo_id="bill_789",
+                due_date=datetime.now() + timedelta(days=2),
+                priority="high",
+                status="pending"
+            ),
+            TrayItem(
+                business_id=business_id,
+                type="invoice",
+                qbo_id="invoice_101",
+                due_date=datetime.now() + timedelta(days=8),
+                priority="medium",
+                status="pending"
+            )
+        ]
+        
+        return mock_items
     
     def get_runway_impact(self, item_type: str) -> Dict[str, Any]:
         """Get mock runway impact."""
@@ -91,8 +189,8 @@ def get_tray_data_provider(provider_type: str = "qbo", db: Session = None, busin
     elif provider_type == "qbo" and db and business_id:
         return QBOTrayDataProvider(db, business_id)
     else:
-        # Default to mock for testing
-        return MockTrayDataProvider()
+        # CRITICAL: No more defaulting to mock! Force explicit provider selection
+        raise ValueError("TrayDataProvider requires explicit provider_type='qbo' with db and business_id, or provider_type='mock'. No more mock defaults!")
 """
 TrayService - Refactored to use Canonical Calculation Services
 
@@ -127,7 +225,16 @@ class TrayService:
     def __init__(self, db: Session, business_id: str = None, data_provider: Optional[TrayDataProvider] = None):
         self.db = db
         self.business_id = business_id
-        self.data_provider = data_provider or get_tray_data_provider()
+        
+        # CRITICAL: Force explicit provider selection - no more mock defaults!
+        if data_provider is None:
+            if business_id:
+                # Use QBO provider when business_id is provided
+                self.data_provider = get_tray_data_provider("qbo", db, business_id)
+            else:
+                raise ValueError("TrayService requires either explicit data_provider or business_id for QBO provider. No mock defaults!")
+        else:
+            self.data_provider = data_provider
         self.smart_sync = SmartSyncService(db, business_id) if business_id else None
         self.reserve_service = RunwayReserveService(db, business_id) if business_id else None
         

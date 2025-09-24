@@ -9,7 +9,7 @@ QBOAuthService and QBOConnectionManager for robust first-time setup.
 """
 from sqlalchemy.orm import Session
 from domains.integrations.qbo.auth import QBOAuthService
-from domains.integrations.qbo.client import get_qbo_provider
+from domains.integrations.qbo.client import get_qbo_client
 from domains.integrations.qbo.config import qbo_config
 from runway.experiences.test_drive import TestDriveService
 from domains.core.models.integration import Integration
@@ -56,7 +56,7 @@ class QBOSetupService:
         
         return result
     
-    def complete_qbo_connection(self, state: str, code: str, realm_id: str) -> Dict[str, Any]:
+    async def complete_qbo_connection(self, state: str, code: str, realm_id: str) -> Dict[str, Any]:
         """
         Complete QBO OAuth flow and establish full connection infrastructure.
         
@@ -109,7 +109,7 @@ class QBOSetupService:
         
         try:
             test_drive_service = TestDriveService(self.db)
-            test_drive_data = test_drive_service.generate_test_drive(business_id)
+            test_drive_data = await test_drive_service.generate_test_drive(business_id)
             logger.info(f"Test drive data generated for business {business_id}")
         except Exception as e:
             test_drive_error = str(e)

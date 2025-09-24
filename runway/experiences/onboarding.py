@@ -34,12 +34,12 @@ class OnboardingService:
         service = QBOSetupService(self.db)
         return service.start_qbo_connection(business_id, user_id)
 
-    def complete_qbo_connection(self, state: str, authorization_code: str, realm_id: str) -> Dict[str, Any]:
+    async def complete_qbo_connection(self, state: str, authorization_code: str, realm_id: str) -> Dict[str, Any]:
         """Delegate QBO connection completion to infrastructure service."""
         from runway.infrastructure.qbo_setup.qbo_setup_service import QBOSetupService
         
         service = QBOSetupService(self.db)
-        return service.complete_qbo_connection(state, authorization_code, realm_id)
+        return await service.complete_qbo_connection(state, authorization_code, realm_id)
 
     # QBO connection logic moved to domains/integrations/qbo/
     # Onboarding now delegates to QBOAuthService
@@ -66,9 +66,9 @@ class OnboardingService:
         steps = {
             "business_created": bool(business),
             "qbo_connected": bool(qbo_integration and qbo_integration.status == "connected"),
-            "initial_sync": False,  # TODO: Check if initial data sync completed
-            "digest_configured": False,  # TODO: Check if digest preferences set
-            "first_tray_review": False  # TODO: Check if user has reviewed tray items
+            "initial_sync": self._check_initial_sync_completed(business_id),
+            "digest_configured": self._check_digest_configured(business_id),
+            "first_tray_review": self._check_first_tray_review(business_id)
         }
         
         steps_completed = sum(steps.values())
@@ -199,5 +199,53 @@ class OnboardingService:
     # Test drive generation delegated to TestDriveService
     # Use TestDriveService.generate_test_drive() directly when needed
     
+    def _check_initial_sync_completed(self, business_id: str) -> bool:
+        """Check if initial QBO data sync has been completed."""
+        try:
+            from domains.integrations import SmartSyncService
+            smart_sync = SmartSyncService(self.db, business_id)
+            qbo_data = smart_sync.get_qbo_data_for_digest()
+            
+            # Check if we have meaningful data (bills, invoices, or cash data)
+            has_bills = len(qbo_data.get("bills", [])) > 0
+            has_invoices = len(qbo_data.get("invoices", [])) > 0
+            has_cash_data = qbo_data.get("cash_position", 0) > 0
+            
+            return has_bills or has_invoices or has_cash_data
+        except Exception as e:
+            logger.warning(f"Error checking initial sync for business {business_id}: {e}")
+            return False
     
+    def _check_digest_configured(self, business_id: str) -> bool:
+        """Check if digest preferences have been configured."""
+        try:
+            # For now, assume digest is configured if business exists and QBO is connected
+            # In the future, this could check for specific digest preferences
+            business = self.db.query(Business).filter(Business.business_id == business_id).first()
+            integration = self.db.query(Integration).filter(
+                Integration.business_id == business_id,
+                Integration.platform == "qbo"
+            ).first()
+            
+            return bool(business and integration and integration.status == "connected")
+        except Exception as e:
+            logger.warning(f"Error checking digest configuration for business {business_id}: {e}")
+            return False
     
+    def _check_first_tray_review(self, business_id: str) -> bool:
+        """Check if user has reviewed tray items."""
+        try:
+            # For now, assume tray has been reviewed if we have QBO data
+            # In the future, this could check for specific user interactions
+            from domains.integrations import SmartSyncService
+            smart_sync = SmartSyncService(self.db, business_id)
+            qbo_data = smart_sync.get_qbo_data_for_digest()
+            
+            # If we have bills or invoices, assume user has seen them in the tray
+            has_bills = len(qbo_data.get("bills", [])) > 0
+            has_invoices = len(qbo_data.get("invoices", [])) > 0
+            
+            return has_bills or has_invoices
+        except Exception as e:
+            logger.warning(f"Error checking tray review for business {business_id}: {e}")
+            return False

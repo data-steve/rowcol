@@ -87,6 +87,9 @@ class RunwayReserve(Base):
     @hybrid_property
     def target_amount(self) -> Decimal:
         """Target reserve amount in dollars."""
+        if hasattr(self.target_amount_cents, 'type'):
+            # This is a class-level access (SQLAlchemy InstrumentedAttribute)
+            return self.target_amount_cents / 100
         return Decimal(self.target_amount_cents) / 100
     
     @target_amount.setter
@@ -97,6 +100,9 @@ class RunwayReserve(Base):
     @hybrid_property
     def current_amount(self) -> Decimal:
         """Current reserve amount in dollars."""
+        if hasattr(self.current_amount_cents, 'type'):
+            # This is a class-level access (SQLAlchemy InstrumentedAttribute)
+            return self.current_amount_cents / 100
         return Decimal(self.current_amount_cents) / 100
     
     @current_amount.setter

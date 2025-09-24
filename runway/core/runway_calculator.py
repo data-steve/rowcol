@@ -163,7 +163,7 @@ class RunwayCalculator(TenantAwareService):
             "ap_upcoming": int(sum(bill.get("amount", 0) for bill in qbo_data.get("bills", [])))
         }
     
-    def calculate_historical_runway(self, weeks_back: int = 4, qbo_data: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    async def calculate_historical_runway(self, weeks_back: int = 4, qbo_data: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
         Calculate what runway would have been for historical periods.
         Used for runway replay and trend analysis.
@@ -174,7 +174,7 @@ class RunwayCalculator(TenantAwareService):
             
             # Get QBO data as baseline (use provided data or fetch from smart_sync)
             if qbo_data is None:
-                qbo_data = self.smart_sync.get_qbo_data_for_digest()
+                qbo_data = await self.smart_sync.get_qbo_data_for_digest()
             
             for week_offset in range(weeks_back, 0, -1):
                 week_start = current_date - timedelta(weeks=week_offset)

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.auth.middleware.auth import get_current_business_id, get_current_user
 from domains.ap.services.bill_ingestion import BillService
 from domains.ap.services.payment import PaymentService
 from domains.integrations import SmartSyncService
@@ -150,7 +150,8 @@ async def get_bill(
 async def approve_bill(
     bill_id: int,
     approval_data: BillApprovalRequest,
-    services: Dict = Depends(get_services)
+    services: Dict = Depends(get_services),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Approve a bill for payment.
@@ -169,7 +170,7 @@ async def approve_bill(
         # Approve the bill
         success = bill_service.approve_bill_entity(
             bill=bill,
-            approved_by_user_id="api_user",  # TODO: Get from auth context
+            approved_by_user_id=current_user["user_id"],
             notes=approval_data.notes
         )
         
@@ -222,7 +223,8 @@ async def approve_bill(
 async def schedule_bill_payment(
     bill_id: int,
     payment_data: PaymentScheduleRequest,
-    services: Dict = Depends(get_services)
+    services: Dict = Depends(get_services),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Schedule payment for an approved bill.
@@ -250,7 +252,7 @@ async def schedule_bill_payment(
             payment_date=payment_data.payment_date,
             payment_method=payment_data.payment_method,
             payment_account=payment_data.payment_account,
-            created_by_user_id="api_user"  # TODO: Get from auth context
+            created_by_user_id=current_user["user_id"]
         )
         
         # Schedule QBO sync for payment creation

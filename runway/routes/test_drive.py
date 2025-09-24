@@ -15,7 +15,7 @@ from runway.experiences.test_drive import TestDriveService
 router = APIRouter(prefix="/test-drive", tags=["test-drive"])
 
 @router.get("/{business_id}/test-drive")
-def get_test_drive(business_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def get_test_drive(business_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Get test drive data showing historical insights.
     
@@ -23,7 +23,7 @@ def get_test_drive(business_id: str, db: Session = Depends(get_db)) -> Dict[str,
     recommended based on the business's QBO data.
     """
     service = TestDriveService(db)
-    return service.generate_test_drive(business_id)
+    return await service.generate_test_drive(business_id)
 
 @router.get("/{business_id}/hygiene-score")
 def get_hygiene_score(business_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:

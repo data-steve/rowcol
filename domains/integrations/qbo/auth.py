@@ -20,6 +20,7 @@ import secrets
 import os
 from enum import Enum
 import time
+import json
 
 from domains.core.services.base_service import TenantAwareService
 from domains.core.models.integration import Integration, IntegrationStatuses
@@ -27,6 +28,9 @@ from common.exceptions import IntegrationError
 from .config import qbo_config
 
 logger = logging.getLogger(__name__)
+
+TOKEN_FILE = os.path.join(os.path.dirname(__file__), 'dev_tokens.json')
+
 
 class QBOEnvironment(Enum):
     """QBO environment types."""
@@ -114,8 +118,8 @@ class QBOAuthService(TenantAwareService):
     def _generate_real_auth_url(self, state: str) -> str:
         """Generate real QBO auth URL."""
         try:
-            from intuitlib.client import AuthClient
-            from intuitlib.enums import Scopes
+            from intuitoauth import AuthClient
+            from intuitoauth import Scopes
             
             auth_client = AuthClient(
                 client_id=self.client_id,
@@ -197,7 +201,7 @@ class QBOAuthService(TenantAwareService):
     def _exchange_real_tokens(self, authorization_code: str) -> Tuple[str, str]:
         """Exchange authorization code for real QBO tokens."""
         try:
-            from intuitlib.client import AuthClient
+            from intuitoauth import AuthClient
             
             auth_client = AuthClient(
                 client_id=self.client_id,
@@ -233,8 +237,19 @@ class QBOAuthService(TenantAwareService):
             ).first()
             
             if not integration or not integration.access_token:
-                self.logger.warning(f"No QBO integration found for business {self.business_id}")
-                return None
+                # Self-heal from dev token file
+                if self._load_tokens_from_dev_file():
+                    integration = self.db.query(Integration).filter(
+                        Integration.business_id == self.business_id,
+                        Integration.platform == "qbo",
+                        Integration.status == IntegrationStatuses.CONNECTED.value
+                    ).first()
+                    if not integration or not integration.access_token:
+                        self.logger.warning(f"No QBO integration found for business {self.business_id}")
+                        return None
+                else:
+                    self.logger.warning(f"No QBO integration found for business {self.business_id}")
+                    return None
             
             # Check if token needs refresh
             if self._token_needs_refresh(integration):
@@ -245,6 +260,68 @@ class QBOAuthService(TenantAwareService):
         except Exception as e:
             self.logger.error(f"Failed to get valid access token: {e}", exc_info=True)
             return None
+    
+    def _load_tokens_from_dev_file(self) -> bool:
+        """
+        If dev_tokens.json exists, load it into the database.
+        This makes the system self-healing after a database reset in local dev.
+        """
+        if not os.path.exists(TOKEN_FILE):
+            return False
+
+        try:
+            with open(TOKEN_FILE, 'r') as f:
+                tokens = json.load(f)
+
+            # Check if tokens are expired
+            refresh_expires = datetime.fromisoformat(tokens['refresh_token_expires_at'])
+            if datetime.utcnow() >= refresh_expires:
+                self.logger.warning(f"Dev tokens in {TOKEN_FILE} have expired. Please run get_qbo_tokens.py.")
+                os.remove(TOKEN_FILE)  # Remove expired file
+                return False
+            
+            # Check if an integration record already exists
+            integration = self.db.query(Integration).filter(
+                Integration.business_id == self.business_id,
+                Integration.platform == "qbo"
+            ).first()
+
+            if integration:
+                # Update existing record
+                integration.access_token = tokens['access_token']
+                integration.refresh_token = tokens['refresh_token']
+                integration.realm_id = tokens['realm_id']
+                integration.token_expires_at = datetime.fromisoformat(tokens['token_expires_at'])
+                integration.expires_at = refresh_expires
+                integration.status = IntegrationStatuses.CONNECTED.value
+                self.logger.info(f"Refreshed DB tokens from {TOKEN_FILE} for business {self.business_id}")
+            else:
+                # Create new integration record from the token file
+                from domains.core.models.business import Business
+                business = self.db.query(Business).filter(Business.business_id == self.business_id).first()
+                if not business:
+                    business = Business(business_id=self.business_id, name="QBO Dev Business (from token file)")
+                    self.db.add(business)
+
+                integration = Integration(
+                    business_id=self.business_id,
+                    platform="qbo",
+                    status=IntegrationStatuses.CONNECTED.value,
+                    access_token=tokens['access_token'],
+                    refresh_token=tokens['refresh_token'],
+                    realm_id=tokens['realm_id'],
+                    token_expires_at=datetime.fromisoformat(tokens['token_expires_at']),
+                    expires_at=refresh_expires
+                )
+                self.db.add(integration)
+                self.logger.info(f"Loaded tokens from {TOKEN_FILE} into new DB record for business {self.business_id}")
+
+            self.db.commit()
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to load tokens from dev file '{TOKEN_FILE}': {e}", exc_info=True)
+            return False
     
     def force_refresh_and_get_new_token(self) -> Optional[str]:
         """
@@ -320,14 +397,17 @@ class QBOAuthService(TenantAwareService):
             auth_client.refresh(refresh_token=integration.refresh_token)
             
             # Update stored tokens in database
-            with self.db.begin():
-                integration.access_token = auth_client.access_token
-                integration.refresh_token = auth_client.refresh_token
-                # QBO access tokens expire in 1 hour (3600 seconds)
-                # QBO refresh tokens expire in 101 days (8726400 seconds)
-                integration.token_expires_at = datetime.utcnow() + timedelta(seconds=auth_client.expires_in)
-                # Store when refresh token expires (101 days from now)
-                integration.expires_at = datetime.utcnow() + timedelta(seconds=8726400)
+            integration.access_token = auth_client.access_token
+            integration.refresh_token = auth_client.refresh_token
+            # QBO access tokens expire in 1 hour (3600 seconds)
+            # QBO refresh tokens expire in 101 days (8726400 seconds)
+            integration.token_expires_at = datetime.utcnow() + timedelta(seconds=auth_client.expires_in)
+            # Store when refresh token expires (101 days from now)
+            integration.expires_at = datetime.utcnow() + timedelta(seconds=8726400)
+            
+            # Commit changes - let the existing transaction handle this
+            self.db.add(integration)
+            self.db.commit()
             
             self.logger.info(f"Refreshed real token for business {self.business_id}")
             return auth_client.access_token

@@ -39,7 +39,7 @@ class CustomerService(TenantAwareService):
         try:
             customers = self.db.query(Customer).filter(
                 Customer.business_id == self.business_id,
-                Customer.is_active == True
+                Customer.is_active
             ).all()
             
             return [
@@ -348,3 +348,24 @@ class CustomerService(TenantAwareService):
             "last_collection_contact": customer.last_collection_contact,
             "collection_preferences": self.get_collection_preferences(customer)
         }
+
+    def get_customer_by_id(self, customer_id: str) -> Optional[Customer]:
+        """Get customer by ID (QBO customer ID)."""
+        try:
+            return self.db.query(Customer).filter(
+                Customer.business_id == self.business_id,
+                Customer.qbo_customer_id == customer_id
+            ).first()
+        except Exception as e:
+            logger.error(f"Error getting customer {customer_id}: {e}")
+            return None
+
+    def get_customer_email(self, customer_id: str) -> Optional[str]:
+        """Get customer email from database."""
+        customer = self.get_customer_by_id(customer_id)
+        return customer.email if customer else None
+
+    def get_customer_phone(self, customer_id: str) -> Optional[str]:
+        """Get customer phone from database."""
+        customer = self.get_customer_by_id(customer_id)
+        return customer.phone if customer else None

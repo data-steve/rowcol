@@ -17,7 +17,7 @@ Features:
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations.qbo.client import get_qbo_provider
+from domains.integrations.qbo.client import get_qbo_client
 from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
 from config.business_rules import RunwayAnalysisSettings, DataQualityThresholds, ProofOfValueThresholds
@@ -38,7 +38,7 @@ class TestDriveService:
         self._runway_calculators = {}  # Cache calculators per business
         self._data_quality_analyzers = {}  # Cache analyzers per business
     
-    def generate_test_drive(self, business_id: str = None, industry: str = "software_agency", use_sandbox: bool = False) -> Dict[str, Any]:
+    async def generate_test_drive(self, business_id: str = None, industry: str = "software_agency", use_sandbox: bool = False) -> Dict[str, Any]:
         """
         Generate a retroactive 4-week runway digest showing insights and data patterns Oodaloo would have surfaced.
         
@@ -69,7 +69,7 @@ class TestDriveService:
             runway_calculator = self._get_runway_calculator(business_id or f"demo_{industry}")
             
             # Use core service for historical runway analysis
-            weeks_data = runway_calculator.calculate_historical_runway(weeks_back=4, qbo_data=qbo_data)
+            weeks_data = await runway_calculator.calculate_historical_runway(weeks_back=4, qbo_data=qbo_data)
             
             # Use core service for test drive formatting
             weeks_data = runway_calculator.format_for_presentation(weeks_data, format_type="test_drive")
@@ -123,8 +123,8 @@ class TestDriveService:
             # Get data quality analyzer for this business
             data_quality_analyzer = self._get_data_quality_analyzer(business_id)
             
-            # Get QBO data for analysis using QBOAPIProvider directly
-            qbo_provider = get_qbo_provider(business_id, self.db)
+            # Get QBO data for analysis using QBOAPIClient directly
+            qbo_provider = get_qbo_client(business_id, self.db)
             qbo_data = {
                 "bills": qbo_provider.get_bills(),
                 "invoices": qbo_provider.get_invoices(),
@@ -205,7 +205,7 @@ class TestDriveService:
     
     def _get_real_qbo_data(self, business_id: str) -> Dict[str, Any]:
         """Get real QBO data for existing business."""
-        # This would use QBOAPIProvider for real data
+        # This would use QBOAPIClient for real data
         # For now, return empty data
         return {
             "bills": [],

@@ -27,7 +27,7 @@ def start_qbo_connection(business_id: str, user_id: str, db: Session = Depends(g
     return service.start_qbo_connection(business_id, user_id)
 
 @router.post("/callback")
-def complete_qbo_connection(state: str, code: str, realm_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def complete_qbo_connection(state: str, code: str, realm_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Complete QBO OAuth flow and establish full connection infrastructure.
     
@@ -40,7 +40,7 @@ def complete_qbo_connection(state: str, code: str, realm_id: str, db: Session = 
     Returns comprehensive setup results including test drive data.
     """
     service = QBOSetupService(db)
-    return service.complete_qbo_connection(state, code, realm_id)
+    return await service.complete_qbo_connection(state, code, realm_id)
 
 @router.get("/{business_id}/status")
 def get_qbo_connection_status(business_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:

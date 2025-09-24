@@ -2,34 +2,34 @@
 Phase 0 QBO Integration Tests
 
 Tests for basic QBO integration functionality that's core to Phase 0 MVP.
-Uses the enhanced QBOAPIProvider with proper mock/real switching.
+Uses the enhanced QBOAPIClient with proper mock/real switching.
 """
 import pytest
 import asyncio
 from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 from domains.core.models import Business, Integration
-from domains.integrations.qbo.client import QBOAPIProvider, get_qbo_provider
+from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
 
 
 def test_qbo_provider_import():
-    """Test that QBOAPIProvider can be imported"""
-    assert QBOAPIProvider is not None
-    assert get_qbo_provider is not None
+    """Test that QBOAPIClient can be imported"""
+    assert QBOAPIClient is not None
+    assert get_qbo_client is not None
 
 
 def test_qbo_provider_factory_real(db: Session, test_business: Business):
     """Test QBO provider factory returns real provider"""
-    provider = get_qbo_provider(test_business.business_id, db)
-    assert isinstance(provider, QBOAPIProvider)
+    provider = get_qbo_client(test_business.business_id, db)
+    assert isinstance(provider, QBOAPIClient)
     assert provider.business_id == test_business.business_id
 
 
 def test_qbo_provider_factory_auto_realm_lookup(db: Session, test_business: Business):
     """Test QBO provider factory can lookup realm_id automatically"""
     # This will use the fallback "mock_realm" since no integration exists
-    provider = get_qbo_provider(test_business.business_id, db)
-    assert isinstance(provider, QBOAPIProvider)
+    provider = get_qbo_client(test_business.business_id, db)
+    assert isinstance(provider, QBOAPIClient)
     assert provider.realm_id == "mock_realm"
 
 
@@ -69,7 +69,7 @@ def test_integration_creation(db: Session, test_business: Business):
 @pytest.mark.asyncio
 async def test_qbo_provider_get_bills_real(db: Session, test_business: Business):
     """Test QBO provider can get bills using real provider"""
-    provider = get_qbo_provider(test_business.business_id, db)
+    provider = get_qbo_client(test_business.business_id, db)
     
     # Test that provider can get bills (will fail with 401 due to invalid tokens, but that's expected)
     try:
@@ -83,7 +83,7 @@ async def test_qbo_provider_get_bills_real(db: Session, test_business: Business)
 @pytest.mark.asyncio
 async def test_qbo_provider_get_invoices_real(db: Session, test_business: Business):
     """Test QBO provider can get invoices using real provider"""
-    provider = get_qbo_provider(test_business.business_id, db)
+    provider = get_qbo_client(test_business.business_id, db)
     
     # Test that provider can get invoices (will fail with 401 due to invalid tokens, but that's expected)
     try:
@@ -96,16 +96,16 @@ async def test_qbo_provider_get_invoices_real(db: Session, test_business: Busine
 
 def test_qbo_provider_business_relationship(db: Session, test_business: Business):
     """Test that QBO provider properly references business"""
-    provider = get_qbo_provider(test_business.business_id, db)
+    provider = get_qbo_client(test_business.business_id, db)
     
     assert provider.business_id == test_business.business_id
 
 
 def test_qbo_provider_factory_function(db: Session, test_business: Business):
     """Test QBO provider factory function"""
-    provider = get_qbo_provider(test_business.business_id, db)
+    provider = get_qbo_client(test_business.business_id, db)
     
-    assert isinstance(provider, QBOAPIProvider)
+    assert isinstance(provider, QBOAPIClient)
     assert provider.business_id == test_business.business_id
 
 
@@ -123,9 +123,9 @@ def test_qbo_provider_phase0_scope():
     # - Advanced reconciliation
     
     try:
-        from domains.integrations.qbo.client import QBOAPIProvider, get_qbo_provider
-        assert QBOAPIProvider is not None
-        assert get_qbo_provider is not None
+        from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
+        assert QBOAPIClient is not None
+        assert get_qbo_client is not None
         
         # Basic provider should be importable
         assert True

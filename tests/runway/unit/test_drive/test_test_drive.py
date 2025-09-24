@@ -47,12 +47,13 @@ class TestTestDrive:
         self.mock_business.business_id = "test-business-123"
         self.mock_business.name = "Test Agency Inc"
         
-    def test_generate_test_drive_success(self, mock_qbo_data):
+    @pytest.mark.asyncio
+    async def test_generate_test_drive_success(self, mock_qbo_data):
         """Test successful runway replay generation."""
         # Mock database query
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
-        with patch('runway.experiences.test_drive.get_qbo_provider') as mock_get_provider:
+        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
             mock_provider = Mock()
             mock_provider.get_bills.return_value = mock_qbo_data["bills"]
             mock_provider.get_invoices.return_value = mock_qbo_data["invoices"]
@@ -63,7 +64,7 @@ class TestTestDrive:
             mock_get_provider.return_value = mock_provider
             
             # Generate runway replay
-            result = self.service.generate_test_drive("test-business-123")
+            result = await self.service.generate_test_drive("test-business-123")
             
             # Verify structure
             assert result["business_name"] == "Test Agency Inc"
@@ -92,23 +93,25 @@ class TestTestDrive:
                 # Verify week labels are correct (format: "Week of Aug 26")
                 assert "Week" in week["week_label"]
     
-    def test_generate_test_drive_business_not_found(self):
+    @pytest.mark.asyncio
+    async def test_generate_test_drive_business_not_found(self):
         """Test runway replay when business doesn't exist."""
         self.mock_db.query.return_value.filter.return_value.first.return_value = None
         
         with pytest.raises(BusinessNotFoundError):
-            self.service.generate_test_drive("nonexistent-business")
+            await self.service.generate_test_drive("nonexistent-business")
     
-    def test_generate_test_drive_error_handling(self):
+    @pytest.mark.asyncio
+    async def test_generate_test_drive_error_handling(self):
         """Test runway replay graceful error handling."""
         # Mock business exists but QBO provider fails
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
-        with patch('runway.experiences.test_drive.get_qbo_provider') as mock_get_provider:
+        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
             mock_get_provider.side_effect = Exception("QBO API error")
             
         # Should return demo data when QBO fails (graceful fallback)
-        result = self.service.generate_test_drive("test-business-123")
+        result = await self.service.generate_test_drive("test-business-123")
         
         assert result["business_name"] == "Test Agency Inc"
         assert "replay_period" in result
@@ -159,7 +162,8 @@ class TestTestDrive:
         statement = self.service._generate_proof_statement(0.0, 0, 0)
         assert "solid" in statement
     
-    def test_test_drive_integration_with_qbo_connection(self):
+    @pytest.mark.asyncio
+    async def test_test_drive_integration_with_qbo_connection(self):
         """Test runway replay is generated during QBO connection."""
         # Mock integration
         mock_integration = Mock(spec=Integration)
@@ -170,7 +174,7 @@ class TestTestDrive:
         # Mock business
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
-        with patch('runway.experiences.test_drive.get_qbo_provider') as mock_get_provider:
+        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
             mock_provider = Mock()
             mock_provider.get_bills.return_value = [{"amount": 3000}]
             mock_provider.get_invoices.return_value = [{"amount": 5000}]
@@ -181,7 +185,7 @@ class TestTestDrive:
             mock_get_provider.return_value = mock_provider
             
             # Generate runway replay directly (as called during QBO connection)
-            result = self.service.generate_test_drive("test-business-123")
+            result = await self.service.generate_test_drive("test-business-123")
             
             # Verify runway replay was generated successfully
             assert result["business_name"] == "Test Agency Inc"
@@ -241,7 +245,7 @@ class TestHygieneScore:
             ]
         }
         
-        with patch('runway.experiences.test_drive.get_qbo_provider') as mock_get_provider:
+        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
             mock_provider = Mock()
             mock_provider.get_bills.return_value = mock_qbo_data["bills"]
             mock_provider.get_invoices.return_value = mock_qbo_data["invoices"]
@@ -304,7 +308,7 @@ class TestHygieneScore:
             ]
         }
         
-        with patch('runway.experiences.test_drive.get_qbo_provider') as mock_get_provider:
+        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
             mock_provider = Mock()
             mock_provider.get_bills.return_value = mock_qbo_data["bills"]
             mock_provider.get_invoices.return_value = mock_qbo_data["invoices"]
@@ -331,7 +335,7 @@ class TestHygieneScore:
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
         # Test excellent health (no issues)
-        with patch('runway.experiences.test_drive.get_qbo_provider') as mock_get_provider:
+        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
             mock_provider = Mock()
             mock_provider.get_bills.return_value = [{"amount": 2000, "vendor": "Vendor X", "due_date": "2025-10-15", "category": "Office Supplies"}]
             mock_provider.get_invoices.return_value = [{"amount": 3000, "due_date": "2025-12-31", "status": "paid", "category": "Services"}]
@@ -352,7 +356,7 @@ class TestHygieneScore:
         # Mock business exists but SmartSync fails
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
-        with patch('runway.experiences.test_drive.get_qbo_provider') as mock_get_provider:
+        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
             mock_get_provider.side_effect = Exception("QBO API error")
             
             # Should return minimal hygiene data instead of crashing
@@ -371,7 +375,7 @@ class TestHygieneScore:
         
         # Test overdue invoice
         overdue_invoice = {"due_date": "2023-08-01"}
-        assert analyzer._is_overdue(overdue_invoice) == True
+        assert analyzer._is_overdue(overdue_invoice)
         
         # Test future invoice
         future_invoice = {"due_date": "2025-12-31"}

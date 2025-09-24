@@ -20,7 +20,7 @@ from enum import Enum
 from dotenv import load_dotenv
 
 from domains.core.services.base_service import TenantAwareService
-from .client import get_qbo_provider
+from .client import get_qbo_client
 
 load_dotenv()
 
@@ -63,7 +63,7 @@ class QBOBulkScheduledService(TenantAwareService):
         """
         try:
             # Get QBO client
-            qbo_provider = get_qbo_provider(self.business_id, self.db)
+            qbo_provider = get_qbo_client(self.business_id, self.db)
             
             # Get all data in one batch call
             batch_data = await qbo_provider.get_all_data_batch()
@@ -108,7 +108,7 @@ class QBOBulkScheduledService(TenantAwareService):
             self.logger.info(f"Starting bulk QBO sync with strategy: {strategy.value}")
             
             # Use QBO client for API calls with retry/error handling
-            qbo_provider = get_qbo_provider(self.business_id, self.db)
+            qbo_provider = get_qbo_client(self.business_id, self.db)
             
             # Get all data in one batch call for efficiency
             batch_data = await qbo_provider.get_all_data_batch()

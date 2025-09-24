@@ -34,7 +34,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations.qbo.client import QBOAPIProvider, get_qbo_provider
+from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
 from domains.integrations.qbo.health import QBOHealthMonitor
 from domains.integrations import SmartSyncService
 from common.exceptions import IntegrationError
@@ -168,7 +168,7 @@ def sample_qbo_responses():
     }
 
 
-@pytest.mark.skip(reason="QBOConnectionManager was deleted - replaced by QBOAPIProvider")
+@pytest.mark.skip(reason="QBOConnectionManager was deleted - replaced by QBOAPIClient")
 class TestQBOConnectionManager:
     """Test QBO connection management functionality."""
     
@@ -343,7 +343,7 @@ class TestSmartSyncServiceIntegration:
         assert hasattr(smart_sync, 'batch_size')
     
     @pytest.mark.asyncio
-    @patch('domains.integrations.qbo.client.get_qbo_provider')
+    @patch('domains.integrations.qbo.client.get_qbo_client')
     async def test_get_qbo_data_for_digest_healthy_connection(self, mock_get_provider, mock_db):
         """Test digest data retrieval with healthy QBO connection."""
         # Mock QBO provider
