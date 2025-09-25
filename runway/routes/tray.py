@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.middleware.auth import get_current_business_id
 from runway.experiences.tray import TrayService
 
 router = APIRouter(tags=["Tray"])

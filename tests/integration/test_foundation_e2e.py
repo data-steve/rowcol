@@ -26,7 +26,7 @@ from domains.integrations import SmartSyncService
 from domains.integrations.qbo.client import get_qbo_client
 from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
-from config.business_rules import RunwayAnalysisSettings, DataQualityThresholds
+from config import RunwayAnalysisSettings, DataQualityThresholds
 
 @pytest.mark.integration
 class TestFoundationE2E:

@@ -132,7 +132,7 @@ def main():
     try:
         webbrowser.open(auth_url)
         print("✅ Opened in your browser")
-    except:
+    except Exception:
         print("❌ Could not open browser - copy the URL above")
     
     print("\n2️⃣ After authorizing, you'll be redirected to the OAuth playground.")

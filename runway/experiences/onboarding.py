@@ -13,7 +13,7 @@ from common.exceptions import (
     IntegrationError,
     ValidationError
 )
-from config.business_rules import OnboardingSettings, IntegrationStatuses, RunwayAnalysisSettings
+from config import OnboardingSettings, IntegrationStatuses, RunwayAnalysisSettings
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import secrets

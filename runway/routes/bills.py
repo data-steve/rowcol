@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id, get_current_user
+from runway.infrastructure.middleware.auth import get_current_business_id, get_current_user
 from domains.ap.services.bill_ingestion import BillService
 from domains.ap.services.payment import PaymentService
 from domains.integrations import SmartSyncService

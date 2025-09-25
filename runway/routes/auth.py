@@ -7,7 +7,7 @@ from runway.schemas.auth import (
     LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
     RegisterRequest, PasswordResetRequest, PasswordResetConfirm
 )
-from runway.infrastructure.auth.middleware.auth import create_access_token, verify_token
+from runway.infrastructure.middleware.auth import create_access_token, verify_token
 import hashlib
 import secrets
 

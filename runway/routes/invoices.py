@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.middleware.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
 from domains.ar.services.collections import CollectionsService
 from domains.integrations import SmartSyncService
@@ -75,7 +75,7 @@ async def list_invoices(
                             due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
                             if datetime.utcnow() <= due_date:
                                 continue
-                        except:
+                        except (ValueError, TypeError):
                             continue
                     else:
                         continue
@@ -103,7 +103,7 @@ async def list_invoices(
                         due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
                         if datetime.utcnow() > due_date:
                             invoice_status = "overdue"
-                    except:
+                    except (ValueError, TypeError):
                         pass
             
             enhanced_invoice = {
@@ -165,7 +165,7 @@ async def get_invoice(
         if customer_id:
             try:
                 payment_history = collections_service.get_customer_payment_history(customer_id)
-            except:
+            except Exception:
                 payment_history = None
         
         # Calculate runway impact
@@ -184,7 +184,7 @@ async def get_invoice(
                 if datetime.utcnow() > due_date:
                     is_overdue = True
                     days_overdue = (datetime.utcnow() - due_date).days
-            except:
+            except (ValueError, TypeError):
                 pass
         
         return {
@@ -403,7 +403,7 @@ async def get_invoices_runway_impact(
                         overdue_count += 1
                     else:
                         current_ar += balance
-                except:
+                except (ValueError, TypeError):
                     current_ar += balance
             else:
                 current_ar += balance

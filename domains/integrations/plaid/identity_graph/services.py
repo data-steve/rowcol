@@ -10,15 +10,24 @@ def _uuid() -> str: return str(uuid.uuid4())
 
 def sha256(*parts: str) -> str:
     h = hashlib.sha256()
-    for p in parts: h.update(p.encode("utf-8"))
+    for p in parts:
+        h.update(p.encode("utf-8"))
     return h.hexdigest()
 
 @dataclass
 class RawEvent:
-    id: str; company_id: str; src: str; kind: str; external_id: str
-    occurred_at: str; amount_cents: int; currency: str = "USD"
-    account_ref: Optional[str] = None; counterparty: Optional[str] = None
-    mcc: Optional[str] = None; parent_external_id: Optional[str] = None
+    id: str
+    company_id: str
+    src: str
+    kind: str
+    external_id: str
+    occurred_at: str
+    amount_cents: int
+    currency: str = "USD"
+    account_ref: Optional[str] = None
+    counterparty: Optional[str] = None
+    mcc: Optional[str] = None
+    parent_external_id: Optional[str] = None
     raw_json: str = "{}"
 
 CANON = ("SETTLEMENT","PAYOUT","CHARGE","FEE","REFUND","INVOICE","PAYMENT")
@@ -39,7 +48,8 @@ def upsert_identity(db: Session, company_id: str, canonical_kind: str, fp: str) 
     row = db.execute(
         "SELECT id FROM identity WHERE company_id=? AND fingerprint=?", (company_id, fp)
     ).fetchone()
-    if row: return row[0]
+    if row:
+        return row[0]
     new_id = _uuid()
     db.execute(
         "INSERT INTO identity(id,company_id,fingerprint,canonical_kind) VALUES(?,?,?,?)",

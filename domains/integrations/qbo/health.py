@@ -14,16 +14,22 @@ Features:
 
 import asyncio
 import logging
+import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from enum import Enum
-import json
-
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
 from domains.integrations.qbo.client import QBOAPIClient
+
+class QBOConnectionStatus(Enum):
+    """QBO connection health status."""
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    FAILING = "failing"
+    DISCONNECTED = "disconnected"
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +73,8 @@ class QBOHealthMonitor:
     
     def __init__(self, db: Session):
         self.db = db
-        self.connection_manager = get_qbo_connection_manager(db)
+        # TODO: Replace with QBOAuthService when health monitoring is reimplemented
+        # self.connection_manager = get_qbo_connection_manager(db)
         self.active_alerts: Dict[str, List[QBOAlert]] = {}
         self.health_history: List[QBOHealthSummary] = []
         self.monitoring_active = False

@@ -11,7 +11,7 @@ from typing import List, Dict, Optional
 from datetime import datetime
 
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.middleware.auth import get_current_business_id
 from domains.ap.services.payment import PaymentService
 from domains.integrations import SmartSyncService
 from runway.core.reserve_runway import RunwayReserveService

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.middleware.auth import get_current_business_id
 from domains.ap.services.vendor import VendorService
 from domains.integrations import SmartSyncService
 from domains.ap.schemas.vendor import VendorResponse, VendorCreate, VendorUpdate

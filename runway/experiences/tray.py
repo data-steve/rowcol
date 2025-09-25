@@ -9,6 +9,15 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from runway.models.tray_item import TrayItem
+from domains.integrations import SmartSyncService
+from runway.core.reserve_runway import RunwayReserveService
+from runway.core.payment_priority_calculator import PaymentPriorityCalculator
+from runway.core.tray_priority_calculator import TrayPriorityCalculator
+from common.exceptions import TrayItemNotFoundError
+from config import TrayPriorities, TrayItemStatuses
+from datetime import datetime
+import os
+import logging
 
 
 class TrayDataProvider(ABC):
@@ -146,20 +155,6 @@ Key Changes:
 - All runway impact calculations → RunwayCalculator (via priority calculators)
 - Maintains orchestration and data provider functionality
 """
-
-from typing import List, Dict, Any
-from sqlalchemy.orm import Session
-from runway.models.tray_item import TrayItem
-# TrayDataProvider and get_tray_data_provider are now defined in this file
-from domains.integrations import SmartSyncService
-from runway.core.reserve_runway import RunwayReserveService
-from runway.core.payment_priority_calculator import PaymentPriorityCalculator
-from runway.core.tray_priority_calculator import TrayPriorityCalculator
-from common.exceptions import TrayItemNotFoundError
-from config.business_rules import TrayPriorities, TrayItemStatuses
-from datetime import datetime
-import os
-import logging
 
 logger = logging.getLogger(__name__)
 

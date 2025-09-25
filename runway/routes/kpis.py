@@ -11,7 +11,7 @@ from typing import List, Dict
 from datetime import datetime, timedelta
 
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.middleware.auth import get_current_business_id
 from domains.core.services.kpi import KPIService
 from domains.integrations import SmartSyncService
 from runway.core.reserve_runway import RunwayReserveService
@@ -296,7 +296,7 @@ def _is_bill_overdue(bill_data: Dict) -> bool:
     try:
         due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
         return datetime.utcnow() > due_date and float(bill_data.get("Balance", 0)) > 0
-    except:
+    except (ValueError, TypeError):
         return False
 
 def _is_invoice_overdue(invoice_data: Dict) -> bool:
@@ -308,7 +308,7 @@ def _is_invoice_overdue(invoice_data: Dict) -> bool:
     try:
         due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
         return datetime.utcnow() > due_date and float(invoice_data.get("Balance", 0)) > 0
-    except:
+    except (ValueError, TypeError):
         return False
 
 def _calculate_data_quality_score(qbo_data: Dict) -> float:

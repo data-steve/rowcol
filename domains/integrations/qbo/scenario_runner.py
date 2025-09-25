@@ -35,6 +35,8 @@ from dataclasses import dataclass, asdict
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 sys.path.insert(0, project_root)
 
+# Import after path manipulation
+# ruff: noqa: E402
 from sqlalchemy.orm import Session
 from db.session import SessionLocal
 from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client

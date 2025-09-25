@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, ForeignKey, Enum, Text, Index, Integer
 from sqlalchemy.orm import relationship
 from .base import Base, TimestampMixin
 from enum import Enum as PyEnum
+import uuid
 
 class AuditSource(PyEnum):
     USER = "user"
@@ -22,8 +23,6 @@ class EntityType(PyEnum):
     CLIENT = "client"
     INVOICE = "invoice"
     BILL = "bill"
-
-import uuid
 
 class AuditLog(Base, TimestampMixin):
     __tablename__ = 'audit_logs'

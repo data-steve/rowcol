@@ -117,7 +117,7 @@ class VendorService(TenantAwareService):
             return "high"
         
         # Use centralized payment rules for consistent thresholds
-        from config.business_rules import PaymentRules
+        from config import PaymentRules
         HIGH_AMOUNT_THRESHOLD = PaymentRules.HIGH_AMOUNT_THRESHOLD
         HIGH_RELIABILITY_THRESHOLD = PaymentRules.HIGH_RELIABILITY_THRESHOLD
         

@@ -91,12 +91,7 @@ class ProofOfValueThresholds:
     SIGNIFICANT_RUNWAY_PROTECTION = 10    # 10+ days = significant protection achieved
     MANY_INSIGHTS_THRESHOLD = 5           # 5+ insights = substantial analysis value
 
-class RunwayThresholds:
-    """Runway status thresholds for consistent categorization."""
-    CRITICAL_DAYS = 7                     # Below 7 days = critical
-    WARNING_DAYS = 30                     # 7-29 days = warning  
-    HEALTHY_DAYS = 90                     # 30-89 days = healthy
-    # 90+ days = excellent
+# RunwayThresholds class moved to business_rules.py to avoid duplication
 
 class DataQualityThresholds:
     """

@@ -24,8 +24,8 @@ from .onboarding import router as onboarding_router
 from .tray import router as tray_router
 from .test_drive import router as test_drive_router
 
-# Import QBO setup routes from infrastructure
-from runway.infrastructure.qbo_setup.routes.qbo_setup import router as qbo_setup_router
+# Import QBO setup routes
+from .qbo_setup import router as qbo_setup_router
 
 # Create consolidated runway router with /api/v1 prefix
 router = APIRouter(prefix="/api/v1")

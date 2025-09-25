@@ -472,12 +472,16 @@ class QBOAuthService(TenantAwareService):
                 return {
                     "connected": False,
                     "status": "not_connected",
+                    "platform": "qbo",
+                    "business_id": self.business_id,
                     "environment": self.environment.value
                 }
             
             return {
                 "connected": integration.status == IntegrationStatuses.CONNECTED.value,
-                "status": integration.status.value,
+                "status": integration.status,  # status is already a string from database
+                "platform": "qbo",
+                "business_id": self.business_id,
                 "environment": self.environment.value,
                 "realm_id": integration.realm_id,
                 "connected_at": integration.connected_at.isoformat() if integration.connected_at else None,
@@ -492,6 +496,8 @@ class QBOAuthService(TenantAwareService):
             return {
                 "connected": False,
                 "status": "error",
+                "platform": "qbo",
+                "business_id": self.business_id,
                 "error": str(e),
                 "environment": self.environment.value
             }

@@ -11,7 +11,7 @@ from typing import Dict, Optional
 from datetime import datetime
 
 from db.session import get_db
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.middleware.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
 from domains.integrations import SmartSyncService
 from runway.core.reserve_runway import RunwayReserveService
@@ -119,7 +119,7 @@ async def get_collections_dashboard(
                         })
                         
                     total_outstanding += amount
-                except:
+                except (ValueError, TypeError):
                     # Skip invoices with invalid dates
                     continue
         
@@ -233,7 +233,7 @@ async def get_overdue_invoices(
                     }
                 })
                 
-            except:
+            except (ValueError, TypeError):
                 continue
         
         # Sort by priority and days overdue
@@ -427,7 +427,7 @@ async def get_collections_runway_impact(
                     if days_overdue > 90 or balance > 5000:
                         critical_amount += balance
                         
-                except:
+                except (ValueError, TypeError):
                     continue
         
         scenarios["collect_overdue_only"]["amount"] = overdue_amount

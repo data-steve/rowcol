@@ -367,35 +367,7 @@ def mock_payment():
 
 # ==================== QBO TEST FIXTURES ====================
 
-@pytest.fixture(scope="function")
-def qbo_connected_business(db):
-    # Use the actual QBO realm_id as business_id so tokens work correctly
-    realm_id = os.getenv('QBO_REALM_ID', 'test_realm_id')
-    business = Business(
-        business_id=realm_id,  # CRITICAL: Use realm_id so tokens match
-        name="Test QBO Business",
-        industry="Software",
-        qbo_id=realm_id
-    )
-    db.add(business)
-    db.commit()
-    db.refresh(business)
-
-    # Add QBO integration with real sandbox credentials if available
-    integration = Integration(
-        business_id=business.business_id,
-        platform="qbo",
-        access_token=os.getenv('QBO_ACCESS_TOKEN', 'test_access_token'),
-        refresh_token=os.getenv('QBO_REFRESH_TOKEN', 'test_refresh_token'),
-        realm_id=os.getenv('QBO_REALM_ID', 'test_realm_id')
-    )
-    db.add(integration)
-    db.commit()
-    
-    # Add test data using centralized helper
-    _add_test_data(db, business)
-    
-    return business
+# Removed duplicate qbo_connected_business fixture - using the one defined earlier
 
 @pytest.fixture(scope="function") 
 def qbo_auth_setup():

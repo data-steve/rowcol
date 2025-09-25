@@ -12,10 +12,10 @@ import argparse
 import json
 import os
 import logging
+import glob
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-import glob
 
 def find_matching_file(glob_pattern, project_root):
     matches = glob.glob(os.path.join(project_root, glob_pattern))
