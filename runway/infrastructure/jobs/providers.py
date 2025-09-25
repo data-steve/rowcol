@@ -10,11 +10,11 @@ from typing import Dict, List, Optional
 import os
 import json
 import logging
+from typing import TYPE_CHECKING
 
 logger = logging.getLogger(__name__)
 
 # Import Job and JobStatus with forward reference to avoid circular imports
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from runway.infrastructure.jobs.job_runner import Job, JobStatus
 

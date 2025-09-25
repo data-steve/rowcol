@@ -68,6 +68,12 @@ class RunwayAnalysisSettings:
     DEFAULT_DAILY_BURN_RATE = 1000        # $1000/day fallback burn rate estimate
     RUNWAY_CRITICAL_DAYS = 30             # Runway below 30 days triggers critical alert
     
+    # Default financial values for development/fallback (when QBO data unavailable)
+    DEFAULT_CASH_BALANCE = 100000         # $100k default cash balance
+    DEFAULT_MONTHLY_REVENUE = 25000       # $25k default monthly revenue
+    DEFAULT_MONTHLY_EXPENSES = 15000      # $15k default monthly expenses
+    DEFAULT_EMPLOYEE_COUNT = 5            # 5 employees default
+    
     # Hygiene score impact factors
     HYGIENE_BILL_DUE_DATE_IMPACT = 0.5    # 0.5 days runway impact per bill missing due date
     HYGIENE_UNCATEGORIZED_IMPACT = 0.2    # 0.2 days runway impact per uncategorized transaction
@@ -85,12 +91,7 @@ class ProofOfValueThresholds:
     SIGNIFICANT_RUNWAY_PROTECTION = 10    # 10+ days = significant protection achieved
     MANY_INSIGHTS_THRESHOLD = 5           # 5+ insights = substantial analysis value
 
-class RunwayThresholds:
-    """Runway status thresholds for consistent categorization."""
-    CRITICAL_DAYS = 7                     # Below 7 days = critical
-    WARNING_DAYS = 30                     # 7-29 days = warning  
-    HEALTHY_DAYS = 90                     # 30-89 days = healthy
-    # 90+ days = excellent
+# RunwayThresholds class moved to business_rules.py to avoid duplication
 
 class DataQualityThresholds:
     """

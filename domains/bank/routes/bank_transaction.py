@@ -20,7 +20,7 @@ from domains.bank.schemas.bank_transaction import (
     BankTransactionCategorize,
     CashFlowSummary
 )
-from runway.infrastructure.auth.middleware.auth import get_current_business_id
+from runway.infrastructure.middleware.auth import get_current_business_id
 
 router = APIRouter()
 

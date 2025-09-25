@@ -3,6 +3,18 @@ from sqlalchemy.orm import Session
 from db.session import get_db
 from domains.integrations import SmartSyncService
 from typing import Dict, Any
+from enum import Enum
+
+class SyncStrategy(Enum):
+    ON_DEMAND = "on_demand"
+    EVENT_TRIGGERED = "event_triggered"
+    SCHEDULED = "scheduled"
+
+class SyncPriority(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
 
 router = APIRouter()
 

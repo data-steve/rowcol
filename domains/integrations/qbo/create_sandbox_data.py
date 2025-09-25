@@ -33,6 +33,7 @@ load_dotenv()
 QBO_CLIENT_ID = os.getenv("QBO_CLIENT_ID")
 QBO_CLIENT_SECRET = os.getenv("QBO_CLIENT_SECRET")
 QBO_ACCESS_TOKEN = os.getenv("QBO_ACCESS_TOKEN")
+QBO_REFRESH_TOKEN = os.getenv("QBO_REFRESH_TOKEN")
 QBO_REALM_ID = os.getenv("QBO_REALM_ID")
 QBO_SANDBOX_URL = "https://sandbox-quickbooks.api.intuit.com/v3/company"
 

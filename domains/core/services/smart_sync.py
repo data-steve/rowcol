@@ -263,12 +263,19 @@ class SmartSyncService(TenantAwareService):
             if not business:
                 raise ValueError(f"Business {self.business_id} not found")
             
-            # QBOIntegration will automatically handle token refresh through qbo_auth
-            qbo_service = QBOIntegration(business)
+            # Use current QBO client pattern
+            from domains.integrations.qbo.client import get_qbo_client
+            qbo_client = get_qbo_client(self.business_id, self.db)
+            
+            # Get QBO data using current client
+            bills = await qbo_client.get_bills()
+            invoices = await qbo_client.get_invoices()
+            balances = await qbo_client.get_company_info()  # Use company info as balance proxy
+            
             return {
-                "bills": qbo_service.get_bills(self.db, due_days=30),
-                "invoices": qbo_service.get_invoices(self.db, aging_days=30),
-                "balances": qbo_service.fetch_balances(self.db),
+                "bills": bills,
+                "invoices": invoices,
+                "balances": balances,
                 "synced_at": datetime.now().isoformat()
             }
         elif platform == "plaid":

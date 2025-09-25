@@ -6,7 +6,7 @@ from domains.integrations import SmartSyncService
 # from runway.experiences.digest.email import EmailService  # TODO: Create email service
 from runway.core.runway_calculator import RunwayCalculator
 from common.exceptions import BusinessNotFoundError, EmailDeliveryError
-from config.business_rules import DigestSettings
+from config import DigestSettings
 from datetime import datetime, timedelta
 from typing import Dict
 import logging

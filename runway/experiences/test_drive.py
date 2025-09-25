@@ -18,11 +18,13 @@ from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
 from domains.integrations.qbo.client import get_qbo_client
+from typing import Dict, Any, Optional
+from runway.core.scenario_data import BusinessScenarioProvider, BusinessScenario
 from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
-from config.business_rules import RunwayAnalysisSettings, DataQualityThresholds, ProofOfValueThresholds
+from config import RunwayAnalysisSettings, DataQualityThresholds, ProofOfValueThresholds
 from common.exceptions import BusinessNotFoundError
-from typing import Dict, Any, List
+from typing import List
 from datetime import datetime, timedelta
 import logging
 
@@ -411,9 +413,6 @@ between tests, demos, and documentation.
 The demo data is designed to showcase Oodaloo's capabilities across different
 business types and industries.
 """
-
-from typing import Dict, Any, Optional
-from runway.core.scenario_data import BusinessScenarioProvider, BusinessScenario
 
 
 class DemoDataService:

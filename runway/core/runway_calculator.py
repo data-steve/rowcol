@@ -19,7 +19,7 @@ Key Calculations:
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
 from domains.integrations import SmartSyncService
-from config.business_rules import RunwayAnalysisSettings, RunwayThresholds
+from config import RunwayAnalysisSettings, RunwayThresholds
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
@@ -313,7 +313,7 @@ class RunwayCalculator(TenantAwareService):
         try:
             due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
             return due_date < datetime.now()
-        except:
+        except (ValueError, TypeError):
             return False
     
     def _apply_scenario_modifications(self, qbo_data: Dict[str, Any], scenario: Dict[str, Any]) -> Dict[str, Any]:

@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Dict, Any, List
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as SQLAlchemySession
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
 from domains.integrations.qbo.client import get_qbo_client
@@ -25,7 +25,7 @@ from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
 from runway.core.reserve_runway import RunwayReserveService
 from runway.schemas.runway_reserve import RunwayReserveCreate, ReserveTypeEnum, ReserveAllocationCreate
-from config.business_rules import RunwayAnalysisSettings
+from config import RunwayAnalysisSettings
 
 # Test configuration
 QBO_SANDBOX_COMPANIES = {

@@ -25,7 +25,7 @@ from db.transaction import db_transaction
 from common.exceptions import (
     BusinessNotFoundError, ValidationError, RunwayCalculationError
 )
-from config.business_rules import RunwayThresholds
+from config import RunwayThresholds
 
 logger = logging.getLogger(__name__)
 

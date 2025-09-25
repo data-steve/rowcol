@@ -14,7 +14,7 @@ To run these tests, you must have your QBO Sandbox credentials in your .env file
 """
 import pytest
 import os
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as SQLAlchemySession
 
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration, IntegrationStatuses

@@ -19,7 +19,7 @@ Key Analysis:
 
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
-from config.business_rules import RunwayAnalysisSettings, DataQualityThresholds
+from config import RunwayAnalysisSettings, DataQualityThresholds
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
@@ -509,7 +509,7 @@ class DataQualityAnalyzer(TenantAwareService):
                     txn_date = datetime.fromisoformat(bill.get("txn_date").replace('Z', '+00:00'))
                     if due_date < txn_date:  # Due date before transaction date is illogical
                         consistency_issues += 1
-                except:
+                except (ValueError, TypeError):
                     consistency_issues += 1
         
         # Calculate consistency percentage
@@ -548,11 +548,11 @@ class DataQualityAnalyzer(TenantAwareService):
         try:
             datetime.fromisoformat(date_str.replace('Z', '+00:00'))
             return True
-        except:
+        except (ValueError, TypeError):
             try:
                 datetime.strptime(date_str[:10], "%Y-%m-%d")
                 return True
-            except:
+            except (ValueError, TypeError):
                 return False
     
     def _is_overdue(self, item: Dict[str, Any]) -> bool:
@@ -577,13 +577,13 @@ class DataQualityAnalyzer(TenantAwareService):
             # Handle different date formats that might come from QBO
             try:
                 due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
-            except:
+            except (ValueError, TypeError):
                 # Fallback for simple date format
                 due_date = datetime.strptime(due_date_str[:10], "%Y-%m-%d")
             
             # Check if bill is overdue by the week_end date and has a balance
             return due_date < week_end and float(bill.get("amount", 0)) > 0
-        except:
+        except (ValueError, TypeError):
             return False  # If we can't parse the date, assume not overdue
     
     def is_invoice_overdue_by_date(self, invoice: Dict[str, Any], week_end: datetime) -> bool:
@@ -596,13 +596,13 @@ class DataQualityAnalyzer(TenantAwareService):
             # Handle different date formats that might come from QBO
             try:
                 due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
-            except:
+            except (ValueError, TypeError):
                 # Fallback for simple date format
                 due_date = datetime.strptime(due_date_str[:10], "%Y-%m-%d")
             
             # Check if invoice is overdue by the week_end date and has a balance
             return due_date < week_end and float(invoice.get("amount", 0)) > 0
-        except:
+        except (ValueError, TypeError):
             return False  # If we can't parse the date, assume not overdue
     
     def _assess_health_level(self, hygiene_score: int) -> Dict[str, str]:
