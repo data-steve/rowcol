@@ -134,6 +134,12 @@ These tasks require:
 - Should be tackled when you have bandwidth
 - Can be converted to executable tasks once solved
 
+### **Progress Tracking**
+- **Work in sequence**: Execute tasks in order by their `00?` number
+- **Update status**: Change `[ ]` to `[✅]` when complete
+- **Archive completed**: Move completed files to `archive/` directory
+- **Simple tracking**: Use the status field in each task
+
 ---
 
 ## Current Cleanup Phases:

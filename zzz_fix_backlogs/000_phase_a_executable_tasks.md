@@ -24,11 +24,13 @@
 ## **Instructions**
 
 1. **Create Git Branch**: `git checkout -b cleanup/phase-a-executable`
-2. **Execute Tasks Sequentially**: Work through tasks in order (they have dependencies)
+2. **Execute Tasks Sequentially**: Work through tasks in order by their number (1, 2, 3, etc.)
 3. **For Each Task**: Follow the specific implementation patterns and verification steps
 4. **Test After Each Task**: Run the specified pytest commands to verify changes
-5. **Commit After Each Task**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
-6. **When All Tasks Complete**: `git checkout main && git merge cleanup/phase-a-executable && git branch -d cleanup/phase-a-executable`
+5. **Update Status**: Change `[ ]` to `[✅]` when task is complete
+6. **Commit After Each Task**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
+7. **Archive When Complete**: Move this file to `archive/` when all tasks are done
+8. **When All Tasks Complete**: `git checkout main && git merge cleanup/phase-a-executable && git branch -d cleanup/phase-a-executable`
 
 **⚠️ IMPORTANT: Do NOT run multiple tasks simultaneously - they have dependencies and will collide!**
 
@@ -49,6 +51,9 @@
 ## **Phase 1: Fix SmartSync Architecture (P0 Critical)**
 
 #### **Task 1: Remove QBOBulkScheduledService from User Action Flows**
+- **Status:** `[ ]` Not started
+- **Priority:** P0 Critical
+- **Estimated Time:** 30 minutes
 - **Justification:** User actions (pay bill, delay payment, send collection) should trigger direct QBO API calls wrapped in SmartSyncService, not bulk scheduled operations. QBOBulkScheduledService is for background data syncs only. See [ADR-005: QBO API Strategy](../docs/architecture/ADR-005-qbo-api-strategy.md) for complete architecture.
 - **Specific Files to Fix:**
   - `domains/ar/services/invoice.py` - Remove QBOBulkScheduledService import and usage
@@ -82,6 +87,9 @@
 ---
 
 #### **Task 2: Implement Direct QBO API Calls for User Actions**
+- **Status:** `[ ]` Not started
+- **Priority:** P0 Critical
+- **Estimated Time:** 45 minutes
 - **Justification:** User actions need immediate QBO API responses wrapped in SmartSyncService for fragility handling, not background processing. This enables real-time dashboard updates and immediate user feedback while handling QBO's rate limits, retries, and deduplication. See [ADR-005: QBO API Strategy](../docs/architecture/ADR-005-qbo-api-strategy.md) for complete architecture.
 - **Specific Files to Fix:**
   - `runway/routes/bills.py` - Replace bulk service calls with direct QBO API calls
