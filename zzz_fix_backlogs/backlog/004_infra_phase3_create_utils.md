@@ -4,12 +4,11 @@
 
 **Instructions:**
 1. **Create Git Branch**: `git checkout -b cleanup/utilities`
-2. Choose a task that is `Ready for Spec`.
-3. Run the `@spec "<Task Title>"` command in Cursor.
-4. Once the task is approved, switch to Auto mode and run `@build`.
-5. After the task is complete, update the status here to `Done ✔️`.
-6. **Commit Work**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
-7. **When All Tasks Complete**: `git checkout main && git merge cleanup/utilities && git branch -d cleanup/utilities`
+2. **Execute Tasks Sequentially**: Work through tasks in order (they have dependencies)
+3. **For Each Task**: Follow the specific implementation patterns and verification steps
+4. **Test After Each Task**: Run the specified verification commands
+5. **Commit After Each Task**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
+6. **When All Tasks Complete**: `git checkout main && git merge cleanup/utilities && git branch -d cleanup/utilities`
 
 **Git Workflow:**
 ```bash
@@ -55,7 +54,7 @@ git reset --hard HEAD~1  # Go back one commit
 ## **Phase 1: Analyze Current Utility Code (P0 Critical)**
 
 #### **Task: Audit Current Utility Code**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Need to understand all utility code before consolidating to avoid breaking existing functionality.
 - **Specific Files to Analyze:**
   - `infra/utils/` - Existing utility functions
@@ -82,12 +81,12 @@ git reset --hard HEAD~1  # Go back one commit
   - Clear understanding of current architecture
   - List of all utility types and functions
   - Documentation of validation and serialization logic
-- **Next Action:** Ready for you to run `@spec "Audit Current Utility Code"`
+- **Next Action:** Execute Task 1: Audit Current Utility Code
 
 ---
 
 #### **Task: Create infra/utils/ Directory Structure**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Need proper directory structure for consolidated utility infrastructure.
 - **Directory Structure to Create:**
   - `infra/utils/` - Main directory (already exists)
@@ -105,14 +104,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All directory structure created
   - All files have proper docstrings
   - Package imports work correctly
-- **Next Action:** Ready for you to run `@spec "Create infra/utils/ Directory Structure"`
+- **Next Action:** Execute Task 2: Create infra/utils/ Directory Structure
 
 ---
 
 ## **Phase 2: Consolidate Validation Utilities (P1 High)**
 
 #### **Task: Create Validation Utilities**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize validation logic for consistent validation across the application.
 - **Target File:**
   - `infra/utils/validation.py` - Validation utilities
@@ -132,12 +131,12 @@ git reset --hard HEAD~1  # Go back one commit
   - All validation types implemented
   - Validation functions tested and working
   - Error messages are clear and helpful
-- **Next Action:** Ready for you to run `@spec "Create Validation Utilities"`
+- **Next Action:** Execute Task 3: Create Validation Utilities
 
 ---
 
 #### **Task: Create Serialization Utilities**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize serialization logic for consistent data handling across the application.
 - **Target File:**
   - `infra/utils/serialization.py` - Serialization utilities
@@ -157,14 +156,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All serialization formats implemented
   - Serialization functions tested and working
   - Error handling for invalid data
-- **Next Action:** Ready for you to run `@spec "Create Serialization Utilities"`
+- **Next Action:** Execute Task 4: Create Serialization Utilities
 
 ---
 
 ## **Phase 3: Create Crypto and Retry Utilities (P1 High)**
 
 #### **Task: Create Crypto Utilities**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize crypto functionality for secure data handling.
 - **Target File:**
   - `infra/utils/crypto.py` - Crypto utilities
@@ -184,12 +183,12 @@ git reset --hard HEAD~1  # Go back one commit
   - All crypto functions implemented
   - Crypto functions tested and working
   - Security best practices followed
-- **Next Action:** Ready for you to run `@spec "Create Crypto Utilities"`
+- **Next Action:** Execute Task 5: Create Crypto Utilities
 
 ---
 
 #### **Task: Consolidate Retry and Backoff Utilities**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize retry logic that's currently scattered across the codebase.
 - **Target File:**
   - `infra/utils/retry.py` - Retry and backoff utilities
@@ -209,14 +208,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All retry strategies implemented
   - Retry functions tested and working
   - Circuit breaker pattern working
-- **Next Action:** Ready for you to run `@spec "Consolidate Retry and Backoff Utilities"`
+- **Next Action:** Execute Task 6: Consolidate Retry and Backoff Utilities
 
 ---
 
 ## **Phase 4: Update Error Handling (P1 High)**
 
 #### **Task: Enhance Error Handling Utilities**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Enhance existing error handling utilities with additional functionality.
 - **Target File:**
   - `infra/utils/error_handling.py` - Enhanced error handling utilities
@@ -236,14 +235,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All error handling features implemented
   - Error handling functions tested and working
   - Error monitoring integration working
-- **Next Action:** Ready for you to run `@spec "Enhance Error Handling Utilities"`
+- **Next Action:** Execute Task 7: Enhance Error Handling Utilities
 
 ---
 
 ## **Phase 5: Integrate and Test (P2 Medium)**
 
 #### **Task: Update All Utility Imports**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Update all imports throughout codebase to use new infra/utils/ structure.
 - **Search Commands to Run:**
   - `grep -r "from infra\.utils\|import.*infra\.utils" . --include="*.py"`
@@ -256,12 +255,12 @@ git reset --hard HEAD~1  # Go back one commit
   - All imports updated to use infra/utils/
   - Application starts without errors
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Update All Utility Imports"`
+- **Next Action:** Execute Task 8: Update All Utility Imports
 
 ---
 
 #### **Task: Test Utilities End-to-End**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Verify that all utility functionality works correctly after consolidation.
 - **Test Scenarios:**
   - Validation utilities with various data types
@@ -280,7 +279,7 @@ git reset --hard HEAD~1  # Go back one commit
   - All utility functions tested
   - Error handling working correctly
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Test Utilities End-to-End"`
+- **Next Action:** Execute Task 9: Test Utilities End-to-End
 
 ---
 
@@ -289,7 +288,7 @@ git reset --hard HEAD~1  # Go back one commit
 - **P0 Critical:** 1 task
 - **P1 High:** 5 tasks
 - **P2 Medium:** 2 tasks
-- **Ready for Spec:** 8 tasks
+- **Total Tasks:** 9 tasks
 
 **Quick Reference Commands:**
 ```bash

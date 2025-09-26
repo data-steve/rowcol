@@ -4,12 +4,11 @@
 
 **Instructions:**
 1. **Create Git Branch**: `git checkout -b cleanup/monitoring`
-2. Choose a task that is `Ready for Spec`.
-3. Run the `@spec "<Task Title>"` command in Cursor.
-4. Once the task is approved, switch to Auto mode and run `@build`.
-5. After the task is complete, update the status here to `Done ✔️`.
-6. **Commit Work**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
-7. **When All Tasks Complete**: `git checkout main && git merge cleanup/monitoring && git branch -d cleanup/monitoring`
+2. **Execute Tasks Sequentially**: Work through tasks in order (they have dependencies)
+3. **For Each Task**: Follow the specific implementation patterns and verification steps
+4. **Test After Each Task**: Run the specified verification commands
+5. **Commit After Each Task**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
+6. **When All Tasks Complete**: `git checkout main && git merge cleanup/monitoring && git branch -d cleanup/monitoring`
 
 **Git Workflow:**
 ```bash
@@ -55,7 +54,7 @@ git reset --hard HEAD~1  # Go back one commit
 ## **Phase 1: Analyze Current Monitoring Code (P0 Critical)**
 
 #### **Task: Audit Current Monitoring Code**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Need to understand all monitoring code before consolidating to avoid breaking existing functionality.
 - **Specific Files to Analyze:**
   - `domains/qbo/health.py` - QBO health monitoring
@@ -81,12 +80,12 @@ git reset --hard HEAD~1  # Go back one commit
   - Clear understanding of current architecture
   - List of all health checks and metrics
   - Documentation of logging configuration
-- **Next Action:** Ready for you to run `@spec "Audit Current Monitoring Code"`
+- **Next Action:** Execute Task 1: Audit Current Monitoring Code
 
 ---
 
 #### **Task: Create infra/monitoring/ Directory Structure**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Need proper directory structure for consolidated monitoring infrastructure.
 - **Directory Structure to Create:**
   - `infra/monitoring/` - Main directory
@@ -104,14 +103,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All directory structure created
   - All files have proper docstrings
   - Package imports work correctly
-- **Next Action:** Ready for you to run `@spec "Create infra/monitoring/ Directory Structure"`
+- **Next Action:** Execute Task 2: Create infra/monitoring/ Directory Structure
 
 ---
 
 ## **Phase 2: Consolidate Health Checks (P1 High)**
 
 #### **Task: Move QBO Health Monitoring to infra/monitoring/**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize QBO health monitoring in infrastructure layer.
 - **Specific Files to Move:**
   - `domains/qbo/health.py` → `infra/monitoring/health_checks.py`
@@ -133,12 +132,12 @@ git reset --hard HEAD~1  # Go back one commit
   - All imports updated throughout codebase
   - Application starts without errors
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Move QBO Health Monitoring to infra/monitoring/"`
+- **Next Action:** Execute Task 3: Move QBO Health Monitoring to infra/monitoring/
 
 ---
 
 #### **Task: Create Generic Health Check System**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Create a generic health check system that can be used across all services.
 - **Target File:**
   - `infra/monitoring/health_checks.py` - Generic health check system
@@ -158,14 +157,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All health check types implemented
   - Health check endpoints working
   - Health check aggregation working
-- **Next Action:** Ready for you to run `@spec "Create Generic Health Check System"`
+- **Next Action:** Execute Task 4: Create Generic Health Check System
 
 ---
 
 ## **Phase 3: Create Metrics and Logging (P1 High)**
 
 #### **Task: Create Metrics Collection System**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize metrics collection for application monitoring.
 - **Target File:**
   - `infra/monitoring/metrics.py` - Metrics collection system
@@ -185,12 +184,12 @@ git reset --hard HEAD~1  # Go back one commit
   - All metric types implemented
   - Metrics collection working
   - Provider abstraction working
-- **Next Action:** Ready for you to run `@spec "Create Metrics Collection System"`
+- **Next Action:** Execute Task 5: Create Metrics Collection System
 
 ---
 
 #### **Task: Create Logging Configuration**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize logging configuration for consistent logging across the application.
 - **Target File:**
   - `infra/monitoring/logging.py` - Logging configuration
@@ -210,14 +209,14 @@ git reset --hard HEAD~1  # Go back one commit
   - Structured logging implemented
   - Log aggregation working
   - All log levels working correctly
-- **Next Action:** Ready for you to run `@spec "Create Logging Configuration"`
+- **Next Action:** Execute Task 6: Create Logging Configuration
 
 ---
 
 ## **Phase 4: Create Observability Tools (P1 High)**
 
 #### **Task: Create Observability Dashboard**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Create observability tools for monitoring application health and performance.
 - **Target File:**
   - `infra/monitoring/observability.py` - Observability tools
@@ -237,14 +236,14 @@ git reset --hard HEAD~1  # Go back one commit
   - Performance monitoring working
   - Error tracking working
   - Dashboard accessible
-- **Next Action:** Ready for you to run `@spec "Create Observability Dashboard"`
+- **Next Action:** Execute Task 7: Create Observability Dashboard
 
 ---
 
 ## **Phase 5: Integrate and Test (P2 Medium)**
 
 #### **Task: Update All Monitoring Imports**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Update all imports throughout codebase to use new infra/monitoring/ structure.
 - **Search Commands to Run:**
   - `grep -r "domains.qbo.health" . --include="*.py"`
@@ -260,12 +259,12 @@ git reset --hard HEAD~1  # Go back one commit
   - No references to old monitoring location
   - Application starts without errors
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Update All Monitoring Imports"`
+- **Next Action:** Execute Task 8: Update All Monitoring Imports
 
 ---
 
 #### **Task: Test Monitoring End-to-End**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Verify that all monitoring functionality works correctly after consolidation.
 - **Test Scenarios:**
   - Health check endpoints
@@ -286,7 +285,7 @@ git reset --hard HEAD~1  # Go back one commit
   - Metrics collection working
   - Logging working correctly
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Test Monitoring End-to-End"`
+- **Next Action:** Execute Task 9: Test Monitoring End-to-End
 
 ---
 
@@ -295,7 +294,7 @@ git reset --hard HEAD~1  # Go back one commit
 - **P0 Critical:** 1 task
 - **P1 High:** 5 tasks
 - **P2 Medium:** 2 tasks
-- **Ready for Spec:** 8 tasks
+- **Total Tasks:** 9 tasks
 
 **Quick Reference Commands:**
 ```bash

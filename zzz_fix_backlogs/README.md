@@ -134,6 +134,31 @@ These tasks require:
 - Should be tackled when you have bandwidth
 - Can be converted to executable tasks once solved
 
+#### **How to Drive Solution Tasks to Executable**
+
+**Step 1: Analysis Phase**
+- Read the task completely to understand what needs to be figured out
+- Use the "Code Pointers" to explore the relevant files
+- Run the "Required Analysis" steps to understand the current state
+- Document findings and identify specific issues
+
+**Step 2: Solution Design**
+- Based on analysis, design a solution approach
+- Create specific implementation patterns (like executable tasks)
+- Define exact files to change and what changes to make
+- Create verification steps with specific commands
+
+**Step 3: Convert to Executable**
+- Move the solved task from `1_NEEDS_SOLVING_TASKS.md` to `0_EXECUTABLE_TASKS.md`
+- Update the task with specific implementation patterns
+- Add code examples and verification commands
+- Remove "figure out" language, add specific steps
+
+**Step 4: Update Dependencies**
+- Check if any blocked tasks are now unblocked
+- Move unblocked tasks to executable or needs solving as appropriate
+- Update task dependencies and references
+
 ### **Progress Tracking**
 - **Work in sequence**: Execute tasks in order by their `00?` number
 - **Update status**: Change `[ ]` to `[✅]` when complete
@@ -143,12 +168,21 @@ These tasks require:
 ---
 
 ## Current Cleanup Phases:
-- `000_phase_a_executable_tasks.md` - ✅ **READY FOR HANDS-FREE EXECUTION** (8 tasks)
-- `001_phase_b_solution_tasks.md` - ⚠️ **NEEDS SOLUTION WORK** (5 tasks)
-- `001_infra_phase3_consolidate_file_processing.md` - Consolidate file processing
-- `002_infra_phase3_create_notifications.md` - Create notifications infrastructure
-- `003_infra_phase3_create_monitoring.md` - Create monitoring infrastructure
-- `004_infra_phase3_create_utils.md` - Create utilities infrastructure
+
+### **Fix Tasks (Current Priority)**
+- `0_EXECUTABLE_TASKS.md` - ✅ **READY FOR HANDS-FREE EXECUTION** (8 SmartSync fix tasks)
+- `1_NEEDS_SOLVING_TASKS.md` - ⚠️ **NEEDS SOLUTION WORK** (5 SmartSync analysis tasks)
+- `2_BLOCKED_TASKS.md` - ✅ **NO BLOCKED TASKS** (all dependencies resolved)
+
+### **Build Tasks (Future Work)**
+- `backlog/001_infra_phase3_consolidate_file_processing.md` - Consolidate file processing
+- `backlog/002_infra_phase3_create_notifications.md` - Create notifications infrastructure
+- `backlog/003_infra_phase3_create_monitoring.md` - Create monitoring infrastructure
+- `backlog/004_infra_phase3_create_utils.md` - Create utilities infrastructure
+
+### **Templates and Documentation**
+- `TASK_BUILDING_TEMPLATE.md` - Template for curating tasks by complexity
+- `README.md` - This file (how to use this folder)
 
 ## Git Workflow:
 ```bash

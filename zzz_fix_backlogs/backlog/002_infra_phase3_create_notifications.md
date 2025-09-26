@@ -4,12 +4,11 @@
 
 **Instructions:**
 1. **Create Git Branch**: `git checkout -b cleanup/notifications`
-2. Choose a task that is `Ready for Spec`.
-3. Run the `@spec "<Task Title>"` command in Cursor.
-4. Once the task is approved, switch to Auto mode and run `@build`.
-5. After the task is complete, update the status here to `Done ✔️`.
-6. **Commit Work**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
-7. **When All Tasks Complete**: `git checkout main && git merge cleanup/notifications && git branch -d cleanup/notifications`
+2. **Execute Tasks Sequentially**: Work through tasks in order (they have dependencies)
+3. **For Each Task**: Follow the specific implementation patterns and verification steps
+4. **Test After Each Task**: Run the specified verification commands
+5. **Commit After Each Task**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
+6. **When All Tasks Complete**: `git checkout main && git merge cleanup/notifications && git branch -d cleanup/notifications`
 
 **Git Workflow:**
 ```bash
@@ -55,7 +54,7 @@ git reset --hard HEAD~1  # Go back one commit
 ## **Phase 1: Analyze Current Notification Code (P0 Critical)**
 
 #### **Task: Audit Current Notification Code**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Need to understand all notification code before consolidating to avoid breaking existing functionality.
 - **Specific Files to Analyze:**
   - `runway/experiences/digest.py` - Commented email service code
@@ -81,12 +80,12 @@ git reset --hard HEAD~1  # Go back one commit
   - Clear understanding of current architecture
   - List of all notification types and providers
   - Documentation of template logic
-- **Next Action:** Ready for you to run `@spec "Audit Current Notification Code"`
+- **Next Action:** Execute Task 1: Audit Current Notification Code
 
 ---
 
 #### **Task: Create infra/notifications/ Directory Structure**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Need proper directory structure for consolidated notification infrastructure.
 - **Directory Structure to Create:**
   - `infra/notifications/` - Main directory
@@ -104,14 +103,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All directory structure created
   - All files have proper docstrings
   - Package imports work correctly
-- **Next Action:** Ready for you to run `@spec "Create infra/notifications/ Directory Structure"`
+- **Next Action:** Execute Task 2: Create infra/notifications/ Directory Structure
 
 ---
 
 ## **Phase 2: Consolidate Notification Services (P1 High)**
 
 #### **Task: Create Email Notification Service**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize email notification functionality with proper templating and delivery.
 - **Target File:**
   - `infra/notifications/email_service.py` - Email notification service
@@ -131,12 +130,12 @@ git reset --hard HEAD~1  # Go back one commit
   - Template management implemented
   - Provider abstraction working
   - Email sending tested and working
-- **Next Action:** Ready for you to run `@spec "Create Email Notification Service"`
+- **Next Action:** Execute Task 3: Create Email Notification Service
 
 ---
 
 #### **Task: Create SMS Notification Service**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize SMS notification functionality with proper provider support.
 - **Target File:**
   - `infra/notifications/sms_service.py` - SMS notification service
@@ -154,12 +153,12 @@ git reset --hard HEAD~1  # Go back one commit
   - SMS service created with all required features
   - Provider abstraction working
   - SMS sending tested and working
-- **Next Action:** Ready for you to run `@spec "Create SMS Notification Service"`
+- **Next Action:** Execute Task 4: Create SMS Notification Service
 
 ---
 
 #### **Task: Create Webhook Notification Service**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize webhook notification functionality for external integrations.
 - **Target File:**
   - `infra/notifications/webhook_service.py` - Webhook notification service
@@ -177,14 +176,14 @@ git reset --hard HEAD~1  # Go back one commit
   - Webhook service created with all required features
   - Security features implemented
   - Webhook sending tested and working
-- **Next Action:** Ready for you to run `@spec "Create Webhook Notification Service"`
+- **Next Action:** Execute Task 5: Create Webhook Notification Service
 
 ---
 
 ## **Phase 3: Create Notification Templates (P1 High)**
 
 #### **Task: Create Notification Template System**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize notification templates for consistent messaging across all notification types.
 - **Target Directory:**
   - `infra/notifications/templates/` - Notification templates
@@ -203,14 +202,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All required templates implemented
   - Template rendering tested and working
   - Variable substitution working correctly
-- **Next Action:** Ready for you to run `@spec "Create Notification Template System"`
+- **Next Action:** Execute Task 6: Create Notification Template System
 
 ---
 
 ## **Phase 4: Integrate with Existing Code (P2 Medium)**
 
 #### **Task: Integrate Notifications with Digest Experience**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Replace commented email service in digest.py with new notification infrastructure.
 - **Specific Files to Update:**
   - `runway/experiences/digest.py` - Replace commented email service
@@ -229,12 +228,12 @@ git reset --hard HEAD~1  # Go back one commit
   - New notification service integrated
   - Digest emails working correctly
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Integrate Notifications with Digest Experience"`
+- **Next Action:** Execute Task 7: Integrate Notifications with Digest Experience
 
 ---
 
 #### **Task: Update All Notification Imports**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Update all imports throughout codebase to use new infra/notifications/ structure.
 - **Search Commands to Run:**
   - `grep -r "email\|sms\|webhook\|notification" . --include="*.py"`
@@ -247,12 +246,12 @@ git reset --hard HEAD~1  # Go back one commit
   - All imports updated to use infra/notifications/
   - Application starts without errors
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Update All Notification Imports"`
+- **Next Action:** Execute Task 8: Update All Notification Imports
 
 ---
 
 #### **Task: Test Notifications End-to-End**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Verify that all notification functionality works correctly after consolidation.
 - **Test Scenarios:**
   - Email notifications (digest, alerts, etc.)
@@ -271,7 +270,7 @@ git reset --hard HEAD~1  # Go back one commit
   - Template rendering works for all templates
   - All providers work correctly
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Test Notifications End-to-End"`
+- **Next Action:** Execute Task 9: Test Notifications End-to-End
 
 ---
 
@@ -280,7 +279,7 @@ git reset --hard HEAD~1  # Go back one commit
 - **P0 Critical:** 1 task
 - **P1 High:** 5 tasks
 - **P2 Medium:** 2 tasks
-- **Ready for Spec:** 8 tasks
+- **Total Tasks:** 9 tasks
 
 **Quick Reference Commands:**
 ```bash

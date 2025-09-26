@@ -4,12 +4,11 @@
 
 **Instructions:**
 1. **Create Git Branch**: `git checkout -b cleanup/file-processing`
-2. Choose a task that is `Ready for Spec`.
-3. Run the `@spec "<Task Title>"` command in Cursor.
-4. Once the task is approved, switch to Auto mode and run `@build`.
-5. After the task is complete, update the status here to `Done ✔️`.
-6. **Commit Work**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
-7. **When All Tasks Complete**: `git checkout main && git merge cleanup/file-processing && git branch -d cleanup/file-processing`
+2. **Execute Tasks Sequentially**: Work through tasks in order (they have dependencies)
+3. **For Each Task**: Follow the specific implementation patterns and verification steps
+4. **Test After Each Task**: Run the specified verification commands
+5. **Commit After Each Task**: `git add . && git commit -m "Task: [task-name] - [brief summary]"`
+6. **When All Tasks Complete**: `git checkout main && git merge cleanup/file-processing && git branch -d cleanup/file-processing`
 
 **Git Workflow:**
 ```bash
@@ -55,7 +54,7 @@ git reset --hard HEAD~1  # Go back one commit
 ## **Phase 1: Analyze Current File Processing (P0 Critical)**
 
 #### **Task: Audit Current File Processing Code**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Need to understand all file processing code before consolidating to avoid breaking existing functionality.
 - **Specific Files to Analyze:**
   - `domains/core/services/document_storage.py` - Main document storage service
@@ -82,12 +81,12 @@ git reset --hard HEAD~1  # Go back one commit
   - Clear understanding of current architecture
   - List of all file types and storage backends
   - Documentation of validation logic
-- **Next Action:** Ready for you to run `@spec "Audit Current File Processing Code"`
+- **Next Action:** Execute Task 1: Audit Current File Processing Code
 
 ---
 
 #### **Task: Create infra/files/ Directory Structure**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Need proper directory structure for consolidated file processing infrastructure.
 - **Directory Structure to Create:**
   - `infra/files/` - Main directory
@@ -104,14 +103,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All directory structure created
   - All files have proper docstrings
   - Package imports work correctly
-- **Next Action:** Ready for you to run `@spec "Create infra/files/ Directory Structure"`
+- **Next Action:** Execute Task 2: Create infra/files/ Directory Structure
 
 ---
 
 ## **Phase 2: Consolidate File Processing (P1 High)**
 
 #### **Task: Move Document Storage to infra/files/**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize document storage functionality in infrastructure layer.
 - **Specific Files to Move:**
   - `domains/core/services/document_storage.py` → `infra/files/document_processing.py`
@@ -133,12 +132,12 @@ git reset --hard HEAD~1  # Go back one commit
   - All imports updated throughout codebase
   - Application starts without errors
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Move Document Storage to infra/files/"`
+- **Next Action:** Execute Task 3: Move Document Storage to infra/files/
 
 ---
 
 #### **Task: Consolidate File Upload Handlers**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize file upload handling logic that's currently scattered across route files.
 - **Specific Files to Consolidate:**
   - `runway/routes/bills.py` - Extract file upload logic
@@ -161,12 +160,12 @@ git reset --hard HEAD~1  # Go back one commit
   - Route files use consolidated handlers
   - File upload functionality works correctly
   - Error handling is consistent across all routes
-- **Next Action:** Ready for you to run `@spec "Consolidate File Upload Handlers"`
+- **Next Action:** Execute Task 4: Consolidate File Upload Handlers
 
 ---
 
 #### **Task: Create File Validation Utilities**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Centralize file validation logic for consistent validation across all file types.
 - **Target File:**
   - `infra/files/file_validation.py` - File validation utilities
@@ -185,14 +184,14 @@ git reset --hard HEAD~1  # Go back one commit
   - All file types properly validated
   - Validation integrated with upload handlers
   - Security validation implemented
-- **Next Action:** Ready for you to run `@spec "Create File Validation Utilities"`
+- **Next Action:** Execute Task 5: Create File Validation Utilities
 
 ---
 
 ## **Phase 3: Create Storage Providers (P1 High)**
 
 #### **Task: Create Storage Provider Abstraction**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Abstract storage backends to support multiple storage providers (local, S3, etc.).
 - **Target File:**
   - `infra/files/storage_providers.py` - Storage provider abstraction
@@ -210,14 +209,14 @@ git reset --hard HEAD~1  # Go back one commit
   - Local and S3 providers implemented
   - Abstract base class for extensibility
   - All providers tested and working
-- **Next Action:** Ready for you to run `@spec "Create Storage Provider Abstraction"`
+- **Next Action:** Execute Task 6: Create Storage Provider Abstraction
 
 ---
 
 ## **Phase 4: Update All Imports and Test (P2 Medium)**
 
 #### **Task: Update All File Processing Imports**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Update all imports throughout codebase to use new infra/files/ structure.
 - **Search Commands to Run:**
   - `grep -r "domains.core.services.document_storage" . --include="*.py"`
@@ -233,12 +232,12 @@ git reset --hard HEAD~1  # Go back one commit
   - No references to old document storage location
   - Application starts without errors
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Update All File Processing Imports"`
+- **Next Action:** Execute Task 7: Update All File Processing Imports
 
 ---
 
 #### **Task: Test File Processing End-to-End**
-- **Status:** `Ready for Spec`
+- **Status:** `[ ]` Not started
 - **Justification:** Verify that all file processing functionality works correctly after consolidation.
 - **Test Scenarios:**
   - File upload for bills
@@ -257,7 +256,7 @@ git reset --hard HEAD~1  # Go back one commit
   - File validation works for all supported types
   - Storage providers work correctly
   - All tests pass
-- **Next Action:** Ready for you to run `@spec "Test File Processing End-to-End"`
+- **Next Action:** Execute Task 8: Test File Processing End-to-End
 
 ---
 
@@ -266,7 +265,7 @@ git reset --hard HEAD~1  # Go back one commit
 - **P0 Critical:** 1 task
 - **P1 High:** 5 tasks
 - **P2 Medium:** 1 task
-- **Ready for Spec:** 7 tasks
+- **Total Tasks:** 8 tasks
 
 **Quick Reference Commands:**
 ```bash
