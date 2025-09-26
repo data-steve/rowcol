@@ -47,10 +47,6 @@ class BalanceService(TenantAwareService):
             logger.error(f"Failed to get current balances: {e}")
             return []
 
-    def get_balances_for_digest(self) -> List[Dict[str, Any]]:
-        """Get balances formatted for digest generation."""
-        return self.get_current_balances()
-    
     def get_total_available_balance(self) -> float:
         """Get total available balance across all accounts."""
         try:

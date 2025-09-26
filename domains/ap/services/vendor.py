@@ -78,10 +78,6 @@ class VendorService(TenantAwareService):
             logger.error(f"Error listing vendors for business {self.business_id}: {e}")
             return []
     
-    def get_vendors_for_digest(self) -> List[Dict[str, Any]]:
-        """Get vendors formatted for digest generation."""
-        return self.get_active_vendors()
-    
     # ==================== VENDOR BUSINESS LOGIC ====================
     
     def get_vendor_payment_methods(self, vendor: Vendor) -> List[str]:

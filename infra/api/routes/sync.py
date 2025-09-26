@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from infra.database.session import get_db
-from domains.qbo.data_service import QBODataService
-from infra.jobs import SyncStrategy, SyncPriority
+from infra.jobs import SmartSyncService
+from domains.qbo.client import QBOClient
+from infra.jobs.enums import SyncStrategy, SyncPriority
 from typing import Dict, Any
 
 router = APIRouter()
@@ -16,9 +17,25 @@ async def sync_on_demand(
     """User explicitly requests a sync."""
     try:
         if platform == "qbo":
-            service = QBODataService(db, business_id)
-            result = service.get_raw_qbo_data()  # Use raw data method
-            return {"status": "success", "platform": platform, "data": result}
+            smart_sync = SmartSyncService(business_id)
+            qbo_client = QBOClient(business_id)
+            
+            # Check if sync is needed
+            if not smart_sync.should_sync("qbo", SyncStrategy.USER_ACTION):
+                cached_data = smart_sync.get_cache("qbo")
+                if cached_data:
+                    return {"status": "success", "platform": platform, "data": cached_data, "cached": True}
+            
+            # Execute sync with retry logic
+            result = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            
+            # Cache results
+            smart_sync.set_cache("qbo", result, ttl_minutes=240)
+            smart_sync.record_user_activity("on_demand_sync")
+            
+            return {"status": "success", "platform": platform, "data": result, "cached": False}
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
         
@@ -35,9 +52,25 @@ async def sync_event_triggered(
     """Sync triggered by user action (opening dashboard, etc.)."""
     try:
         if platform == "qbo":
-            service = QBODataService(db, business_id)
-            result = service.get_raw_qbo_data()  # Use raw data method
-            return {"status": "success", "platform": platform, "event_type": event_type, "data": result}
+            smart_sync = SmartSyncService(business_id)
+            qbo_client = QBOClient(business_id)
+            
+            # Check if sync is needed
+            if not smart_sync.should_sync("qbo", SyncStrategy.EVENT_TRIGGERED):
+                cached_data = smart_sync.get_cache("qbo")
+                if cached_data:
+                    return {"status": "success", "platform": platform, "event_type": event_type, "data": cached_data, "cached": True}
+            
+            # Execute sync with retry logic
+            result = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            
+            # Cache results
+            smart_sync.set_cache("qbo", result, ttl_minutes=240)
+            smart_sync.record_user_activity(f"event_triggered_sync_{event_type}")
+            
+            return {"status": "success", "platform": platform, "event_type": event_type, "data": result, "cached": False}
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
         
@@ -53,9 +86,15 @@ async def get_sync_status(
     """Get current sync status for a platform."""
     try:
         if platform == "qbo":
-            service = QBODataService(db, business_id)
+            smart_sync = SmartSyncService(business_id)
             # Return basic status info
-            return {"platform": platform, "status": "available", "service": "QBODataService"}
+            return {
+                "platform": platform, 
+                "status": "available", 
+                "service": "SmartSyncService",
+                "can_sync": smart_sync.should_sync("qbo", SyncStrategy.SCHEDULED),
+                "cache_status": "available" if smart_sync.get_cache("qbo") else "empty"
+            }
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
         
@@ -74,8 +113,14 @@ async def get_all_sync_status(
         status = {}
         for platform in platforms:
             if platform == "qbo":
-                service = QBODataService(db, business_id)
-                status[platform] = {"platform": platform, "status": "available", "service": "QBODataService"}
+                smart_sync = SmartSyncService(business_id)
+                status[platform] = {
+                    "platform": platform, 
+                    "status": "available", 
+                    "service": "SmartSyncService",
+                    "can_sync": smart_sync.should_sync("qbo", SyncStrategy.SCHEDULED),
+                    "cache_status": "available" if smart_sync.get_cache("qbo") else "empty"
+                }
         
         return {
             "overall_status": "healthy",
@@ -94,12 +139,13 @@ async def test_sync(
     """Test sync without actually performing it."""
     try:
         if platform == "qbo":
-            service = QBODataService(db, business_id)
+            smart_sync = SmartSyncService(business_id)
             return {
                 "platform": platform,
-                "would_sync": True,
+                "would_sync": smart_sync.should_sync("qbo", SyncStrategy.SCHEDULED),
                 "status": "available",
-                "service": "QBODataService",
+                "service": "SmartSyncService",
+                "cache_status": "available" if smart_sync.get_cache("qbo") else "empty",
                 "message": "This endpoint tests sync logic without actually syncing"
             }
         else:

@@ -155,10 +155,6 @@ class BillService(TenantAwareService):
             logger.error(f"Failed to get bills due in {days} days: {e}")
             return []
     
-    def get_bills_for_digest(self) -> List[Dict[str, Any]]:
-        """Get bills formatted for digest generation."""
-        return self.get_bills_due_in_days(30)
-    
     def get_overdue_bills(self) -> List[Dict[str, Any]]:
         """Get overdue bills for collections."""
         try:

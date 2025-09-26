@@ -59,10 +59,6 @@ class CustomerService(TenantAwareService):
             logger.error(f"Failed to get active customers: {e}")
             return []
     
-    def get_customers_for_digest(self) -> List[Dict[str, Any]]:
-        """Get customers formatted for digest generation."""
-        return self.get_active_customers()
-    
     def calculate_collection_priority_score(self, customer: Customer) -> float:
         """
         Calculate collection priority score based on multiple factors.

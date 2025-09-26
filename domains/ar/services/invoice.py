@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice
 from domains.policy.services.policy_engine import PolicyEngineService
-from domains.qbo.service import QBOBulkScheduledService
 from infra.jobs import SmartSyncService
 from datetime import datetime, timedelta
 from domains.core.services.base_service import TenantAwareService
@@ -14,7 +13,6 @@ logger = logging.getLogger(__name__)
 class InvoiceService(TenantAwareService):
     def __init__(self, db: Session, business_id: str):
         super().__init__(db, business_id)
-        self.qbo_service = QBOBulkScheduledService(db, business_id)
         self.smart_sync = SmartSyncService(business_id)
         self.policy_engine = PolicyEngineService(db)
     
@@ -53,10 +51,6 @@ class InvoiceService(TenantAwareService):
         except Exception as e:
             logger.error(f"Failed to get overdue invoices: {e}")
             return []
-    
-    def get_invoices_for_digest(self) -> List[Dict[str, Any]]:
-        """Get all overdue invoices for digest generation."""
-        return self.get_overdue_invoices(0)
     
     def get_aging_buckets(self) -> Dict[str, List[Dict[str, Any]]]:
         """Get invoices organized by aging buckets."""
@@ -138,15 +132,24 @@ class InvoiceService(TenantAwareService):
             self.db.rollback()
             raise ValueError(f"Invoice creation failed: {str(e)}")
 
-    def sync_invoices(self, business_id: int) -> List[Invoice]:
+    async def sync_invoices(self, business_id: int) -> List[Invoice]:
         """Sync invoices from QBO via SmartSyncService."""
         try:
-            if not self.qbo_service:
-                # Fallback for when business_id wasn't provided in constructor
-                self.qbo_service = QBOBulkScheduledService(self.db, str(business_id))
+            # Use SmartSyncService for sync orchestration
+            from domains.qbo.client import QBOClient
             
-            # Use QBOBulkScheduledService to get QBO invoices data
-            qbo_data = await self.qbo_service.get_qbo_data_for_digest()
+            # Check if sync is needed
+            if not self.smart_sync.should_sync("qbo", "SCHEDULED"):
+                cached_data = self.smart_sync.get_cache("qbo")
+                if cached_data:
+                    return cached_data
+            
+            # Execute sync with retry logic
+            qbo_client = QBOClient(str(business_id))
+            qbo_data = await self.smart_sync.execute_with_retry(
+                qbo_client.get_invoices, max_attempts=3
+            )
+            
             qbo_invoices = qbo_data.get("invoices", [])
             
             invoices = []
@@ -173,7 +176,8 @@ class InvoiceService(TenantAwareService):
             
             self.db.commit()
             
-            # Record sync activity
+            # Cache results and record activity
+            self.smart_sync.set_cache("qbo", invoices, ttl_minutes=240)
             self.smart_sync.record_user_activity("invoice_sync")
             
             return invoices

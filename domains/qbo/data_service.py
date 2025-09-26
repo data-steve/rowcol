@@ -10,7 +10,7 @@ centralized, scalable data access layer.
 
 from sqlalchemy.orm import Session
 from domains.qbo.client import get_qbo_client
-from infra.jobs import SyncStrategy, SyncPriority, SyncTimingManager, SyncCache
+from infra.jobs import SmartSyncService
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
@@ -29,46 +29,63 @@ class QBODataService:
     def __init__(self, db: Session, business_id: str):
         self.db = db
         self.business_id = business_id
-        self.timing_manager = SyncTimingManager(business_id)
-        self.cache = SyncCache()
+        self.smart_sync = SmartSyncService(business_id)
         
     
-    def get_bulk_raw_data(self, business_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    def get_digest_data(self) -> Dict[str, Any]:
         """
-        Get raw QBO data for multiple businesses efficiently for bulk processing.
+        Get QBO data formatted specifically for digest experience.
         
-        This method is optimized for bulk operations that need to process all businesses
-        within QBO rate limits.
-        
-        Args:
-            business_ids: List of business IDs to process
-            
         Returns:
-            Dict mapping business_id to their raw QBO data
+            Dict containing digest-specific QBO data
         """
-        results = {}
+        # Get raw QBO data using SmartSyncService
+        qbo_data = self.smart_sync.get_qbo_data_for_digest()
         
-        # Process in batches to respect QBO rate limits
-        batch_size = 10  # Process 10 businesses at a time
-        for i in range(0, len(business_ids), batch_size):
-            batch = business_ids[i:i + batch_size]
-            
-            for business_id in batch:
-                try:
-                    # Create a new service instance for each business
-                    business_service = QBODataService(self.db, business_id)
-                    results[business_id] = business_service.get_raw_qbo_data()
-                    
-                    # Add small delay between businesses to respect rate limits
-                    await asyncio.sleep(0.1)
-                    
-                except Exception as e:
-                    logger.error(f"Failed to get raw data for business {business_id}: {e}")
-                    results[business_id] = {"error": str(e), "bills": [], "invoices": [], "balances": [], "customers": [], "vendors": []}
-            
-            # Add delay between batches
-            if i + batch_size < len(business_ids):
-                await asyncio.sleep(1.0)
+        # Format for digest experience
+        return {
+            "bills": qbo_data.get("bills", []),
+            "invoices": qbo_data.get("invoices", []),
+            "balances": qbo_data.get("balances", []),
+            "customers": qbo_data.get("customers", []),
+            "vendors": qbo_data.get("vendors", []),
+            "synced_at": qbo_data.get("synced_at", datetime.utcnow().isoformat())
+        }
+    
+    def get_tray_data(self) -> Dict[str, Any]:
+        """
+        Get QBO data formatted specifically for tray experience.
         
-        return results
+        Returns:
+            Dict containing tray-specific QBO data
+        """
+        # Get raw QBO data using SmartSyncService
+        qbo_data = self.smart_sync.get_qbo_data_for_digest()
+        
+        # Format for tray experience
+        return {
+            "bills": qbo_data.get("bills", []),
+            "invoices": qbo_data.get("invoices", []),
+            "synced_at": qbo_data.get("synced_at", datetime.utcnow().isoformat())
+        }
+    
+    def get_test_drive_data(self) -> Dict[str, Any]:
+        """
+        Get QBO data formatted specifically for test_drive experience.
+        
+        Returns:
+            Dict containing test_drive-specific QBO data
+        """
+        # Get raw QBO data using SmartSyncService
+        qbo_data = self.smart_sync.get_qbo_data_for_digest()
+        
+        # Format for test_drive experience
+        return {
+            "bills": qbo_data.get("bills", []),
+            "invoices": qbo_data.get("invoices", []),
+            "balances": qbo_data.get("balances", []),
+            "customers": qbo_data.get("customers", []),
+            "vendors": qbo_data.get("vendors", []),
+            "synced_at": qbo_data.get("synced_at", datetime.utcnow().isoformat())
+        }
     

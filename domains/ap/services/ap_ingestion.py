@@ -1,7 +1,8 @@
 from typing import Dict, Optional, List, Any
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
-from domains.qbo.data_service import QBODataService
+from infra.jobs import SmartSyncService
+from domains.qbo.client import QBOClient
 from domains.ap.models.bill import Bill as BillModel, BillStatus
 from domains.vendor_normalization.models import VendorCanonical as VendorCanonicalModel
 from domains.ap.schemas.bill import Bill
@@ -18,14 +19,14 @@ logger = logging.getLogger(__name__)
 class IngestionService(TenantAwareService):
     def __init__(self, db: Session, business_id: str):
         super().__init__(db, business_id)
-        # TODO: Complete refactor to use QBODataService instead of direct QBO client
-        # This addresses the critical architectural violation identified in code audit
-        self.qbo_data_service = QBODataService(db, business_id)
+        # Use SmartSyncService for QBO orchestration and QBOClient for direct API calls
+        self.smart_sync = SmartSyncService(business_id)
+        self.qbo_client = QBOClient(business_id)
         # OCR is handled by QBO; no local OCRAdapter needed
         self.vendor_service = VendorNormalizationService(db)
         self.norm_cfg = load_normalize_cfg("domains/vendor_normalization/scripts/config/normalize.yaml")
 
-    # Token refresh is now handled centrally by QBOAuth and QBODataService
+    # Token refresh is now handled centrally by QBOAuth and SmartSyncService
     # Individual services should not manage tokens directly
 
     def _parse_date(self, date_value) -> Optional[datetime]:
@@ -42,26 +43,34 @@ class IngestionService(TenantAwareService):
         return None
 
     async def sync_bills(self, business_id: str) -> Dict[str, Any]:
-        """Sync bills from QBO using QBODataService and process them via BillService."""
+        """Sync bills from QBO using SmartSyncService and process them via BillService."""
         try:
-            from domains.qbo.data_service import QBODataService
             from domains.ap.services.bill_ingestion import BillService
 
-            qbo_data_service = QBODataService(self.db, business_id)
-            BillService(self.db, business_id)
+            # Use SmartSyncService for orchestration and QBOClient for direct API calls
+            smart_sync = SmartSyncService(business_id)
+            qbo_client = QBOClient(business_id)
+            bill_service = BillService(self.db, business_id)
             
-            sync_result = await qbo_data_service.get_raw_qbo_data()
+            # Get QBO data using SmartSyncService
+            qbo_data = await smart_sync.execute_with_retry(
+                qbo_client.get_bills, max_attempts=3
+            )
             
-            if sync_result.get('status') != 'success':
-                return {"status": "error", "message": sync_result.get('error', 'Unknown error')}
+            # Process bills through BillService
+            processed_bills = []
+            for bill_data in qbo_data:
+                try:
+                    processed_bill = bill_service.process_bill_from_qbo(bill_data)
+                    processed_bills.append(processed_bill)
+                except Exception as e:
+                    logger.error(f"Error processing bill {bill_data.get('id', 'unknown')}: {e}")
             
-            # The bulk_sync_qbo_data method in the service now handles the ingestion.
-            # We can return the statistics from the sync.
             return {
                 "status": "success",
-                "synced_count": sync_result.get("bills", {}).get("synced", 0),
-                "skipped_count": sync_result.get("bills", {}).get("skipped", 0),
-                "errors": sync_result.get("bills", {}).get("errors", 0)
+                "synced_count": len(processed_bills),
+                "skipped_count": len(qbo_data) - len(processed_bills),
+                "errors": len(qbo_data) - len(processed_bills)
             }
         except Exception as e:
             self.logger.error(f"Error syncing bills for business {business_id}: {e}", exc_info=True)
