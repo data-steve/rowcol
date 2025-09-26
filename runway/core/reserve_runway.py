@@ -21,11 +21,11 @@ from runway.models.runway_reserve import (
 from runway.schemas.runway_reserve import (
     RunwayReserveCreate, RunwayReserveUpdate, ReserveAllocationCreate, RunwayCalculationWithReserves, ReserveRecommendation
 )
-from db.transaction import db_transaction
+from infra.database.transaction import db_transaction
 from common.exceptions import (
     BusinessNotFoundError, ValidationError, RunwayCalculationError
 )
-from config import RunwayThresholds
+from infra.config import RunwayThresholds
 
 logger = logging.getLogger(__name__)
 
@@ -371,7 +371,7 @@ class RunwayReserveService:
             return Decimal(str(cash_position))
         except Exception as e:
             logger.warning(f"Failed to get QBO cash balance for business {business_id}: {e}")
-            from config.business_rules.core_thresholds import RunwayAnalysisSettings
+            from infra.config.business_rules.core_thresholds import RunwayAnalysisSettings
             return Decimal(str(RunwayAnalysisSettings.DEFAULT_CASH_BALANCE))
     
     def _calculate_monthly_burn_rate(self, business_id: str) -> Decimal:
@@ -386,7 +386,7 @@ class RunwayReserveService:
             return Decimal(str(daily_burn * 30))
         except Exception as e:
             logger.warning(f"Failed to get QBO burn rate for business {business_id}: {e}")
-            from config.business_rules.core_thresholds import RunwayAnalysisSettings
+            from infra.config.business_rules.core_thresholds import RunwayAnalysisSettings
             daily_burn = Decimal(str(RunwayAnalysisSettings.DEFAULT_DAILY_BURN_RATE))
             return daily_burn * 30
     
@@ -401,7 +401,7 @@ class RunwayReserveService:
         When we implement advanced reserve features, this should query
         QBO Income accounts for the last 3-6 months and calculate average.
         """
-        from config.business_rules.core_thresholds import RunwayAnalysisSettings
+        from infra.config.business_rules.core_thresholds import RunwayAnalysisSettings
         
         logger.info(f"Using default monthly revenue for reserve calculations - business {business_id}")
         return Decimal(str(RunwayAnalysisSettings.DEFAULT_MONTHLY_REVENUE))
@@ -417,7 +417,7 @@ class RunwayReserveService:
         When we implement advanced reserve features, this should query
         QBO Expense accounts for the last 3-6 months and calculate average.
         """
-        from config.business_rules.core_thresholds import RunwayAnalysisSettings
+        from infra.config.business_rules.core_thresholds import RunwayAnalysisSettings
         
         logger.info(f"Using default monthly expenses for reserve calculations - business {business_id}")
         return Decimal(str(RunwayAnalysisSettings.DEFAULT_MONTHLY_EXPENSES))
@@ -432,7 +432,7 @@ class RunwayReserveService:
         When we implement advanced reserve features, this should query
         QBO Employee entities or integrate with payroll systems.
         """
-        from config.business_rules.core_thresholds import RunwayAnalysisSettings
+        from infra.config.business_rules.core_thresholds import RunwayAnalysisSettings
         
         logger.info(f"Using default employee count for reserve calculations - business {business_id}")
         return RunwayAnalysisSettings.DEFAULT_EMPLOYEE_COUNT

@@ -9,12 +9,12 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from runway.models.tray_item import TrayItem
-from domains.integrations import SmartSyncService
+from domains.qbo.smart_sync import SmartSyncService
 from runway.core.reserve_runway import RunwayReserveService
 from runway.core.payment_priority_calculator import PaymentPriorityCalculator
 from runway.core.tray_priority_calculator import TrayPriorityCalculator
 from common.exceptions import TrayItemNotFoundError
-from config import TrayPriorities, TrayItemStatuses
+from infra.config import TrayPriorities, TrayItemStatuses
 from datetime import datetime
 import os
 import logging
@@ -51,14 +51,16 @@ class QBOTrayDataProvider(TrayDataProvider):
         self.db = db
         self.business_id = business_id
         # Initialize QBO integration
-        from domains.integrations import SmartSyncService
-        self.smart_sync = SmartSyncService(db, business_id)
+        from infra.jobs import SyncStrategy, SyncPriority, SyncTimingManager, SyncCache
+        from domains.qbo.client import get_qbo_client
+        self.timing_manager = SyncTimingManager(business_id)
+        self.cache = SyncCache(business_id, default_ttl_minutes=15)
     
     def get_tray_items(self, business_id: str) -> List[TrayItem]:
         """Get tray items from QBO data."""
         try:
             # Get QBO data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
+            qbo_data = self._get_qbo_data_for_tray()
             
             tray_items = []
             
@@ -118,6 +120,47 @@ class QBOTrayDataProvider(TrayDataProvider):
         else:
             return "low"
     
+    def _get_qbo_data_for_tray(self) -> Dict[str, Any]:
+        """Get QBO data specifically for tray experience."""
+        # Check cache first
+        cached_data = self.cache.get("qbo", "tray")
+        if cached_data:
+            return cached_data
+        
+        # Check if we should sync
+        if not self.timing_manager.should_sync("qbo", SyncStrategy.EVENT_TRIGGERED, SyncPriority.MEDIUM):
+            # Return empty data if sync not needed
+            return {"bills": [], "invoices": []}
+        
+        try:
+            # Get QBO client and fetch data
+            from domains.qbo.client import get_qbo_client
+            qbo_client = get_qbo_client(self.business_id, self.db)
+            
+            # Fetch data needed for tray
+            bills = qbo_client.get_bills()
+            invoices = qbo_client.get_invoices()
+            
+            # Format for tray
+            tray_data = {
+                "bills": bills,
+                "invoices": invoices,
+                "synced_at": datetime.utcnow().isoformat()
+            }
+            
+            # Cache the result
+            self.cache.set("qbo", tray_data, ttl_minutes=15)  # Shorter cache for tray
+            self.timing_manager.record_sync("qbo", SyncStrategy.EVENT_TRIGGERED, success=True)
+            
+            return tray_data
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to get QBO data for tray: {e}")
+            self.timing_manager.record_sync("qbo", SyncStrategy.EVENT_TRIGGERED, success=False)
+            return {"bills": [], "invoices": []}
+    
     def get_runway_impact(self, item_type: str) -> Dict[str, Any]:
         """Calculate runway impact from QBO data."""
         # This would calculate based on actual QBO data
@@ -171,20 +214,30 @@ class TrayService:
                 raise ValueError("TrayService requires business_id for QBO provider. No mocking allowed!")
         else:
             self.data_provider = data_provider
-        self.smart_sync = SmartSyncService(db, business_id) if business_id else None
+        # Initialize sync utilities
+        if business_id:
+            from infra.scheduler import SyncStrategy, SyncPriority, SyncTimingManager
+            from infra.cache import SyncCache
+            self.timing_manager = SyncTimingManager(business_id)
+            self.cache = SyncCache(business_id, default_ttl_minutes=15)
+        else:
+            self.timing_manager = None
+            self.cache = None
         self.reserve_service = RunwayReserveService(db, business_id) if business_id else None
         
         # Canonical calculation services
         self.payment_priority_calculator = PaymentPriorityCalculator(db, business_id, validate_business=False) if business_id else None
         self.tray_priority_calculator = TrayPriorityCalculator(db, business_id, validate_business=False) if business_id else None
         
-        self.qbo_base_url = "https://sandbox-quickbooks.api.intuit.com"
+        # Use centralized QBO config
+        from domains.qbo.config import qbo_config
+        self.qbo_base_url = qbo_config.api_base_url
         self.realm_id = os.getenv("QBO_REALM_ID", "mock_realm_123")
 
     def calculate_priority_score(self, item: TrayItem) -> int:
         """Calculate priority score using canonical TrayPriorityCalculator."""
         if not self.tray_priority_calculator:
-            return 50  # Default medium priority
+            raise RuntimeError("TrayPriorityCalculator not available - this is a critical service that should always be initialized")
         
         # Convert TrayItem to dict format for canonical service
         item_data = {
@@ -252,25 +305,21 @@ class TrayService:
     def categorize_bill_urgency(self, bill_data: Dict[str, Any]) -> str:
         """Categorize bill urgency using canonical PaymentPriorityCalculator."""
         if not self.payment_priority_calculator:
-            return "must_pay"  # Conservative default
+            raise RuntimeError("PaymentPriorityCalculator not available - this is a critical service that should always be initialized")
         
         return self.payment_priority_calculator.categorize_bill_urgency(bill_data)
 
     def get_payment_decision_analysis(self, bill_data: Dict[str, Any]) -> Dict[str, Any]:
         """Get payment decision analysis using canonical PaymentPriorityCalculator."""
         if not self.payment_priority_calculator:
-            return {
-                "category": "must_pay",
-                "runway_impact": {"error": "Payment priority calculator not available"},
-                "recommendation": "Pay immediately (no analysis available)"
-            }
+            raise RuntimeError("PaymentPriorityCalculator not available - this is a critical service that should always be initialized")
         
         return self.payment_priority_calculator.get_payment_decision_analysis(bill_data)
 
     def _calculate_runway_impact(self, item: TrayItem) -> Dict[str, Any]:
         """Calculate runway impact using canonical TrayPriorityCalculator."""
         if not self.tray_priority_calculator:
-            return self.data_provider.get_runway_impact(getattr(item, 'type', ''))
+            raise RuntimeError("TrayPriorityCalculator not available - this is a critical service that should always be initialized")
         
         # Convert TrayItem to dict format for canonical service
         item_data = {
@@ -297,8 +346,11 @@ class TrayService:
             # Get base tray items
             base_items = self.get_tray_items(business_id)
             
-            if not include_runway_analysis or not self.tray_priority_calculator:
+            if not include_runway_analysis:
                 return base_items
+            
+            if not self.tray_priority_calculator:
+                raise RuntimeError("TrayPriorityCalculator not available - this is a critical service that should always be initialized")
             
             # Get QBO data for enhanced analysis
             qbo_data = self.smart_sync.get_qbo_data_for_digest() if self.smart_sync else {}

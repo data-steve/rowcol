@@ -9,7 +9,7 @@ Provides endpoints for proof-of-value demonstrations including:
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Dict, Any
-from db.session import get_db
+from infra.database.session import get_db
 from runway.experiences.test_drive import DemoTestDriveService
 
 router = APIRouter(prefix="/test-drive", tags=["test-drive"])

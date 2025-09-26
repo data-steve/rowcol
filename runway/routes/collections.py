@@ -10,10 +10,10 @@ from sqlalchemy.orm import Session
 from typing import Dict, Optional
 from datetime import datetime
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
-from domains.integrations import SmartSyncService
+from domains.qbo.service import QBOBulkScheduledService
 from runway.core.reserve_runway import RunwayReserveService
 
 router = APIRouter(tags=["AR Collections"])
@@ -25,7 +25,7 @@ def get_services(
     """Get all required services with business context."""
     return {
         "invoice_service": InvoiceService(db, business_id),
-        "smart_sync": SmartSyncService(db, business_id),
+        "qbo_service": QBOBulkScheduledService(db, business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -39,14 +39,14 @@ async def get_collections_dashboard(
     Shows aging buckets, collection priorities, and runway impact from outstanding AR.
     """
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
         
         # Get current runway calculation
         runway_calc = reserve_service.calculate_runway_with_reserves()
         
         # Get QBO data for AR analysis
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         invoices = qbo_data.get("invoices", [])
         
         # Calculate aging buckets
@@ -174,10 +174,10 @@ async def get_overdue_invoices(
     Shows invoices past due with customer contact information and collection recommendations.
     """
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         
         # Get QBO data
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         invoices = qbo_data.get("invoices", [])
         
         today = datetime.utcnow()
@@ -268,10 +268,10 @@ async def get_customer_aging(
     Shows all outstanding invoices for a customer with payment history and recommendations.
     """
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         
         # Get QBO data
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         invoices = qbo_data.get("invoices", [])
         
         customer_invoices = []
@@ -368,7 +368,7 @@ async def get_collections_runway_impact(
     Shows how collecting outstanding invoices would extend runway.
     """
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
         
         # Get current runway
@@ -377,7 +377,7 @@ async def get_collections_runway_impact(
         daily_burn = runway_calc.get("daily_burn", 1)
         
         # Get outstanding AR
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         invoices = qbo_data.get("invoices", [])
         
         total_ar = sum(

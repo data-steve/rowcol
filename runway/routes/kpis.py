@@ -10,10 +10,10 @@ from sqlalchemy.orm import Session
 from typing import List, Dict
 from datetime import datetime, timedelta
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id
 from domains.core.services.kpi import KPIService
-from domains.integrations import SmartSyncService
+from domains.qbo.service import QBOBulkScheduledService
 from runway.core.reserve_runway import RunwayReserveService
 
 router = APIRouter(tags=["Analytics KPIs"])
@@ -25,7 +25,7 @@ def get_services(
     """Get all required services with business context."""
     return {
         "kpi_service": KPIService(db),
-        "smart_sync": SmartSyncService(db, business_id),
+        "qbo_service": QBOBulkScheduledService(db, business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -40,7 +40,7 @@ async def get_kpi_dashboard(
     """
     try:
         kpi_service = services["kpi_service"]
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
         business_id = services["smart_sync"].business_id
         
@@ -51,7 +51,7 @@ async def get_kpi_dashboard(
         runway_calc = reserve_service.calculate_runway_with_reserves()
         
         # Get QBO sync and data quality metrics
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         
         # Calculate additional runway KPIs
         bills_data = qbo_data.get("bills", [])
@@ -75,7 +75,7 @@ async def get_kpi_dashboard(
             "operational_kpis": {
                 **core_kpis,
                 "data_quality_score": _calculate_data_quality_score(qbo_data),
-                "sync_health_score": _calculate_sync_health_score(smart_sync)
+                "sync_health_score": _calculate_sync_health_score(qbo_service)
             },
             "cash_flow_kpis": {
                 "current_runway_days": current_runway,
@@ -123,14 +123,14 @@ async def get_operational_kpis(
     """
     try:
         kpi_service = services["kpi_service"]
-        smart_sync = services["smart_sync"]
-        business_id = services["smart_sync"].business_id
+        qbo_service = services["qbo_service"]
+        business_id = qbo_service.business_id
         
         # Get core KPIs
         core_kpis = kpi_service.calculate_kpis(business_id)
         
         # Get QBO data for additional calculations
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         
         return {
             "automation_metrics": {
@@ -170,14 +170,14 @@ async def get_cash_flow_kpis(
     Shows runway calculations, burn rates, and cash flow projections.
     """
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
         
         # Get comprehensive runway calculation
         runway_calc = reserve_service.calculate_runway_with_reserves(include_projections=True)
         
         # Get QBO data for cash flow analysis
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         
         # Calculate cash flow velocity metrics
         bills_data = qbo_data.get("bills", [])
@@ -316,7 +316,7 @@ def _calculate_data_quality_score(qbo_data: Dict) -> float:
     # TODO: Implement comprehensive data quality scoring
     return 85.0  # Mock score
 
-def _calculate_sync_health_score(smart_sync: SmartSyncService) -> float:
+def _calculate_sync_health_score(qbo_service: QBOBulkScheduledService) -> float:
     """Calculate QBO sync health score."""
     # TODO: Implement sync health scoring based on sync frequency and success rates
     return 92.0  # Mock score

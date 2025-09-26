@@ -1,14 +1,14 @@
 from typing import Dict, Optional, List, Any
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
-from domains.integrations import SmartSyncService
+from domains.qbo.data_service import QBODataService
 from domains.ap.models.bill import Bill as BillModel, BillStatus
 from domains.vendor_normalization.models import VendorCanonical as VendorCanonicalModel
 from domains.ap.schemas.bill import Bill
 from domains.vendor_normalization.services import VendorNormalizationService
 from domains.vendor_normalization.lib.cleaners import load_normalize_cfg
 from common.exceptions import ValidationError, QBOSyncError
-from db.transaction import db_transaction
+from infra.database.transaction import db_transaction
 from datetime import datetime
 import dateutil.parser
 import logging
@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 class IngestionService(TenantAwareService):
     def __init__(self, db: Session, business_id: str):
         super().__init__(db, business_id)
-        # TODO: Complete refactor to use SmartSyncService instead of direct QBO client
+        # TODO: Complete refactor to use QBODataService instead of direct QBO client
         # This addresses the critical architectural violation identified in code audit
-        self.smart_sync = SmartSyncService(db, business_id)
+        self.qbo_data_service = QBODataService(db, business_id)
         # OCR is handled by QBO; no local OCRAdapter needed
         self.vendor_service = VendorNormalizationService(db)
         self.norm_cfg = load_normalize_cfg("domains/vendor_normalization/scripts/config/normalize.yaml")
 
-    # Token refresh is now handled centrally by QBOAuth and SmartSyncService
+    # Token refresh is now handled centrally by QBOAuth and QBODataService
     # Individual services should not manage tokens directly
 
     def _parse_date(self, date_value) -> Optional[datetime]:
@@ -42,15 +42,15 @@ class IngestionService(TenantAwareService):
         return None
 
     async def sync_bills(self, business_id: str) -> Dict[str, Any]:
-        """Sync bills from QBO using SmartSyncService and process them via BillService."""
+        """Sync bills from QBO using QBODataService and process them via BillService."""
         try:
-            from domains.integrations import SmartSyncService
+            from domains.qbo.data_service import QBODataService
             from domains.ap.services.bill_ingestion import BillService
 
-            smart_sync = SmartSyncService(self.db, business_id)
+            qbo_data_service = QBODataService(self.db, business_id)
             BillService(self.db, business_id)
             
-            sync_result = await smart_sync.bulk_sync_qbo_data()
+            sync_result = await qbo_data_service.get_raw_qbo_data()
             
             if sync_result.get('status') != 'success':
                 return {"status": "error", "message": sync_result.get('error', 'Unknown error')}
@@ -67,8 +67,3 @@ class IngestionService(TenantAwareService):
             self.logger.error(f"Error syncing bills for business {business_id}: {e}", exc_info=True)
             # Re-raising as ValueError is not ideal, but keeping consistent with original code
             raise ValueError(f"QBO bill sync failed: {str(e)}")
-
-    def ingest_document(self, file_path: str, business_id: int) -> Bill:
-        """Ingest a document (mock OCR for now)."""
-        # Document ingestion logic here (if any)
-        pass

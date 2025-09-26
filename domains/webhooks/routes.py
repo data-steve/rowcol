@@ -2,8 +2,8 @@ from fastapi import APIRouter, Request, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from domains.webhooks.models.webhook_event import WebhookEvent
-from domains.integrations.plaid.sync import PlaidSyncService
-from db.session import get_db
+from infra.plaid.sync import PlaidSyncService
+from infra.database.session import get_db
 
 router = APIRouter()
 

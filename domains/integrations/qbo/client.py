@@ -851,9 +851,7 @@ class QBOAPIClient:
         If a 401 Unauthorized is received, it will attempt to refresh the
         token and retry the call once.
         """
-        # Check if we're in mock mode
-        if qbo_config.is_mock_mode:
-            return self._get_mock_response(endpoint, method, params)
+        # No mocking
         
         auth_service = QBOAuthService(
             self.db, 
@@ -1183,9 +1181,7 @@ class QBOAPIClient:
     
     async def _make_batch_api_call(self, batch_queries: List[Dict[str, str]]) -> Dict[str, Any]:
         """Make a batch API call to QBO."""
-        # Check if we're in mock mode
-        if qbo_config.is_mock_mode:
-            return self._get_mock_batch_response(batch_queries)
+        # Mock response removed - use real API
         
         auth_service = QBOAuthService(self.db, self.business_id)
         access_token = auth_service.get_valid_access_token()

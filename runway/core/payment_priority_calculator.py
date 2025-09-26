@@ -19,8 +19,8 @@ import logging
 
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.vendor import Vendor
-from config import PaymentRules
-from config import RunwayThresholds
+from infra.config import PaymentRules
+from infra.config import RunwayThresholds
 
 logger = logging.getLogger(__name__)
 

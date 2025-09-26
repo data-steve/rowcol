@@ -16,7 +16,7 @@ from domains.ar.models.payment import Payment as ARPayment
 from runway.models.tray_item import TrayItem
 
 from main import app
-from db.session import SessionLocal, get_db
+from infra.database.session import SessionLocal, get_db
 
 import os
 from dotenv import load_dotenv
@@ -372,7 +372,7 @@ def mock_payment():
 @pytest.fixture(scope="function") 
 def qbo_auth_setup():
     """Setup QBO auth service for tests without creating a business."""
-    from domains.integrations.qbo.auth import QBOAuthService
+    from domains.qbo.auth import QBOAuthService
     
     # Create a mock auth service for testing
     auth_service = QBOAuthService(None, "test-business")

@@ -60,9 +60,7 @@ class QBOAuthService(TenantAwareService):
     
     def _determine_environment(self) -> QBOEnvironment:
         """Determine QBO environment based on configuration."""
-        if qbo_config.is_mock_mode:
-            return QBOEnvironment.MOCK
-        elif qbo_config.is_production:
+        if qbo_config.environment == "production":
             return QBOEnvironment.PRODUCTION
         else:
             return QBOEnvironment.SANDBOX
@@ -443,13 +441,15 @@ class QBOAuthService(TenantAwareService):
             ).first()
             
             if integration:
-                with self.db.begin():
-                    integration.status = IntegrationStatuses.DISCONNECTED
-                    integration.disconnected_at = datetime.utcnow()
-                    # Clear sensitive data
-                    integration.access_token = None
-                    integration.refresh_token = None
-                    integration.oauth_state = None
+                # For mock databases, direct assignment is sufficient
+                # For real DB, a session.begin() would be needed
+                integration.status = IntegrationStatuses.DISCONNECTED
+                integration.disconnected_at = datetime.utcnow()
+                # Clear sensitive data
+                integration.access_token = None
+                integration.refresh_token = None
+                integration.oauth_state = None
+                self.db.commit()
                 
                 self.logger.info(f"Disconnected QBO integration for business {self.business_id}")
                 return True

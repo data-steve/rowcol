@@ -19,7 +19,7 @@ Key Analysis:
 
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
-from config import RunwayAnalysisSettings, DataQualityThresholds
+from infra.config import RunwayAnalysisSettings, DataQualityThresholds
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging

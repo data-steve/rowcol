@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session as SQLAlchemySession
 
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration, IntegrationStatuses
-from domains.integrations.qbo.client import get_real_qbo_client
+from domains.qbo.client import get_real_qbo_client
 from tests.conftest import test_business  # Re-using the basic business fixture
 
 @pytest.mark.qbo_real_api

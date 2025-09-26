@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 from domains.ar.models.customer import Customer
 from domains.core.services.base_service import TenantAwareService
-from config import CollectionsRules, CommunicationRules, RiskAssessmentRules
+from infra.config import CollectionsRules, CommunicationRules, RiskAssessmentRules
 
 import logging
 

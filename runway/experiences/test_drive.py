@@ -17,12 +17,12 @@ Features:
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations.qbo.client import get_qbo_client
+from domains.qbo.client import get_qbo_client
 from typing import Dict, Any, Optional
 from runway.core.scenario_data import BusinessScenarioProvider, BusinessScenario
 from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
-from config import RunwayAnalysisSettings, DataQualityThresholds, ProofOfValueThresholds
+from infra.config import RunwayAnalysisSettings, DataQualityThresholds, ProofOfValueThresholds
 from common.exceptions import BusinessNotFoundError
 from typing import List
 from datetime import datetime, timedelta

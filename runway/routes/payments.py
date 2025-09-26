@@ -10,10 +10,9 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 from datetime import datetime
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id
 from domains.ap.services.payment import PaymentService
-from domains.integrations import SmartSyncService
 from runway.core.reserve_runway import RunwayReserveService
 from domains.ap.schemas.payment import PaymentResponse, PaymentExecutionRequest
 from common.exceptions import BusinessRuleViolationError
@@ -27,7 +26,6 @@ def get_services(
     """Get all required services with business context."""
     return {
         "payment_service": PaymentService(db, business_id),
-        "smart_sync": SmartSyncService(db, business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 

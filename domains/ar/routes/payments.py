@@ -4,7 +4,7 @@ Handles payment application for AR domain.
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from db.session import get_db
+from infra.database.session import get_db
 from domains.ar.services.payment_application import PaymentApplicationService
 from domains.ar.services.adjustment import AdjustmentService
 from datetime import datetime

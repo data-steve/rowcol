@@ -22,11 +22,11 @@ from unittest.mock import patch, AsyncMock
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations import SmartSyncService
-from domains.integrations.qbo.client import get_qbo_client
+from domains.qbo.smart_sync import SmartSyncService
+from domains.qbo.client import get_qbo_client
 from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
-from config import RunwayAnalysisSettings, DataQualityThresholds
+from infra.config import RunwayAnalysisSettings, DataQualityThresholds
 
 @pytest.mark.integration
 class TestFoundationE2E:
@@ -241,7 +241,7 @@ class TestFoundationE2E:
         runway_status = runway_analysis["runway_status"]
         
         # Validate status matches business rules
-        from config.business_rules import RunwayThresholds
+        from infra.config.core_thresholds import RunwayThresholds
         
         if runway_days < RunwayThresholds.CRITICAL_DAYS:
             assert runway_status == "critical", f"Runway status should be critical for {runway_days} days"

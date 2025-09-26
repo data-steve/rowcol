@@ -34,10 +34,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
-from domains.integrations.qbo.health import QBOHealthMonitor, QBOConnectionStatus
-from domains.integrations.qbo.auth import QBOAuthService
-from domains.integrations import SmartSyncService
+from domains.qbo.client import QBOAPIClient, get_qbo_client
+from domains.qbo.health import QBOHealthMonitor, QBOConnectionStatus
+from domains.qbo.auth import QBOAuthService
+from domains.qbo.smart_sync import SmartSyncService
 from common.exceptions import IntegrationError
 
 
@@ -412,7 +412,7 @@ class TestProductionScenarios:
     @pytest.mark.asyncio
     async def test_real_qbo_sandbox_connection(self):
         """Test against real QBO sandbox (requires environment setup)."""
-        from db.session import SessionLocal
+        from infra.database.session import SessionLocal
         
         # This test only runs with real QBO sandbox credentials
         db = SessionLocal()

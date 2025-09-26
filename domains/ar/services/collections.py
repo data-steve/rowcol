@@ -23,7 +23,8 @@ from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from domains.integrations import SmartSyncService
+from domains.qbo.service import QBOBulkScheduledService
+from infra.jobs import SmartSyncService
 from domains.core.services.base_service import TenantAwareService
 from common.exceptions import ValidationError
 import logging
@@ -35,7 +36,8 @@ class CollectionsService(TenantAwareService):
     
     def __init__(self, db: Session, business_id: str = None):
         super().__init__(db, business_id)
-        self.smart_sync = SmartSyncService(db, business_id) if business_id else None
+        self.qbo_service = QBOBulkScheduledService(db, business_id) if business_id else None
+        self.smart_sync = SmartSyncService(business_id) if business_id else None
     
     def get_overdue_invoices(self, days_overdue_min: int = 1, priority: Optional[str] = None) -> List[Dict[str, Any]]:
         """
@@ -49,11 +51,11 @@ class CollectionsService(TenantAwareService):
             List of overdue invoice dictionaries with collection metadata
         """
         try:
-            if not self.smart_sync:
-                raise ValidationError("SmartSyncService not available - business_id required")
+            if not self.qbo_service:
+                raise ValidationError("QBOBulkScheduledService not available - business_id required")
             
             # Get QBO invoice data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
+            qbo_data = await self.qbo_service.get_qbo_data_for_digest()
             invoices = qbo_data.get("invoices", [])
             
             today = datetime.utcnow()
@@ -180,11 +182,11 @@ class CollectionsService(TenantAwareService):
             Dictionary with aging buckets and summary statistics
         """
         try:
-            if not self.smart_sync:
-                raise ValidationError("SmartSyncService not available - business_id required")
+            if not self.qbo_service:
+                raise ValidationError("QBOBulkScheduledService not available - business_id required")
             
             # Get QBO invoice data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
+            qbo_data = await self.qbo_service.get_qbo_data_for_digest()
             invoices = qbo_data.get("invoices", [])
             
             today = datetime.utcnow()
@@ -267,11 +269,11 @@ class CollectionsService(TenantAwareService):
             Dictionary with payment history and reliability metrics
         """
         try:
-            if not self.smart_sync:
-                raise ValidationError("SmartSyncService not available - business_id required")
+            if not self.qbo_service:
+                raise ValidationError("QBOBulkScheduledService not available - business_id required")
             
             # Get QBO data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
+            qbo_data = await self.qbo_service.get_qbo_data_for_digest()
             invoices = qbo_data.get("invoices", [])
             
             customer_invoices = []

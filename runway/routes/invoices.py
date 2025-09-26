@@ -10,11 +10,11 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
 from domains.ar.services.collections import CollectionsService
-from domains.integrations import SmartSyncService
+from domains.qbo.service import QBOBulkScheduledService
 from runway.core.reserve_runway import RunwayReserveService
 from common.exceptions import ValidationError
 
@@ -28,7 +28,7 @@ def get_services(
     return {
         "invoice_service": InvoiceService(db, business_id),
         "collections_service": CollectionsService(db, business_id),
-        "smart_sync": SmartSyncService(db, business_id),
+        "qbo_service": QBOBulkScheduledService(db, business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -46,11 +46,11 @@ async def list_invoices(
     Shows invoice status, payment progress, and cash flow impact calculations.
     """
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
         
         # Get QBO invoice data
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         invoices = qbo_data.get("invoices", [])
         
         # Get current runway for impact calculations
@@ -143,12 +143,12 @@ async def get_invoice(
 ):
     """Get detailed invoice information with payment history and collection status."""
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         collections_service = services["collections_service"]
         reserve_service = services["reserve_service"]
         
         # Get QBO data
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         invoices = qbo_data.get("invoices", [])
         
         # Find the specific invoice
@@ -281,11 +281,11 @@ async def get_payment_options(
     Shows different payment timing options and their runway impact.
     """
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
         
         # Get invoice details
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         invoices = qbo_data.get("invoices", [])
         
         target_invoice = next((inv for inv in invoices if inv.get("Id") == invoice_id), None)
@@ -365,7 +365,7 @@ async def get_invoices_runway_impact(
     Shows total AR value and potential runway extension from collections.
     """
     try:
-        smart_sync = services["smart_sync"]
+        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
         
         # Get current runway
@@ -374,7 +374,7 @@ async def get_invoices_runway_impact(
         daily_burn = runway_calc.get("daily_burn", 1)
         
         # Get outstanding invoices
-        qbo_data = smart_sync.get_qbo_data_for_digest()
+        qbo_data = await qbo_service.get_qbo_data_for_digest()
         invoices = qbo_data.get("invoices", [])
         
         total_ar = 0

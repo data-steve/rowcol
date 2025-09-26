@@ -2,11 +2,11 @@ from sqlalchemy.orm import Session
 from domains.core.models.balance import Balance
 from domains.core.models.business import Business
 from domains.core.models.user import User
-from domains.integrations import SmartSyncService
+# SmartSync removed - using RunwayCalculator directly
 # from runway.experiences.digest.email import EmailService  # TODO: Create email service
 from runway.core.runway_calculator import RunwayCalculator
 from common.exceptions import BusinessNotFoundError, EmailDeliveryError
-from config import DigestSettings
+from infra.config import DigestSettings
 from datetime import datetime, timedelta
 from typing import Dict
 import logging

@@ -18,7 +18,7 @@ from datetime import datetime
 import logging
 
 from domains.core.services.base_service import TenantAwareService
-from config import TrayPriorities
+from infra.config import TrayPriorities
 
 logger = logging.getLogger(__name__)
 

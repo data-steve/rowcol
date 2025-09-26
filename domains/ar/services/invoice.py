@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice
 from domains.policy.services.policy_engine import PolicyEngineService
-from domains.integrations import SmartSyncService
+from domains.qbo.service import QBOBulkScheduledService
+from infra.jobs import SmartSyncService
 from datetime import datetime, timedelta
 from domains.core.services.base_service import TenantAwareService
 import logging
@@ -13,7 +14,8 @@ logger = logging.getLogger(__name__)
 class InvoiceService(TenantAwareService):
     def __init__(self, db: Session, business_id: str):
         super().__init__(db, business_id)
-        self.smart_sync = SmartSyncService(db, business_id)
+        self.qbo_service = QBOBulkScheduledService(db, business_id)
+        self.smart_sync = SmartSyncService(business_id)
         self.policy_engine = PolicyEngineService(db)
     
     # ==================== SMART SYNC DATA METHODS ====================
@@ -139,12 +141,12 @@ class InvoiceService(TenantAwareService):
     def sync_invoices(self, business_id: int) -> List[Invoice]:
         """Sync invoices from QBO via SmartSyncService."""
         try:
-            if not self.smart_sync:
+            if not self.qbo_service:
                 # Fallback for when business_id wasn't provided in constructor
-                self.smart_sync = SmartSyncService(self.db, str(business_id))
+                self.qbo_service = QBOBulkScheduledService(self.db, str(business_id))
             
-            # Use SmartSyncService to get QBO invoices data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
+            # Use QBOBulkScheduledService to get QBO invoices data
+            qbo_data = await self.qbo_service.get_qbo_data_for_digest()
             qbo_invoices = qbo_data.get("invoices", [])
             
             invoices = []

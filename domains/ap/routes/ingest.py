@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from db.session import get_db
+from infra.database.session import get_db
 from domains.ap.services.ap_ingestion import IngestionService
 from domains.ap.services.payment import PaymentService
 from domains.ap.services.statement_reconciliation import StatementReconciliationService

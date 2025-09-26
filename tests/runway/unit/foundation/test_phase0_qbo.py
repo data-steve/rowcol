@@ -9,7 +9,7 @@ import asyncio
 from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 from domains.core.models import Business, Integration
-from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
+from domains.qbo.client import QBOAPIClient, get_qbo_client
 
 
 def test_qbo_provider_import():
@@ -185,7 +185,7 @@ def test_qbo_provider_phase0_scope():
     # - Advanced reconciliation
     
     try:
-        from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
+        from domains.qbo.client import QBOAPIClient, get_qbo_client
         assert QBOAPIClient is not None
         assert get_qbo_client is not None
         

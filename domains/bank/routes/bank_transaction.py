@@ -13,14 +13,14 @@ NOT: Multi-client allocation, complex automation (that's RowCol - see _parked/)
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from db.session import get_db
+from infra.database.session import get_db
 from domains.bank.services.bank_transaction import BankTransactionService
 from domains.bank.schemas.bank_transaction import (
     BankTransactionResponse, 
     BankTransactionCategorize,
     CashFlowSummary
 )
-from runway.infrastructure.middleware.auth import get_current_business_id
+from infra.auth.auth import get_current_business_id
 
 router = APIRouter()
 

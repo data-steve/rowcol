@@ -9,10 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id
 from domains.ap.services.vendor import VendorService
-from domains.integrations import SmartSyncService
+from infra.jobs import SmartSyncService
 from domains.ap.schemas.vendor import VendorResponse, VendorCreate, VendorUpdate
 from common.exceptions import ValidationError
 
@@ -25,7 +25,7 @@ def get_services(
     """Get all required services with business context."""
     return {
         "vendor_service": VendorService(db, business_id),
-        "smart_sync": SmartSyncService(db, business_id)
+        "smart_sync": SmartSyncService(business_id)
     }
 
 @router.get("/", response_model=List[VendorResponse])
@@ -112,7 +112,7 @@ async def create_vendor(
         vendor = vendor_service.create_vendor(vendor_data.dict())
         
         # Record activity for smart sync
-        smart_sync.record_user_activity("vendor_created")
+        sync_timing.record_user_activity("vendor_created")
         
         # Get enhanced vendor data
         vendor_service.get_vendor_payment_history_summary(vendor.vendor_id)
@@ -233,7 +233,7 @@ async def update_vendor(
         vendor = vendor_service.update_vendor(vendor_id, vendor_data.dict(exclude_unset=True))
         
         # Record activity for smart sync
-        smart_sync.record_user_activity("vendor_updated")
+        sync_timing.record_user_activity("vendor_updated")
         
         # Get updated summary
         vendor_service.get_vendor_payment_history_summary(vendor_id)

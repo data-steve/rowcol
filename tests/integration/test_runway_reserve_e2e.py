@@ -19,13 +19,13 @@ from typing import Dict, Any, List
 from sqlalchemy.orm import Session as SQLAlchemySession
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.integrations.qbo.client import get_qbo_client
-from domains.integrations import SmartSyncService
+from domains.qbo.client import get_qbo_client
+from domains.qbo.smart_sync import SmartSyncService
 from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
 from runway.core.reserve_runway import RunwayReserveService
 from runway.schemas.runway_reserve import RunwayReserveCreate, ReserveTypeEnum, ReserveAllocationCreate
-from config import RunwayAnalysisSettings
+from infra.config import RunwayAnalysisSettings
 
 # Test configuration
 QBO_SANDBOX_COMPANIES = {

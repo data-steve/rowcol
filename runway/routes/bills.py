@@ -9,11 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id, get_current_user
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id, get_current_user
 from domains.ap.services.bill_ingestion import BillService
 from domains.ap.services.payment import PaymentService
-from domains.integrations import SmartSyncService
+from infra.jobs import SyncTimingManager
 from runway.core.reserve_runway import RunwayReserveService
 from domains.ap.schemas.bill import BillResponse, BillApprovalRequest
 from domains.ap.schemas.payment import PaymentScheduleRequest
@@ -29,7 +29,7 @@ def get_services(
     return {
         "bill_service": BillService(db, business_id),
         "payment_service": PaymentService(db, business_id),
-        "smart_sync": SmartSyncService(db, business_id),
+        "sync_timing": SyncTimingManager(business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -95,8 +95,8 @@ async def upload_bill(
         result = await bill_service.process_bill(file, vendor_id)
         
         # Trigger smart QBO sync to get latest vendor data
-        smart_sync = services["smart_sync"]
-        smart_sync.record_user_activity("bill_upload")
+        sync_timing = services["sync_timing"]
+        sync_timing.record_user_activity("bill_upload")
         
         return {
             "message": "Bill uploaded and processed successfully",

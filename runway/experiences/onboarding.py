@@ -4,16 +4,17 @@ from domains.core.models.business import Business
 from domains.core.models.user import User
 from domains.core.models.integration import Integration
 from domains.core.services.audit_log import AuditLogService
-from domains.integrations import SmartSyncService
+from domains.qbo.smart_sync import SmartSyncService
+from domains.qbo.setup import QBOSetupService
 from runway.experiences.test_drive import DemoTestDriveService
-from db.transaction import db_transaction
+from infra.database.transaction import db_transaction
 from common.exceptions import (
     OnboardingError, 
     BusinessNotFoundError, 
     IntegrationError,
     ValidationError
 )
-from config import OnboardingSettings, IntegrationStatuses, RunwayAnalysisSettings
+from infra.config import OnboardingSettings, IntegrationStatuses, RunwayAnalysisSettings
 from typing import Dict, Any, List
 from datetime import datetime, timedelta
 import secrets
@@ -29,15 +30,11 @@ class OnboardingService:
 
     def start_qbo_connection(self, business_id: str, user_id: str) -> Dict[str, Any]:
         """Delegate QBO connection setup to infrastructure service."""
-        from runway.infrastructure.qbo_setup.qbo_setup_service import QBOSetupService
-        
         service = QBOSetupService(self.db)
         return service.start_qbo_connection(business_id, user_id)
 
     async def complete_qbo_connection(self, state: str, authorization_code: str, realm_id: str) -> Dict[str, Any]:
         """Delegate QBO connection completion to infrastructure service."""
-        from runway.infrastructure.qbo_setup.qbo_setup_service import QBOSetupService
-        
         service = QBOSetupService(self.db)
         return await service.complete_qbo_connection(state, authorization_code, realm_id)
 
@@ -202,7 +199,7 @@ class OnboardingService:
     async def _check_initial_sync_completed(self, business_id: str) -> bool:
         """Check if initial QBO data sync has been completed."""
         try:
-            from domains.integrations import SmartSyncService
+            from domains.qbo.smart_sync import SmartSyncService
             smart_sync = SmartSyncService(self.db, business_id)
             qbo_data = await smart_sync.get_qbo_data_for_digest()
             
@@ -237,7 +234,7 @@ class OnboardingService:
         try:
             # For now, assume tray has been reviewed if we have QBO data
             # In the future, this could check for specific user interactions
-            from domains.integrations import SmartSyncService
+            from domains.qbo.smart_sync import SmartSyncService
             smart_sync = SmartSyncService(self.db, business_id)
             qbo_data = await smart_sync.get_qbo_data_for_digest()
             
