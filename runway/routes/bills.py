@@ -13,7 +13,7 @@ from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id, get_current_user
 from domains.ap.services.bill_ingestion import BillService
 from domains.ap.services.payment import PaymentService
-from infra.jobs import SyncTimingManager
+from infra.jobs import SmartSyncService
 from runway.core.reserve_runway import RunwayReserveService
 from domains.ap.schemas.bill import BillResponse, BillApprovalRequest
 from domains.ap.schemas.payment import PaymentScheduleRequest
@@ -29,7 +29,7 @@ def get_services(
     return {
         "bill_service": BillService(db, business_id),
         "payment_service": PaymentService(db, business_id),
-        "sync_timing": SyncTimingManager(business_id),
+        "smart_sync": SmartSyncService(business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -236,6 +236,7 @@ async def schedule_bill_payment(
         bill_service = services["bill_service"]
         payment_service = services["payment_service"]
         smart_sync = services["smart_sync"]
+        business_id = services["smart_sync"].business_id
         
         # Get the bill
         bill = bill_service._get_bill_or_raise(bill_id)
@@ -246,7 +247,15 @@ async def schedule_bill_payment(
                 detail="Bill must be approved before scheduling payment"
             )
         
-        # Create the payment
+        # Check rate limits and deduplication for user action
+        from infra.jobs.enums import SyncStrategy
+        if not smart_sync.should_sync("qbo", SyncStrategy.USER_ACTION):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        
+        if smart_sync.deduplicate_action("payment", str(bill_id), payment_data.dict()):
+            return {"status": "already_processed"}
+        
+        # Create the payment locally first
         payment = payment_service.create_payment(
             bill_id=bill_id,
             payment_date=payment_data.payment_date,
@@ -255,8 +264,39 @@ async def schedule_bill_payment(
             created_by_user_id=current_user["user_id"]
         )
         
-        # Schedule QBO sync for payment creation
+        # Execute direct QBO API call with retry logic
+        from domains.qbo.client import QBOClient
+        qbo_client = QBOClient(business_id)
+        
+        # Create payment in QBO
+        qbo_payment = await smart_sync.execute_with_retry(
+            qbo_client.create_payment, 
+            {
+                "bill_id": bill.qbo_bill_id,
+                "amount": float(payment.amount),
+                "payment_date": payment.payment_date.isoformat(),
+                "payment_method": payment.payment_method
+            }, 
+            max_attempts=3
+        )
+        
+        # Update local DB with QBO payment ID
+        await smart_sync.update_local_db("payment", str(bill_id), {
+            "qbo_payment_id": qbo_payment.get("Id"),
+            "status": "synced"
+        })
+        
+        # Record user activity
         smart_sync.record_user_activity("payment_scheduled")
+        
+        # Trigger background reconciliation
+        await smart_sync.schedule_reconciliation("payment", str(bill_id))
+        
+        # Calculate runway impact
+        reserve_service = services["reserve_service"]
+        runway_calc = reserve_service.calculate_runway_with_reserves()
+        daily_burn = runway_calc.get("daily_burn", 1)
+        runway_impact_days = float(payment.amount) / daily_burn if daily_burn > 0 else 0
         
         return {
             "message": "Payment scheduled successfully",
@@ -264,7 +304,9 @@ async def schedule_bill_payment(
             "bill_id": bill_id,
             "scheduled_date": payment.payment_date,
             "amount": float(payment.amount),
-            "method": payment.payment_method
+            "method": payment.payment_method,
+            "qbo_payment_id": qbo_payment.get("Id"),
+            "runway_impact": f"+{runway_impact_days:.1f} days"
         }
         
     except ValidationError as e:

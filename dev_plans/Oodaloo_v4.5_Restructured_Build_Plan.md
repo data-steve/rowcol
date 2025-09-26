@@ -400,6 +400,7 @@ This plan provides the architectural rigor and detailed task breakdown needed fo
 **Scope**: Comprehensive audit and enhancement of all data generation systems, quality scoring, and business scenario realism.
 
 **Key Areas**:
+- **🚨 CRITICAL: Eliminate All Mock Violations**: Replace all hardcoded mock values in KPI calculations with real data analysis (P0 Critical - violates "no more mocks" commitment)
 - **Data Generator Consolidation**: Audit all mock data providers (`create_sandbox_data.py`, `scenario_runner.py`, `conftest.py` fixtures, QBO client mock data) and consolidate into unified, realistic data generation system
 - **Business Size Awareness**: Enhance data generation to properly represent small (1-10 employees), medium (11-50 employees), and large (50+ employees) business scenarios with appropriate financial ratios and transaction volumes
 - **Industry-Specific Patterns**: Create realistic data patterns for different industries (marketing agency, construction, professional services, e-commerce, consulting) with proper seasonal variations and cash flow characteristics

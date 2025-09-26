@@ -1,191 +1,4 @@
 """
-Tray Data Providers
-
-This module provides data providers for the tray experience, allowing for
-different data sources (QBO, mock, test) to be used interchangeably.
-"""
-
-from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from runway.models.tray_item import TrayItem
-from domains.qbo.smart_sync import SmartSyncService
-from runway.core.reserve_runway import RunwayReserveService
-from runway.core.payment_priority_calculator import PaymentPriorityCalculator
-from runway.core.tray_priority_calculator import TrayPriorityCalculator
-from common.exceptions import TrayItemNotFoundError
-from infra.config import TrayPriorities, TrayItemStatuses
-from datetime import datetime
-import os
-import logging
-
-
-class TrayDataProvider(ABC):
-    """Abstract base class for tray data providers."""
-    
-    @abstractmethod
-    def get_tray_items(self, business_id: str) -> List[TrayItem]:
-        """Get tray items for a business."""
-        pass
-    
-    @abstractmethod
-    def get_runway_impact(self, item_type: str) -> Dict[str, Any]:
-        """Get runway impact for a specific item type."""
-        pass
-    
-    @abstractmethod
-    def get_action_result(self, action: str, item_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Get result of performing an action on a tray item."""
-        pass
-    
-    @abstractmethod
-    def get_priority_weights(self) -> Dict[str, int]:
-        """Get priority weights for different item types."""
-        pass
-
-
-class QBOTrayDataProvider(TrayDataProvider):
-    """Data provider that fetches data from QBO."""
-    
-    def __init__(self, db: Session, business_id: str):
-        self.db = db
-        self.business_id = business_id
-        # Initialize QBO integration
-        from infra.jobs import SyncStrategy, SyncPriority, SyncTimingManager, SyncCache
-        from domains.qbo.client import get_qbo_client
-        self.timing_manager = SyncTimingManager(business_id)
-        self.cache = SyncCache(business_id, default_ttl_minutes=15)
-    
-    def get_tray_items(self, business_id: str) -> List[TrayItem]:
-        """Get tray items from QBO data."""
-        try:
-            # Get QBO data
-            qbo_data = self._get_qbo_data_for_tray()
-            
-            tray_items = []
-            
-            # Convert QBO bills to tray items
-            if "bills" in qbo_data:
-                for bill in qbo_data["bills"]:
-                    tray_items.append(TrayItem(
-                        business_id=business_id,
-                        type="bill",
-                        qbo_id=str(bill.get("qbo_id", bill.get("id", ""))),
-                        due_date=bill.get("due_date"),
-                        priority=self._calculate_bill_priority(bill),
-                        status="pending"
-                    ))
-            
-            # Convert QBO invoices to tray items
-            if "invoices" in qbo_data:
-                for invoice in qbo_data["invoices"]:
-                    tray_items.append(TrayItem(
-                        business_id=business_id,
-                        type="invoice",
-                        qbo_id=str(invoice.get("qbo_id", invoice.get("id", ""))),
-                        due_date=invoice.get("due_date"),
-                        priority=self._calculate_invoice_priority(invoice),
-                        status="pending"
-                    ))
-            
-            return tray_items
-            
-        except Exception as e:
-            # Log error and return empty list as fallback
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to fetch QBO tray items for business {business_id}: {e}")
-            return []
-    
-    def _calculate_bill_priority(self, bill: Dict[str, Any]) -> str:
-        """Calculate priority for a bill based on amount and due date."""
-        amount = float(bill.get("total_amount", 0))
-        bill.get("due_date")
-        
-        if amount > 5000:
-            return "high"
-        elif amount > 1000:
-            return "medium"
-        else:
-            return "low"
-    
-    def _calculate_invoice_priority(self, invoice: Dict[str, Any]) -> str:
-        """Calculate priority for an invoice based on amount and age."""
-        amount = float(invoice.get("total_amount", 0))
-        
-        if amount > 10000:
-            return "high"
-        elif amount > 2000:
-            return "medium"
-        else:
-            return "low"
-    
-    def _get_qbo_data_for_tray(self) -> Dict[str, Any]:
-        """Get QBO data specifically for tray experience."""
-        # Check cache first
-        cached_data = self.cache.get("qbo", "tray")
-        if cached_data:
-            return cached_data
-        
-        # Check if we should sync
-        if not self.timing_manager.should_sync("qbo", SyncStrategy.EVENT_TRIGGERED, SyncPriority.MEDIUM):
-            # Return empty data if sync not needed
-            return {"bills": [], "invoices": []}
-        
-        try:
-            # Get QBO client and fetch data
-            from domains.qbo.client import get_qbo_client
-            qbo_client = get_qbo_client(self.business_id, self.db)
-            
-            # Fetch data needed for tray
-            bills = qbo_client.get_bills()
-            invoices = qbo_client.get_invoices()
-            
-            # Format for tray
-            tray_data = {
-                "bills": bills,
-                "invoices": invoices,
-                "synced_at": datetime.utcnow().isoformat()
-            }
-            
-            # Cache the result
-            self.cache.set("qbo", tray_data, ttl_minutes=15)  # Shorter cache for tray
-            self.timing_manager.record_sync("qbo", SyncStrategy.EVENT_TRIGGERED, success=True)
-            
-            return tray_data
-            
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to get QBO data for tray: {e}")
-            self.timing_manager.record_sync("qbo", SyncStrategy.EVENT_TRIGGERED, success=False)
-            return {"bills": [], "invoices": []}
-    
-    def get_runway_impact(self, item_type: str) -> Dict[str, Any]:
-        """Calculate runway impact from QBO data."""
-        # This would calculate based on actual QBO data
-        return {"cash_impact": 0, "days_impact": 0, "urgency": "low"}
-    
-    def get_action_result(self, action: str, item_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute action against QBO."""
-        # This would perform actual QBO operations
-        return {"processed": True, "qbo_result": True}
-    
-    def get_priority_weights(self) -> Dict[str, int]:
-        """Get priority weights based on business rules."""
-        return {"bill": 30, "invoice": 25, "payment": 35}
-
-
-# MockTrayDataProvider removed - all tests now use real QBO sandbox data
-
-
-def get_tray_data_provider(provider_type: str = "qbo", db: Session = None, business_id: str = None) -> TrayDataProvider:
-    """Get the QBO tray data provider - no more mocking!"""
-    if provider_type == "qbo" and db and business_id:
-        return QBOTrayDataProvider(db, business_id)
-    else:
-        raise ValueError("TrayDataProvider requires db and business_id for QBO provider. No mocking allowed!")
-"""
 TrayService - Refactored to use Canonical Calculation Services
 
 This service orchestrates tray functionality while delegating all calculations
@@ -199,31 +12,29 @@ Key Changes:
 - Maintains orchestration and data provider functionality
 """
 
+from typing import List, Dict, Any, Optional
+from sqlalchemy.orm import Session
+from runway.models.tray_item import TrayItem
+from infra.jobs import SmartSyncService
+from runway.core.reserve_runway import RunwayReserveService
+from runway.core.payment_priority_calculator import PaymentPriorityCalculator
+from runway.core.tray_priority_calculator import TrayPriorityCalculator
+from common.exceptions import TrayItemNotFoundError
+from infra.config import TrayPriorities, TrayItemStatuses
+from datetime import datetime
+import os
+import logging
+
 logger = logging.getLogger(__name__)
 
 class TrayService:
-    def __init__(self, db: Session, business_id: str, data_provider: Optional[TrayDataProvider] = None):
+    def __init__(self, db: Session, business_id: str):
         self.db = db
         self.business_id = business_id
         
-        # No more mocking - always use QBO provider!
-        if data_provider is None:
-            if business_id:
-                self.data_provider = get_tray_data_provider("qbo", db, business_id)
-            else:
-                raise ValueError("TrayService requires business_id for QBO provider. No mocking allowed!")
-        else:
-            self.data_provider = data_provider
         # Initialize sync utilities
-        if business_id:
-            from infra.scheduler import SyncStrategy, SyncPriority, SyncTimingManager
-            from infra.cache import SyncCache
-            self.timing_manager = SyncTimingManager(business_id)
-            self.cache = SyncCache(business_id, default_ttl_minutes=15)
-        else:
-            self.timing_manager = None
-            self.cache = None
-        self.reserve_service = RunwayReserveService(db, business_id) if business_id else None
+        self.smart_sync = SmartSyncService(business_id)
+        self.reserve_service = RunwayReserveService(db, business_id)
         
         # Canonical calculation services
         self.payment_priority_calculator = PaymentPriorityCalculator(db, business_id, validate_business=False) if business_id else None
@@ -251,8 +62,66 @@ class TrayService:
         return int(priority_analysis.get('priority_score', 50))
 
     def get_tray_items(self, business_id: int) -> List[Dict[str, Any]]:
-        """Get tray items from data provider."""
-        return self.data_provider.get_tray_items(business_id)
+        """Get tray items from QBO data."""
+        try:
+            # Get QBO data using SmartSyncService
+            qbo_data = self.smart_sync.get_qbo_data_for_digest()
+            
+            tray_items = []
+            
+            # Convert QBO bills to tray items
+            if "bills" in qbo_data:
+                for bill in qbo_data["bills"]:
+                    tray_items.append({
+                        "business_id": business_id,
+                        "type": "bill",
+                        "qbo_id": str(bill.get("qbo_id", bill.get("id", ""))),
+                        "due_date": bill.get("due_date"),
+                        "amount": bill.get("total_amount", 0),
+                        "priority": self._calculate_bill_priority(bill),
+                        "status": "pending"
+                    })
+            
+            # Convert QBO invoices to tray items
+            if "invoices" in qbo_data:
+                for invoice in qbo_data["invoices"]:
+                    tray_items.append({
+                        "business_id": business_id,
+                        "type": "invoice",
+                        "qbo_id": str(invoice.get("qbo_id", invoice.get("id", ""))),
+                        "due_date": invoice.get("due_date"),
+                        "amount": invoice.get("total_amount", 0),
+                        "priority": self._calculate_invoice_priority(invoice),
+                        "status": "pending"
+                    })
+            
+            return tray_items
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch QBO tray items for business {business_id}: {e}")
+            return []
+    
+    def _calculate_bill_priority(self, bill: Dict[str, Any]) -> str:
+        """Calculate priority for a bill based on amount and due date."""
+        amount = float(bill.get("total_amount", 0))
+        
+        if amount > 5000:
+            return "high"
+        elif amount > 1000:
+            return "medium"
+        else:
+            return "low"
+    
+    def _calculate_invoice_priority(self, invoice: Dict[str, Any]) -> str:
+        """Calculate priority for an invoice based on amount and age."""
+        amount = float(invoice.get("total_amount", 0))
+        
+        if amount > 10000:
+            return "high"
+        elif amount > 2000:
+            return "medium"
+        else:
+            return "low"
 
     def get_tray_summary(self, business_id: int) -> Dict[str, Any]:
         """Get tray summary with canonical priority calculations."""

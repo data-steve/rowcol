@@ -13,7 +13,6 @@ from datetime import datetime, timedelta
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.core.services.kpi import KPIService
-from domains.qbo.service import QBOBulkScheduledService
 from runway.core.reserve_runway import RunwayReserveService
 
 router = APIRouter(tags=["Analytics KPIs"])
@@ -25,7 +24,6 @@ def get_services(
     """Get all required services with business context."""
     return {
         "kpi_service": KPIService(db),
-        "qbo_service": QBOBulkScheduledService(db, business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -40,9 +38,8 @@ async def get_kpi_dashboard(
     """
     try:
         kpi_service = services["kpi_service"]
-        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
-        business_id = services["smart_sync"].business_id
+        business_id = services["reserve_service"].business_id
         
         # Get core operational KPIs (using business_id)
         core_kpis = kpi_service.calculate_kpis(business_id)
@@ -50,8 +47,23 @@ async def get_kpi_dashboard(
         # Get runway-specific metrics
         runway_calc = reserve_service.calculate_runway_with_reserves()
         
-        # Get QBO sync and data quality metrics
-        qbo_data = await qbo_service.get_qbo_data_for_digest()
+        # Get QBO sync and data quality metrics using SmartSyncService
+        from infra.jobs import SmartSyncService
+        from domains.qbo.client import QBOClient
+        
+        smart_sync = SmartSyncService(business_id)
+        qbo_client = QBOClient(business_id)
+        
+        # Check if sync is needed
+        if not smart_sync.should_sync("qbo", "SCHEDULED"):
+            qbo_data = smart_sync.get_cache("qbo") or {}
+        else:
+            # Execute sync with retry logic
+            qbo_data = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            # Cache results
+            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
         
         # Calculate additional runway KPIs
         bills_data = qbo_data.get("bills", [])
@@ -75,7 +87,7 @@ async def get_kpi_dashboard(
             "operational_kpis": {
                 **core_kpis,
                 "data_quality_score": _calculate_data_quality_score(qbo_data),
-                "sync_health_score": _calculate_sync_health_score(qbo_service)
+                "sync_health_score": _calculate_sync_health_score(smart_sync)
             },
             "cash_flow_kpis": {
                 "current_runway_days": current_runway,
@@ -123,14 +135,28 @@ async def get_operational_kpis(
     """
     try:
         kpi_service = services["kpi_service"]
-        qbo_service = services["qbo_service"]
-        business_id = qbo_service.business_id
+        business_id = services["reserve_service"].business_id
         
         # Get core KPIs
         core_kpis = kpi_service.calculate_kpis(business_id)
         
-        # Get QBO data for additional calculations
-        qbo_data = await qbo_service.get_qbo_data_for_digest()
+        # Get QBO data for additional calculations using SmartSyncService
+        from infra.jobs import SmartSyncService
+        from domains.qbo.client import QBOClient
+        
+        smart_sync = SmartSyncService(business_id)
+        qbo_client = QBOClient(business_id)
+        
+        # Check if sync is needed
+        if not smart_sync.should_sync("qbo", "SCHEDULED"):
+            qbo_data = smart_sync.get_cache("qbo") or {}
+        else:
+            # Execute sync with retry logic
+            qbo_data = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            # Cache results
+            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
         
         return {
             "automation_metrics": {
@@ -170,14 +196,29 @@ async def get_cash_flow_kpis(
     Shows runway calculations, burn rates, and cash flow projections.
     """
     try:
-        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
         # Get comprehensive runway calculation
         runway_calc = reserve_service.calculate_runway_with_reserves(include_projections=True)
         
-        # Get QBO data for cash flow analysis
-        qbo_data = await qbo_service.get_qbo_data_for_digest()
+        # Get QBO data for cash flow analysis using SmartSyncService
+        from infra.jobs import SmartSyncService
+        from domains.qbo.client import QBOClient
+        
+        smart_sync = SmartSyncService(business_id)
+        qbo_client = QBOClient(business_id)
+        
+        # Check if sync is needed
+        if not smart_sync.should_sync("qbo", "SCHEDULED"):
+            qbo_data = smart_sync.get_cache("qbo") or {}
+        else:
+            # Execute sync with retry logic
+            qbo_data = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            # Cache results
+            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
         
         # Calculate cash flow velocity metrics
         bills_data = qbo_data.get("bills", [])
@@ -314,27 +355,47 @@ def _is_invoice_overdue(invoice_data: Dict) -> bool:
 def _calculate_data_quality_score(qbo_data: Dict) -> float:
     """Calculate overall data quality score."""
     # TODO: Implement comprehensive data quality scoring
-    return 85.0  # Mock score
+    raise NotImplementedError(
+        "Data quality scoring not yet implemented. "
+        "This requires real data quality analysis of QBO data completeness and accuracy. "
+        "See backlog task: Implement Real Data Quality Scoring"
+    )
 
-def _calculate_sync_health_score(qbo_service: QBOBulkScheduledService) -> float:
+def _calculate_sync_health_score(smart_sync) -> float:
     """Calculate QBO sync health score."""
     # TODO: Implement sync health scoring based on sync frequency and success rates
-    return 92.0  # Mock score
+    raise NotImplementedError(
+        "Sync health scoring not yet implemented. "
+        "This requires real sync frequency and success rate tracking from SmartSyncService. "
+        "See backlog task: Implement Real Sync Health Scoring"
+    )
 
 def _calculate_runway_trend(runway_calc: Dict) -> str:
     """Calculate runway trend direction."""
     # TODO: Implement historical runway comparison
-    return "stable"  # Mock trend
+    raise NotImplementedError(
+        "Runway trend calculation not yet implemented. "
+        "This requires historical runway data comparison over time. "
+        "See backlog task: Implement Real Runway Trend Analysis"
+    )
 
 def _calculate_avg_payment_cycle(bills_data: List[Dict]) -> float:
     """Calculate average payment cycle in days."""
     # TODO: Implement based on actual payment dates
-    return 25.5  # Mock average
+    raise NotImplementedError(
+        "Payment cycle calculation not yet implemented. "
+        "This requires analysis of actual bill due dates vs payment dates. "
+        "See backlog task: Implement Real Payment Cycle Analysis"
+    )
 
 def _calculate_avg_collection_cycle(invoices_data: List[Dict]) -> float:
     """Calculate average collection cycle in days."""
     # TODO: Implement based on actual collection dates
-    return 32.1  # Mock average
+    raise NotImplementedError(
+        "Collection cycle calculation not yet implemented. "
+        "This requires analysis of actual invoice dates vs payment received dates. "
+        "See backlog task: Implement Real Collection Cycle Analysis"
+    )
 
 def _generate_operational_recommendations(core_kpis: Dict) -> List[Dict]:
     """Generate recommendations based on operational KPIs."""
@@ -372,4 +433,8 @@ def _assess_cash_flow_health(runway_calc: Dict) -> str:
 def _calculate_collection_efficiency(invoices_data: List[Dict]) -> float:
     """Calculate collection efficiency percentage."""
     # TODO: Implement based on actual collection performance
-    return 78.5  # Mock efficiency score
+    raise NotImplementedError(
+        "Collection efficiency calculation not yet implemented. "
+        "This requires analysis of actual collection success rates and timing. "
+        "See backlog task: Implement Real Collection Efficiency Analysis"
+    )

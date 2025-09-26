@@ -18,8 +18,7 @@ Key Calculations:
 
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
-from infra.jobs import SyncStrategy, SyncPriority, SyncTimingManager
-from infra.jobs import SyncCache
+from infra.jobs import SmartSyncService
 from domains.qbo.client import get_qbo_client
 from infra.config import RunwayAnalysisSettings, RunwayThresholds
 from typing import Dict, Any, List, Optional
@@ -34,8 +33,7 @@ class RunwayCalculator(TenantAwareService):
     
     def __init__(self, db: Session, business_id: str, validate_business: bool = True):
         super().__init__(db, business_id, validate_business)
-        self.timing_manager = SyncTimingManager(business_id)
-        self.cache = SyncCache(business_id, default_ttl_minutes=30)
+        self.smart_sync = SmartSyncService(business_id)
     
     def calculate_current_runway(self, qbo_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """

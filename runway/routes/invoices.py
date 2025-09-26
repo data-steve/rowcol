@@ -14,7 +14,6 @@ from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
 from domains.ar.services.collections import CollectionsService
-from domains.qbo.service import QBOBulkScheduledService
 from runway.core.reserve_runway import RunwayReserveService
 from common.exceptions import ValidationError
 
@@ -28,7 +27,6 @@ def get_services(
     return {
         "invoice_service": InvoiceService(db, business_id),
         "collections_service": CollectionsService(db, business_id),
-        "qbo_service": QBOBulkScheduledService(db, business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -46,11 +44,27 @@ async def list_invoices(
     Shows invoice status, payment progress, and cash flow impact calculations.
     """
     try:
-        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
-        # Get QBO invoice data
-        qbo_data = await qbo_service.get_qbo_data_for_digest()
+        # Get QBO invoice data using SmartSyncService
+        from infra.jobs import SmartSyncService
+        from domains.qbo.client import QBOClient
+        
+        smart_sync = SmartSyncService(business_id)
+        qbo_client = QBOClient(business_id)
+        
+        # Check if sync is needed
+        if not smart_sync.should_sync("qbo", "SCHEDULED"):
+            qbo_data = smart_sync.get_cache("qbo") or {}
+        else:
+            # Execute sync with retry logic
+            qbo_data = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            # Cache results
+            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
+        
         invoices = qbo_data.get("invoices", [])
         
         # Get current runway for impact calculations
@@ -143,12 +157,28 @@ async def get_invoice(
 ):
     """Get detailed invoice information with payment history and collection status."""
     try:
-        qbo_service = services["qbo_service"]
         collections_service = services["collections_service"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
-        # Get QBO data
-        qbo_data = await qbo_service.get_qbo_data_for_digest()
+        # Get QBO data using SmartSyncService
+        from infra.jobs import SmartSyncService
+        from domains.qbo.client import QBOClient
+        
+        smart_sync = SmartSyncService(business_id)
+        qbo_client = QBOClient(business_id)
+        
+        # Check if sync is needed
+        if not smart_sync.should_sync("qbo", "SCHEDULED"):
+            qbo_data = smart_sync.get_cache("qbo") or {}
+        else:
+            # Execute sync with retry logic
+            qbo_data = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            # Cache results
+            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
+        
         invoices = qbo_data.get("invoices", [])
         
         # Find the specific invoice
@@ -281,11 +311,27 @@ async def get_payment_options(
     Shows different payment timing options and their runway impact.
     """
     try:
-        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
-        # Get invoice details
-        qbo_data = await qbo_service.get_qbo_data_for_digest()
+        # Get invoice details using SmartSyncService
+        from infra.jobs import SmartSyncService
+        from domains.qbo.client import QBOClient
+        
+        smart_sync = SmartSyncService(business_id)
+        qbo_client = QBOClient(business_id)
+        
+        # Check if sync is needed
+        if not smart_sync.should_sync("qbo", "SCHEDULED"):
+            qbo_data = smart_sync.get_cache("qbo") or {}
+        else:
+            # Execute sync with retry logic
+            qbo_data = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            # Cache results
+            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
+        
         invoices = qbo_data.get("invoices", [])
         
         target_invoice = next((inv for inv in invoices if inv.get("Id") == invoice_id), None)
@@ -365,16 +411,32 @@ async def get_invoices_runway_impact(
     Shows total AR value and potential runway extension from collections.
     """
     try:
-        qbo_service = services["qbo_service"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
         # Get current runway
         runway_calc = reserve_service.calculate_runway_with_reserves()
         current_runway = runway_calc.get("runway_days", 0)
         daily_burn = runway_calc.get("daily_burn", 1)
         
-        # Get outstanding invoices
-        qbo_data = await qbo_service.get_qbo_data_for_digest()
+        # Get outstanding invoices using SmartSyncService
+        from infra.jobs import SmartSyncService
+        from domains.qbo.client import QBOClient
+        
+        smart_sync = SmartSyncService(business_id)
+        qbo_client = QBOClient(business_id)
+        
+        # Check if sync is needed
+        if not smart_sync.should_sync("qbo", "SCHEDULED"):
+            qbo_data = smart_sync.get_cache("qbo") or {}
+        else:
+            # Execute sync with retry logic
+            qbo_data = await smart_sync.execute_with_retry(
+                qbo_client.get_all_data, max_attempts=3
+            )
+            # Cache results
+            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
+        
         invoices = qbo_data.get("invoices", [])
         
         total_ar = 0

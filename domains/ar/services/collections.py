@@ -23,7 +23,6 @@ from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from domains.qbo.service import QBOBulkScheduledService
 from infra.jobs import SmartSyncService
 from domains.core.services.base_service import TenantAwareService
 from common.exceptions import ValidationError
@@ -36,10 +35,9 @@ class CollectionsService(TenantAwareService):
     
     def __init__(self, db: Session, business_id: str = None):
         super().__init__(db, business_id)
-        self.qbo_service = QBOBulkScheduledService(db, business_id) if business_id else None
         self.smart_sync = SmartSyncService(business_id) if business_id else None
     
-    def get_overdue_invoices(self, days_overdue_min: int = 1, priority: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def get_overdue_invoices(self, days_overdue_min: int = 1, priority: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Get overdue invoices with priority scoring and collection recommendations.
         
@@ -51,12 +49,29 @@ class CollectionsService(TenantAwareService):
             List of overdue invoice dictionaries with collection metadata
         """
         try:
-            if not self.qbo_service:
-                raise ValidationError("QBOBulkScheduledService not available - business_id required")
+            if not self.smart_sync:
+                raise ValidationError("SmartSyncService not available - business_id required")
             
-            # Get QBO invoice data
-            qbo_data = await self.qbo_service.get_qbo_data_for_digest()
-            invoices = qbo_data.get("invoices", [])
+            # Use SmartSyncService for data retrieval
+            from domains.qbo.client import QBOClient
+            
+            # Check if sync is needed
+            if not self.smart_sync.should_sync("qbo", "SCHEDULED"):
+                cached_data = self.smart_sync.get_cache("qbo")
+                if cached_data:
+                    invoices = cached_data.get("invoices", [])
+                else:
+                    invoices = []
+            else:
+                # Execute sync with retry logic
+                qbo_client = QBOClient(self.business_id)
+                qbo_data = await self.smart_sync.execute_with_retry(
+                    qbo_client.get_invoices, max_attempts=3
+                )
+                invoices = qbo_data.get("invoices", [])
+                
+                # Cache results
+                self.smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
             
             today = datetime.utcnow()
             overdue_invoices = []
@@ -174,7 +189,7 @@ class CollectionsService(TenantAwareService):
             logger.error(f"Failed to send reminder for invoice {invoice_id}: {str(e)}")
             raise ValidationError(f"Failed to send reminder: {str(e)}")
     
-    def get_aging_report(self) -> Dict[str, Any]:
+    async def get_aging_report(self) -> Dict[str, Any]:
         """
         Generate aging report with buckets and totals.
         
@@ -182,12 +197,29 @@ class CollectionsService(TenantAwareService):
             Dictionary with aging buckets and summary statistics
         """
         try:
-            if not self.qbo_service:
-                raise ValidationError("QBOBulkScheduledService not available - business_id required")
+            if not self.smart_sync:
+                raise ValidationError("SmartSyncService not available - business_id required")
             
-            # Get QBO invoice data
-            qbo_data = await self.qbo_service.get_qbo_data_for_digest()
-            invoices = qbo_data.get("invoices", [])
+            # Use SmartSyncService for data retrieval
+            from domains.qbo.client import QBOClient
+            
+            # Check if sync is needed
+            if not self.smart_sync.should_sync("qbo", "SCHEDULED"):
+                cached_data = self.smart_sync.get_cache("qbo")
+                if cached_data:
+                    invoices = cached_data.get("invoices", [])
+                else:
+                    invoices = []
+            else:
+                # Execute sync with retry logic
+                qbo_client = QBOClient(self.business_id)
+                qbo_data = await self.smart_sync.execute_with_retry(
+                    qbo_client.get_invoices, max_attempts=3
+                )
+                invoices = qbo_data.get("invoices", [])
+                
+                # Cache results
+                self.smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
             
             today = datetime.utcnow()
             aging_buckets = {
@@ -258,7 +290,7 @@ class CollectionsService(TenantAwareService):
             logger.error(f"Failed to generate aging report: {str(e)}")
             raise ValidationError(f"Failed to generate aging report: {str(e)}")
     
-    def get_customer_payment_history(self, customer_id: str) -> Dict[str, Any]:
+    async def get_customer_payment_history(self, customer_id: str) -> Dict[str, Any]:
         """
         Get payment history and reliability score for a customer.
         
@@ -269,12 +301,29 @@ class CollectionsService(TenantAwareService):
             Dictionary with payment history and reliability metrics
         """
         try:
-            if not self.qbo_service:
-                raise ValidationError("QBOBulkScheduledService not available - business_id required")
+            if not self.smart_sync:
+                raise ValidationError("SmartSyncService not available - business_id required")
             
-            # Get QBO data
-            qbo_data = await self.qbo_service.get_qbo_data_for_digest()
-            invoices = qbo_data.get("invoices", [])
+            # Use SmartSyncService for data retrieval
+            from domains.qbo.client import QBOClient
+            
+            # Check if sync is needed
+            if not self.smart_sync.should_sync("qbo", "SCHEDULED"):
+                cached_data = self.smart_sync.get_cache("qbo")
+                if cached_data:
+                    invoices = cached_data.get("invoices", [])
+                else:
+                    invoices = []
+            else:
+                # Execute sync with retry logic
+                qbo_client = QBOClient(self.business_id)
+                qbo_data = await self.smart_sync.execute_with_retry(
+                    qbo_client.get_invoices, max_attempts=3
+                )
+                invoices = qbo_data.get("invoices", [])
+                
+                # Cache results
+                self.smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
             
             customer_invoices = []
             total_invoiced = 0

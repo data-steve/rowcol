@@ -13,7 +13,6 @@ class Business(Base, TimestampMixin, TenantMixin):
     integrations = relationship("Integration", back_populates="business")
     policy_profile = relationship("PolicyProfile", foreign_keys=[policy_profile_id])
     balances = relationship("Balance", back_populates="business", foreign_keys=[Balance.business_id])
-    notifications = relationship("Notification", back_populates="business")
     tray_items = relationship("TrayItem", back_populates="business")
     users = relationship("User", back_populates="business")
     transactions = relationship("Transaction", back_populates="business")

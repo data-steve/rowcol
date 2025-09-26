@@ -177,9 +177,72 @@ This data should be moved to `infra/qbo/sandbox_data_service.py` with:
 6. **Temporal Data** - Historical data with proper date ranges
 7. **Data Quality Variations** - Some incomplete or inconsistent data for testing
 
+## TrayDataProvider Classes (Moved from runway/experiences/tray.py)
+
+These classes were removed from the tray service and should be moved to the future QBO Sandbox Data Service:
+
+### TrayDataProvider Abstract Base Class
+```python
+class TrayDataProvider(ABC):
+    """Abstract base class for tray data providers."""
+    
+    @abstractmethod
+    def get_tray_items(self, business_id: str) -> List[TrayItem]:
+        """Get tray items for a business."""
+        pass
+    
+    @abstractmethod
+    def get_runway_impact(self, item_type: str) -> Dict[str, Any]:
+        """Get runway impact for a specific item type."""
+        pass
+    
+    @abstractmethod
+    def get_action_result(self, action: str, item_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Get result of performing an action on a tray item."""
+        pass
+    
+    @abstractmethod
+    def get_priority_weights(self) -> Dict[str, int]:
+        """Get priority weights for different item types."""
+        pass
+```
+
+### QBOTrayDataProvider Implementation
+```python
+class QBOTrayDataProvider(TrayDataProvider):
+    """Data provider that fetches data from QBO."""
+    
+    def __init__(self, db: Session, business_id: str):
+        self.db = db
+        self.business_id = business_id
+        self.smart_sync = SmartSyncService(business_id)
+    
+    def get_tray_items(self, business_id: str) -> List[TrayItem]:
+        """Get tray items from QBO data."""
+        # Implementation details...
+    
+    def _get_qbo_data_for_tray(self) -> Dict[str, Any]:
+        """Get QBO data specifically for tray experience."""
+        # Implementation details...
+    
+    # ... other methods
+```
+
+### Factory Function
+```python
+def get_tray_data_provider(provider_type: str = "qbo", db: Session = None, business_id: str = None) -> TrayDataProvider:
+    """Get the QBO tray data provider - no more mocking!"""
+    if provider_type == "qbo" and db and business_id:
+        return QBOTrayDataProvider(db, business_id)
+    else:
+        raise ValueError("TrayDataProvider requires db and business_id for QBO provider. No mocking allowed!")
+```
+
 ## Current Issues to Fix
 
 1. **Remove all mock methods** from `domains/qbo/client.py`
 2. **Remove mock environment checks** (`if qbo_config.environment == "mock"`)
 3. **Remove mock response calls** (`return self._get_mock_response(...)`)
 4. **Clean up auth service** - Fix Integration model references
+5. **Remove TrayDataProvider classes** from `runway/experiences/tray.py` (moved to sandbox data service)
+6. **Clean up tray.py** - Remove duplicate versions and dead code

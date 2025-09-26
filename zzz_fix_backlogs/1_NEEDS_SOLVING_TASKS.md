@@ -16,13 +16,40 @@
 
 ## **Context for All Tasks**
 
-These tasks build on the foundation established in the executable tasks:
-- SmartSyncService architecture is implemented
-- QBOBulkScheduledService is properly scoped
-- Direct QBO API calls are working for user actions
-- Infrastructure is consolidated in `infra/jobs/`
+### **What is zzz_fix_backlogs?**
+This directory contains cleanup tasks from a major infrastructure consolidation effort. The codebase was refactored to move scattered utilities into a consolidated `infra/jobs/` directory, but several architectural decisions need analysis and solution work before they can be executed.
+
+### **Current Architecture State**
+- **SmartSyncService** (`infra/jobs/smart_sync.py`): Central orchestration layer for ALL QBO interactions. Handles retries, deduplication, rate limiting, and caching while enabling immediate user actions through direct API calls. See [ADR-005: QBO API Strategy](../docs/architecture/ADR-005-qbo-api-strategy.md) for complete architecture.
+- **QBOBulkScheduledService** (`domains/qbo/service.py`): ONLY for bulk background data operations (like digest generation). NOT for user actions.
+- **Direct QBO API calls** (`domains/qbo/client.py`): For immediate user actions (pay bill, delay payment, send collection). Must be wrapped in SmartSyncService for fragility handling.
+- **QBODataService** (`domains/qbo/data_service.py`): ONLY for `runway/experiences/` data formatting. NOT a generic data fetcher.
+- **User Actions vs Data Syncs**: User actions = immediate QBO API calls wrapped in SmartSyncService. Data syncs = background operations coordinated by SmartSyncService.
+
+### **Key Architecture Principle**
+The question isn't "SmartSyncService vs direct API calls" - it's "How do we use SmartSyncService to handle QBO's fragility while maintaining the UX of immediate user actions?" Answer: SmartSyncService as the orchestration layer that handles retries, deduplication, rate limiting, and caching, while still allowing direct API calls for user actions.
+
+### **QBO Fragility Context**
+QuickBooks Online API has well-documented fragility that can disrupt the cash runway ritual:
+- **Rate Limiting**: 500 requests/min per app, 100 requests/sec per realm
+- **Intermittent Failures**: 503 Service Unavailable, network latency, maintenance windows
+- **Duplicate Actions**: Retrying failed requests can create duplicate transactions
+- **Lost Actions**: QBO's async processing can make actions appear to fail when they succeeded
+- **Data Inconsistencies**: QBO data may not reflect real-time changes
+- **Webhook Reliability**: Missed events, out-of-order delivery, duplicates
+
+### **Product Context**
+Oodaloo is a cash runway management tool for service agencies ($1M–$5M, 10-30 staff) that automates 70-80% of weekly cash runway decisions through QBO integration. The core value proposition is the "weekly cash runway ritual" - a seamless, trustworthy experience where users can make immediate decisions (pay bills, send reminders) with real-time feedback.
 
 **Key Challenge**: These tasks require understanding complex relationships and making architectural decisions that affect multiple parts of the system.
+
+## **Development Environment Setup**
+
+**IMPORTANT**: Start your development session with:
+```bash
+poetry shell
+```
+This activates the virtual environment and saves you from typing `poetry run` before every command. You can then run commands directly like `uvicorn main:app --reload` instead of `poetry run uvicorn main:app --reload`.
 
 ---
 
@@ -47,6 +74,17 @@ These tasks build on the foundation established in the executable tasks:
   - Test each use case to identify what's missing
   - Determine what integration tests are needed
   - Identify gaps in functionality
+- **Discovery Commands to Run:**
+  - `grep -r "SmartSyncService" . --include="*.py"` - Find all current usage
+  - `grep -r "from infra.jobs import SmartSyncService" . --include="*.py"` - Check imports
+  - `grep -r "smart_sync\." . --include="*.py"` - Find method calls
+  - `uvicorn main:app --reload` - Test application startup
+  - `pytest tests/ -k "smart_sync"` - Run existing SmartSync tests
+- **Files to Read First:**
+  - `docs/architecture/ADR-005-qbo-api-strategy.md` - Complete API strategy
+  - `infra/jobs/smart_sync.py` - Current implementation
+  - `dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md` - Product context
+  - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Overall architecture
 - **Dependencies:** `Fix SmartSyncService Usage in Domain Services` (from executable tasks)
 - **Verification:** 
   - Current SmartSyncService is not fully integrated across all use cases
@@ -80,6 +118,17 @@ These tasks build on the foundation established in the executable tasks:
   - Identify overlapping or duplicate functionality
   - Determine clear separation of concerns
   - Decide on single architecture for digest experience
+- **Discovery Commands to Run:**
+  - `grep -r "digest" runway/experiences/ infra/scheduler/` - Find all digest usage
+  - `grep -r "DigestService" . --include="*.py"` - Find service usage
+  - `grep -r "digest_jobs" . --include="*.py"` - Find job usage
+  - `ls -la runway/experiences/digest.py infra/scheduler/digest_jobs.py` - Check file existence
+  - `uvicorn main:app --reload` - Test application startup
+- **Files to Read First:**
+  - `runway/experiences/digest.py` - Experience logic
+  - `infra/scheduler/digest_jobs.py` - Job scheduling
+  - `dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md` - Digest requirements
+  - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Background jobs architecture
 - **Dependencies:** `Fix QBODataService Scope and Remove Bulk Methods` (from executable tasks)
 - **Verification:** 
   - Run `grep -r "digest" runway/experiences/ infra/scheduler/` - understand current usage
@@ -112,6 +161,18 @@ These tasks build on the foundation established in the executable tasks:
   - Determine how to replace individual utilities with SmartSyncService
   - Test that SmartSyncService works for all calculator scenarios
   - Verify no functionality is lost in the transition
+- **Discovery Commands to Run:**
+  - `grep -r "SyncTimingManager" runway/` - Find current usage
+  - `grep -r "from infra\.jobs\.sync_strategies import SyncTimingManager"` - Check imports
+  - `grep -r "sync_timing\." runway/` - Find method calls
+  - `grep -r "SyncCache" runway/` - Find cache usage
+  - `uvicorn main:app --reload` - Test application startup
+- **Files to Read First:**
+  - `runway/core/runway_calculator.py` - Main calculator
+  - `runway/experiences/tray.py` - Tray experience
+  - `runway/experiences/digest.py` - Digest experience
+  - `infra/jobs/smart_sync.py` - SmartSync implementation
+  - `docs/architecture/ADR-005-qbo-api-strategy.md` - API strategy
 - **Dependencies:** `Test SmartSyncService Integration End-to-End` (this phase)
 - **Verification:** 
   - Run `grep -r "SyncTimingManager" runway/`
@@ -141,6 +202,18 @@ These tasks build on the foundation established in the executable tasks:
   - Run `pytest` to discover test import failures
   - Analyze each error to determine root cause
   - Determine fix for each error
+- **Discovery Commands to Run:**
+  - `uvicorn main:app --reload` - Check for startup import errors
+  - `pytest` - Check for test import failures
+  - `python -c "import main"` - Test basic import chain
+  - `grep -r "from infra\.(cache|queue|scheduler)" . --include="*.py"` - Find old imports
+  - `grep -r "import infra\.(cache|queue|scheduler)" . --include="*.py"` - Find old imports
+  - `grep -r "circular import" . --include="*.py"` - Find circular import issues
+- **Files to Read First:**
+  - `main.py` - Application entry point
+  - `infra/jobs/__init__.py` - Consolidated exports
+  - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Import structure
+  - `infrastructure_consolidation_plan.md` - Consolidation history
 - **Commands to Run:**
   - `uvicorn main:app --reload` - Check for startup import errors
   - `pytest` - Check for test import failures
@@ -176,6 +249,18 @@ These tasks build on the foundation established in the executable tasks:
   - Identify specific sections that need updates
   - Check for outdated references to old architecture
   - Determine what new documentation is needed
+- **Discovery Commands to Run:**
+  - `grep -r "infra\.(cache|queue|scheduler)" docs/` - Find old references
+  - `grep -r "SmartSyncService" docs/` - Find SmartSync references
+  - `grep -r "QBOBulkScheduledService" docs/` - Find bulk service references
+  - `grep -r "domains/qbo" docs/` - Find QBO references
+  - `find docs/ -name "*.md" -exec grep -l "infra/" {} \;` - Find infra references
+- **Files to Read First:**
+  - `infrastructure_consolidation_plan.md` - Consolidation plan
+  - `README.md` - Main documentation
+  - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Architecture docs
+  - `docs/architecture/ADR-005-qbo-api-strategy.md` - API strategy
+  - `dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md` - Build plan
 - **Specific Files to Update:**
   - `infrastructure_consolidation_plan.md` - Update status and mark completed phases
   - `README.md` - Update architecture section with new structure
@@ -228,3 +313,59 @@ These tasks build on the foundation established in the executable tasks:
 4. Convert solved solution tasks into executable tasks for future work
 
 This backlog contains tasks that require **analysis, discovery, and solution work** and should not be executed hands-free.
+
+---
+
+## **How to Use This Backlog**
+
+### **For New Threads Starting This Work**
+
+1. **Read the Context Section First** - Understand what zzz_fix_backlogs is and the current architecture state
+2. **Read the Key Architecture Principle** - Understand the SmartSyncService vs direct API calls distinction
+3. **Read the QBO Fragility Context** - Understand why SmartSyncService is necessary
+4. **Read the Product Context** - Understand what Oodaloo is and why it matters
+
+### **For Each Task**
+
+1. **Read the Files to Read First** - Get the necessary context before starting
+2. **Run the Discovery Commands** - Understand the current state
+3. **Analyze the Current Issues** - Understand what needs to be solved
+4. **Follow the Required Analysis** - Work through the analysis systematically
+5. **Document Your Solution** - Once solved, document the approach for future reference
+
+### **Common Patterns to Look For**
+
+- **Import Issues**: Look for old `infra.cache`, `infra.queue`, `infra.scheduler` imports
+- **Service Misuse**: Look for QBOBulkScheduledService used for user actions
+- **Missing Integration**: Look for direct QBO calls not wrapped in SmartSyncService
+- **Circular Dependencies**: Look for domains importing from runway or vice versa
+
+### **Decision Making Guidelines**
+
+- **When in doubt, use SmartSyncService** - It's the central orchestration layer
+- **User actions = direct QBO calls wrapped in SmartSyncService** - Not bulk operations
+- **Background syncs = SmartSyncService + QBOBulkScheduledService** - Not direct calls
+- **Experience data = QBODataService** - Only for runway/experiences/ formatting
+
+### **Testing Strategy**
+
+- **Always test uvicorn startup** - `uvicorn main:app --reload`
+- **Always run pytest** - `pytest` to check for test failures
+- **Test the specific functionality** - Don't just check imports
+- **Verify the solution works** - Don't just fix the immediate error
+
+### **When You're Stuck**
+
+1. **Read the ADR-005** - It has the complete API strategy
+2. **Read the Comprehensive Architecture** - It has the overall system design
+3. **Read the Build Plan** - It has the product context and requirements
+4. **Check the executable tasks** - They might have solved similar problems
+5. **Ask for help** - These are complex architectural decisions
+
+### **Success Criteria**
+
+- **Application starts without errors** - `uvicorn main:app --reload` works
+- **All tests pass** - `pytest` passes
+- **Architecture is consistent** - All services follow the same patterns
+- **Documentation is updated** - Reflects the new architecture
+- **Solution is documented** - Future developers can understand the decisions

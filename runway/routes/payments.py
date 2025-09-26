@@ -116,7 +116,15 @@ async def execute_payment(
     try:
         payment_service = services["payment_service"]
         smart_sync = services["smart_sync"]
-        services["reserve_service"]
+        business_id = services["smart_sync"].business_id
+        
+        # Check rate limits and deduplication for user action
+        from infra.jobs.enums import SyncStrategy
+        if not smart_sync.should_sync("qbo", SyncStrategy.USER_ACTION):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        
+        if smart_sync.deduplicate_action("payment_execution", str(payment_id), execution_data.dict()):
+            return {"status": "already_processed"}
         
         # Execute the payment workflow
         payment = payment_service.execute_payment_workflow(
@@ -124,11 +132,33 @@ async def execute_payment(
             confirmation_number=execution_data.confirmation_number
         )
         
-        # Record user activity for smart sync
+        # Execute direct QBO API call with retry logic
+        from domains.qbo.client import QBOClient
+        qbo_client = QBOClient(business_id)
+        
+        # Record payment in QBO
+        qbo_payment = await smart_sync.execute_with_retry(
+            qbo_client.record_payment, 
+            {
+                "payment_id": payment.qbo_payment_id,
+                "confirmation_number": payment.confirmation_number,
+                "execution_date": payment.execution_date.isoformat(),
+                "amount": float(payment.amount)
+            }, 
+            max_attempts=3
+        )
+        
+        # Update local DB with QBO confirmation
+        await smart_sync.update_local_db("payment_execution", str(payment_id), {
+            "qbo_confirmation": qbo_payment.get("Id"),
+            "status": "executed"
+        })
+        
+        # Record user activity
         smart_sync.record_user_activity("payment_executed")
         
-        # Trigger QBO sync for payment recording
-        sync_result = smart_sync.sync_platform("qbo", smart_sync.SyncStrategy.EVENT_TRIGGERED)
+        # Trigger background reconciliation
+        await smart_sync.schedule_reconciliation("payment_execution", str(payment_id))
         
         return {
             "message": "Payment executed successfully",
@@ -136,7 +166,7 @@ async def execute_payment(
             "confirmation_number": payment.confirmation_number,
             "execution_date": payment.execution_date.isoformat(),
             "amount": float(payment.amount),
-            "qbo_sync_status": sync_result.get("status", "pending"),
+            "qbo_confirmation": qbo_payment.get("Id"),
             "runway_impact": payment_service.calculate_payment_runway_impact(payment)
         }
         

@@ -30,6 +30,8 @@ This template documents the process for taking raw task backlogs and curating th
   - Dependencies
   - Verification Commands
   - Definition of Done
+- **Progress Tracking Instructions** - Clear steps for updating task status as work progresses
+- **Git Workflow Instructions** - Surgical commit steps for each task
 
 ### **1_NEEDS_SOLVING_TASKS.md** - Needs Analysis and Solution Work
 **Characteristics:**
@@ -52,6 +54,7 @@ This template documents the process for taking raw task backlogs and curating th
   - Verification
   - Definition of Done
   - Solution Required (what needs to be figured out)
+- **Progress Tracking Instructions** - Clear steps for updating task status as analysis progresses
 
 ### **2_BLOCKED_TASKS.md** - Blocked by Solution Tasks
 **Characteristics:**
@@ -106,12 +109,15 @@ For each task, ask:
 - [ ] Complete verification steps
 - [ ] No "figure out" language
 - [ ] Ready for hands-free execution
+- [ ] **Progress tracking instructions included**
+- [ ] **Git workflow instructions included**
 
 ### **Needs Solving Tasks**
 - [ ] Clear analysis requirements
 - [ ] "Figure out" or "determine" language present
 - [ ] Dependencies clearly identified
 - [ ] Solution Required section explains what needs to be figured out
+- [ ] **Progress tracking instructions included**
 
 ### **Blocked Tasks**
 - [ ] Ready for execution once unblocked
@@ -145,6 +151,14 @@ For each task, ask:
 - **Definition of Done:**
   - [Specific outcome 1]
   - [Specific outcome 2]
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting work
+  - Update status to `[✅]` when task is complete
+  - Update status to `[❌]` if blocked or failed
+- **Git Commit:**
+  - After completing verification, commit the specific files modified:
+  - `git add [specific-files-modified]`
+  - `git commit -m "feat: [task-description] - [brief-summary]"`
 ```
 
 ### **Needs Solving Task Pattern**
@@ -167,6 +181,11 @@ For each task, ask:
 - **Definition of Done:**
   - [What the solution should achieve]
 - **Solution Required:** [What needs to be figured out]
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting analysis
+  - Update status to `[💡]` when solution is identified
+  - Update status to `[✅]` when solution is documented
+  - Update status to `[❌]` if blocked or need help
 ```
 
 ## **File Naming Convention**
@@ -192,6 +211,7 @@ For each task, ask:
 - **Blocked Tasks:** Clear what dependencies need to be resolved
 - **No Information Loss:** All detail preserved from original backlogs
 - **Clean Formatting:** No spec/agent references, consistent status format
+- **Git Workflow:** Clear surgical commit instructions for each task
 
 ## **Common Mistakes to Avoid**
 
@@ -200,6 +220,7 @@ For each task, ask:
 - **Don't remove warnings** - they're there for a reason
 - **Don't change verification steps** - they're tested and working
 - **Don't add new requirements** - just organize existing ones
+- **Don't forget git workflow** - surgical commits are essential
 
 ## **Updates to This Template**
 
