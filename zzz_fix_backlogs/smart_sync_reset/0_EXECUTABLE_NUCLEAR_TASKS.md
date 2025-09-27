@@ -69,7 +69,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 - **Verification:** 
   - Run `ls domains/qbo/` - should show only: `auth.py`, `setup.py`, `config.py`, `health.py`, `models.py`
   - Run `ls domains/integrations/` - should show no `qbo/` directory
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
 - **Git Commit:**
   - Run `git add . && git commit -m "feat: nuclear cleanup - delete circular dependency files"`
 - **Definition of Done:**
@@ -127,7 +127,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 - **Dependencies:** `Delete Circular Dependency Mess`
 - **Verification:** 
   - Run `poetry run python -c "from infra.qbo.client import QBORawClient; print('QBORawClient import works')"`
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
 - **Git Commit:**
   - Run `git add . && git commit -m "feat: create QBORawClient for raw QBO HTTP calls"`
 - **Definition of Done:**
@@ -165,7 +165,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 - **Dependencies:** `Create Raw QBO HTTP Client`
 - **Verification:** 
   - Run `poetry run python -c "from infra.qbo.smart_sync import SmartSyncService; print('SmartSyncService import works')"`
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
 - **Git Commit:**
   - Run `git add . && git commit -m "feat: move SmartSyncService to infra/qbo/ with QBO orchestration"`
 - **Definition of Done:**
@@ -214,7 +214,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
   - Run `grep -r "from domains.integrations.qbo" . --include="*.py"` - should return no results
   - Run `grep -r "from infra.jobs import SmartSyncService" . --include="*.py"` - should return no results
   - Run `grep -r "from infra.qbo.smart_sync import SmartSyncService" . --include="*.py"` - should show new imports
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
 - **Definition of Done:**
   - All import errors are fixed
   - All imports use correct paths
@@ -256,7 +256,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 - **Verification:** 
   - Run `grep -r "QBOClient" docs/architecture/ADR-005-qbo-api-strategy.md` - should return no results
   - Run `grep -r "Domain Service → SmartSyncService → Raw QBO HTTP Calls" docs/architecture/ADR-005-qbo-api-strategy.md` - should show the new pattern
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
 - **Definition of Done:**
   - ADR-005 reflects the new nuclear architecture
   - No references to QBOClient or old patterns
@@ -302,7 +302,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 - **Dependencies:** `Fix Import Errors After Foundation is Built`
 - **Verification:** 
   - Run `grep -r "SmartSyncService" domains/` - should show new imports
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
   - Run `pytest tests/domains/` - domain tests should pass
 - **Definition of Done:**
   - All domain services use SmartSyncService for QBO operations
@@ -333,7 +333,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 - **Verification:** 
   - Run `grep -r "QBORawClient" runway/routes/` - should return no results
   - Run `grep -r "SmartSyncService" runway/routes/` - should return no results
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
   - Run `pytest tests/runway/` - runway tests should pass
 - **Definition of Done:**
   - All route files use domain services
@@ -369,7 +369,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 - **Verification:** 
   - Run `grep -r "from infra.qbo.integration_models" . --include="*.py"` - should return no results
   - Run `grep -r "Integration" domains/core/models/__init__.py` - should return no results
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
   - Run `pytest tests/domains/` - domain tests should pass
 - **Git Commit:**
   - Run `git add . && git commit -m "feat: simplify integration model - add QBO fields to Business"`
@@ -426,7 +426,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
   - Run `grep -r "from domains.core.models.integration" . --include="*.py"` - should return no results
   - Run `grep -r "Integration\." . --include="*.py"` - should return no results
   - Run `grep -r "integration\." . --include="*.py"` - should return no results
-  - Run `uvicorn main:app --reload` - should start without import errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
   - Run `pytest tests/` - all tests should pass
 - **Git Commit:**
   - Run `git add . && git commit -m "feat: comprehensive cleanup - remove all Integration model references"`
@@ -491,7 +491,7 @@ pytest
 ```
 
 **THOROUGH VERIFICATION CHECKLIST:**
-- [ ] After EACH file change, run `uvicorn main:app --reload` to test startup
+- [ ] After EACH file change, check uvicorn in Cursor terminal to ensure it's still running
 - [ ] After EACH import change, run `pytest` to test functionality
 - [ ] Before deleting ANY file, run `grep -r "filename" . --include="*.py"` to check references
 - [ ] After EACH service replacement, verify the new service actually works

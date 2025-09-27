@@ -248,7 +248,7 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Verification:** 
   - Run `grep -r "old_pattern" . --include="*.py"` - should return no results
   - Run `grep -r "new_pattern" . --include="*.py"` - should show new usage
-  - Run `uvicorn main:app --reload` - should start without errors
+  - **Check uvicorn in Cursor terminal** - should be running without errors
   - Run `pytest` - should pass without import failures
 
 - **Definition of Done:**
