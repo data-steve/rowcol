@@ -21,10 +21,13 @@ This template documents the process for taking raw task backlogs and curating th
 **Required Sections:**
 - Context for All Tasks
 - Critical Warnings from Painful Lessons
+- **CRITICAL: Recursive Discovery/Triage Pattern** - Built into every task
 - Task details with:
   - Status, Priority, Justification
-  - Specific Files to Fix
-  - Search Commands to Run
+  - **Initial Files to Fix** (starting point, not comprehensive)
+  - **MANDATORY: Comprehensive Discovery Commands** (find ALL occurrences)
+  - **MANDATORY: Recursive Triage Process** (understand context before changing)
+  - **MANDATORY: Comprehensive Cleanup Requirements** (handle all edge cases)
   - Required Imports/Changes
   - Pattern to Implement (with code examples)
   - Dependencies
@@ -32,6 +35,7 @@ This template documents the process for taking raw task backlogs and curating th
   - Definition of Done
 - **Progress Tracking Instructions** - Clear steps for updating task status as work progresses
 - **Git Workflow Instructions** - Surgical commit steps for each task
+- **Todo List Integration** - Cursor todo list management requirements
 
 ### **1_NEEDS_SOLVING_TASKS.md** - Needs Analysis and Solution Work
 **Characteristics:**
@@ -79,9 +83,32 @@ This template documents the process for taking raw task backlogs and curating th
 
 ### **Step 2: Categorize by Complexity**
 For each task, ask:
-- **Is this fully solved?** → Executable
-- **Does this need analysis work?** → Needs Solving
-- **Is this blocked by other tasks?** → Blocked
+
+#### **Executable Task Gatekeeping Questions:**
+- **Is this fully solved?** (Clear implementation pattern exists)
+- **Are ALL files identified?** (Not just initial files, but comprehensive discovery commands provided)
+- **Is the recursive triage process defined?** (Understand context before changing)
+- **Are cleanup requirements comprehensive?** (Handle all edge cases, not just basic changes)
+- **Is there NO "figure out" language?** (Everything is specific and actionable)
+- **Can any developer execute this?** (No additional context needed)
+
+**If ANY answer is NO → Needs Solving**
+
+#### **Needs Solving Task Gatekeeping Questions:**
+- **Does this need analysis work?** (Discovery, understanding, design required)
+- **Is there "figure out" or "determine" language?** (Indicates unknowns)
+- **Are there architectural decisions needed?** (Requires human input)
+- **Are dependencies unclear?** (Need to map relationships)
+- **Does the solution need to be designed?** (Not just implemented)
+
+**If ANY answer is YES → Needs Solving**
+
+#### **Blocked Task Gatekeeping Questions:**
+- **Is this ready for execution?** (Same complexity as executable tasks)
+- **Is it blocked by solution tasks?** (Dependencies need to be resolved first)
+- **Will it become executable once unblocked?** (No additional analysis needed)
+
+**If ALL answers are YES → Blocked**
 
 ### **CRITICAL: Recursive Discovery/Triage Pattern**
 
@@ -169,33 +196,83 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Status:** `[ ]` Not started
 - **Priority:** P0 Critical / P1 High / P2 Medium
 - **Justification:** [Why this task is needed]
-- **Specific Files to Fix:**
+
+- **Initial Files to Fix:** (Starting point - NOT comprehensive)
   - `file1.py` - [specific change needed]
   - `file2.py` - [specific change needed]
-- **Search Commands to Run:**
-  - `grep -r "pattern" path/`
+
+- **MANDATORY: Comprehensive Discovery Commands:**
+  ```bash
+  # Find ALL occurrences of the pattern
+  grep -r "pattern" . --include="*.py"
+  grep -r "related_pattern" . --include="*.py"
+  grep -r "import.*pattern" . --include="*.py"
+  find . -name "*.py" -exec grep -l "pattern" {} \;
+  ```
+
+- **MANDATORY: Recursive Triage Process:**
+  1. **For each file found in discovery:**
+     - Read the broader context around each occurrence
+     - Understand what the method/service/route is doing
+     - Determine if it needs simple replacement, contextual update, or complete overhaul
+     - Identify all related imports, method calls, and dependencies
+  2. **Map the real system:**
+     - How do these pieces actually connect?
+     - What are the real data flows?
+     - What would break if you changed it?
+  3. **Plan comprehensive updates:**
+     - Update method names AND all calls to those methods
+     - Update imports AND all references
+     - Handle edge cases and multiple patterns in same file
+     - Update related logic that depends on the changes
+
+- **MANDATORY: Comprehensive Cleanup Requirements:**
+  - **File Operations:** Use `cp` then `rm` for moves, never just `mv`
+  - **Import Cleanup:** Remove ALL old imports, add ALL new imports
+  - **Reference Cleanup:** Update ALL references to renamed methods/classes
+  - **Dependency Cleanup:** Update ALL dependent code
+  - **Test Cleanup:** Update ALL test files that reference changed code
+  - **Documentation Cleanup:** Update ALL documentation references
+
 - **Required Imports/Changes:**
   - Remove: `old_import`
   - Add: `new_import`
+
 - **Pattern to Implement:**
   ```python
   # Code example here
   ```
+
 - **Dependencies:** [List any dependencies]
+
 - **Verification:** 
-  - Run `command1` - should return X
-  - Run `command2` - should return Y
+  - Run `grep -r "old_pattern" . --include="*.py"` - should return no results
+  - Run `grep -r "new_pattern" . --include="*.py"` - should show new usage
+  - Run `uvicorn main:app --reload` - should start without errors
+  - Run `pytest` - should pass without import failures
+
 - **Definition of Done:**
   - [Specific outcome 1]
   - [Specific outcome 2]
+  - ALL occurrences found and updated (not just initial files)
+  - No broken references or imports anywhere
+  - Comprehensive cleanup completed
+
 - **Progress Tracking:**
   - Update status to `[🔄]` when starting work
   - Update status to `[✅]` when task is complete
   - Update status to `[❌]` if blocked or failed
+
 - **Git Commit:**
   - After completing verification, commit the specific files modified:
   - `git add [specific-files-modified]`
   - `git commit -m "feat: [task-description] - [brief-summary]"`
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
 ```
 
 ### **Needs Solving Task Pattern**
@@ -258,6 +335,29 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Don't change verification steps** - they're tested and working
 - **Don't add new requirements** - just organize existing ones
 - **Don't forget git workflow** - surgical commits are essential
+
+## **Critical Lessons Learned**
+
+### **Why Tasks Fail:**
+1. **Incomplete Discovery**: Tasks list specific files but miss others found during execution
+2. **Blind Search-and-Replace**: Changes made without understanding context
+3. **Insufficient Cleanup**: Edge cases and dependencies not handled
+4. **Missing File Operations**: Using `mv` instead of `cp` then `rm`
+5. **No Todo Integration**: Progress not tracked in Cursor todo list
+
+### **Success Patterns:**
+1. **Comprehensive Discovery**: Find ALL occurrences, not just initial files
+2. **Recursive Triage**: Understand context before making changes
+3. **Comprehensive Cleanup**: Handle all edge cases and dependencies
+4. **Proper File Operations**: Use `cp` then `rm` for moves
+5. **Todo Integration**: Track progress and discovered edge cases
+
+### **Template Requirements:**
+- **Every executable task MUST have comprehensive discovery commands**
+- **Every executable task MUST have recursive triage process**
+- **Every executable task MUST have comprehensive cleanup requirements**
+- **Every executable task MUST have todo list integration**
+- **Gatekeeping questions MUST be used to distinguish task types**
 
 ## **Updates to This Template**
 
