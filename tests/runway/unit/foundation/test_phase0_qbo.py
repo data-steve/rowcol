@@ -78,85 +78,47 @@ def test_business_qbo_fields_update(db: Session, test_business: Business):
 
 
 @pytest.mark.asyncio
-async def test_qbo_provider_get_bills_real():
+async def test_qbo_provider_get_bills_real(qbo_connected_business):
     """Test QBO provider can get bills using real provider with production database"""
-    import os
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    # from infra.qbo.integration_models import Integration, IntegrationStatuses  # Replaced with Business model
-    from domains.core.models.business import Business
+    business = qbo_connected_business
     
-    # Connect to MAIN database (not test database) to get real QBO-connected business
-    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
-    engine = create_engine(database_url)
-    Session = sessionmaker(bind=engine)
+    if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
+        pytest.skip("SKIPPING: QBO business missing required tokens.")
+
+    # Test with real SmartSyncService
+    from infra.qbo.smart_sync import SmartSyncService
+    smart_sync = SmartSyncService(business.business_id)
     
-    with Session() as session:
-        # Look for existing QBO-connected business in MAIN database
-        business = session.query(Business).filter(
-            Business.qbo_status == "connected",
-            Business.qbo_access_token.isnot(None)
-        ).first()
-
-        if not business:
-            pytest.skip("SKIPPING: No QBO-connected business found. Run token refresh script.")
-
-        if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
-            pytest.skip("SKIPPING: QBO business missing required tokens.")
-
-        # Test with real SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
-        smart_sync = SmartSyncService(business.business_id)
-        
-        # Test that SmartSyncService can get bills (should work with valid tokens)
-        try:
-            bills = await smart_sync.get_bills()
-            assert isinstance(bills, list)
-            print(f"✅ Successfully retrieved {len(bills)} bills from QBO")
-        except Exception as e:
-            # If it fails, it should be with a proper error message
-            assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
+    # Test that SmartSyncService can get bills (should work with valid tokens)
+    try:
+        bills = await smart_sync.get_bills()
+        assert isinstance(bills, list)
+        print(f"✅ Successfully retrieved {len(bills)} bills from QBO")
+    except Exception as e:
+        # If it fails, it should be with a proper error message
+        assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
 
 
 @pytest.mark.asyncio
-async def test_qbo_provider_get_invoices_real():
+async def test_qbo_provider_get_invoices_real(qbo_connected_business):
     """Test QBO provider can get invoices using real provider with production database"""
-    import os
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    # from infra.qbo.integration_models import Integration, IntegrationStatuses  # Replaced with Business model
-    from domains.core.models.business import Business
+    business = qbo_connected_business
     
-    # Connect to MAIN database (not test database) to get real QBO-connected business
-    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
-    engine = create_engine(database_url)
-    Session = sessionmaker(bind=engine)
+    if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
+        pytest.skip("SKIPPING: QBO business missing required tokens.")
+
+    # Test with real SmartSyncService
+    from infra.qbo.smart_sync import SmartSyncService
+    smart_sync = SmartSyncService(business.business_id)
     
-    with Session() as session:
-        # Look for existing QBO-connected business in MAIN database
-        business = session.query(Business).filter(
-            Business.qbo_status == "connected",
-            Business.qbo_access_token.isnot(None)
-        ).first()
-
-        if not business:
-            pytest.skip("SKIPPING: No QBO-connected business found. Run token refresh script.")
-
-        if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
-            pytest.skip("SKIPPING: QBO business missing required tokens.")
-
-        # Test with real SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
-        smart_sync = SmartSyncService(business.business_id)
-        
-        # Test that SmartSyncService can get invoices (should work with valid tokens)
-        try:
-            invoices = await smart_sync.get_invoices()
-            assert isinstance(invoices, list)
-            print(f"✅ Successfully retrieved {len(invoices)} invoices from QBO")
-        except Exception as e:
-            # If it fails, it should be with a proper error message
-            assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
+    # Test that SmartSyncService can get invoices (should work with valid tokens)
+    try:
+        invoices = await smart_sync.get_invoices()
+        assert isinstance(invoices, list)
+        print(f"✅ Successfully retrieved {len(invoices)} invoices from QBO")
+    except Exception as e:
+        # If it fails, it should be with a proper error message
+        assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
 
 
 def test_qbo_provider_business_relationship(db: Session, test_business: Business):

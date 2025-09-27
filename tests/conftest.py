@@ -28,6 +28,47 @@ load_dotenv()
 QBO_CLIENT_ID = os.getenv('QBO_CLIENT_ID', 'test_client_id')
 QBO_CLIENT_SECRET = os.getenv('QBO_CLIENT_SECRET', 'test_client_secret')
 QBO_REDIRECT_URI = os.getenv('QBO_REDIRECT_URI', 'http://localhost:8000/callback')
+
+
+@pytest.fixture
+def prod_database_session():
+    """
+    Centralized fixture for production database connections.
+    
+    This fixture provides a connection to the main database (not test database)
+    for integration tests that need real QBO data. Replaces the duplicated
+    database connection logic found throughout test files.
+    """
+    import os
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    
+    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
+    engine = create_engine(database_url)
+    Session = sessionmaker(bind=engine)
+    
+    with Session() as session:
+        yield session
+
+
+@pytest.fixture
+def qbo_connected_business(prod_database_session):
+    """
+    Fixture that provides a QBO-connected business from the production database.
+    
+    This replaces the duplicated business query logic found throughout test files.
+    """
+    from domains.core.models.business import Business
+    
+    business = prod_database_session.query(Business).filter(
+        Business.qbo_status == 'connected',
+        Business.qbo_access_token.isnot(None)
+    ).first()
+    
+    if not business:
+        pytest.skip("No QBO-connected business found in production database")
+    
+    return business
 QBO_SANDBOX_BASE_URL = 'https://sandbox-quickbooks.api.intuit.com'
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
