@@ -13,7 +13,7 @@ from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id, get_current_user
 from domains.ap.services.bill_ingestion import BillService
 from domains.ap.services.payment import PaymentService
-from infra.jobs import SmartSyncService
+from infra.qbo.smart_sync import SmartSyncService
 from runway.core.reserve_runway import RunwayReserveService
 from domains.ap.schemas.bill import BillResponse, BillApprovalRequest
 from domains.ap.schemas.payment import PaymentScheduleRequest
@@ -29,7 +29,7 @@ def get_services(
     return {
         "bill_service": BillService(db, business_id),
         "payment_service": PaymentService(db, business_id),
-        "smart_sync": SmartSyncService(business_id),
+        "smart_sync": SmartSyncService(business_id, "", db),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -264,13 +264,8 @@ async def schedule_bill_payment(
             created_by_user_id=current_user["user_id"]
         )
         
-        # Execute direct QBO API call with retry logic
-        from domains.qbo.client import QBOClient
-        qbo_client = QBOClient(business_id)
-        
-        # Create payment in QBO
-        qbo_payment = await smart_sync.execute_with_retry(
-            qbo_client.create_payment, 
+        # Create payment in QBO using SmartSyncService
+        qbo_payment = await smart_sync.create_payment_immediate(
             {
                 "bill_id": bill.qbo_bill_id,
                 "amount": float(payment.amount),

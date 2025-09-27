@@ -17,7 +17,7 @@ Features:
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.qbo.client import get_qbo_client
+from infra.qbo.smart_sync import SmartSyncService
 from typing import Dict, Any, Optional
 from runway.core.scenario_data import BusinessScenarioProvider, BusinessScenario
 from runway.core.runway_calculator import RunwayCalculator
@@ -109,7 +109,7 @@ class DemoTestDriveService:
                 "test_drive_type": "test_drive"
             }
     
-    def generate_hygiene_score(self, business_id: str) -> Dict[str, Any]:
+    async def generate_hygiene_score(self, business_id: str) -> Dict[str, Any]:
         """
         Generate a data hygiene score showing QBO data quality issues.
         
@@ -125,16 +125,9 @@ class DemoTestDriveService:
             # Get data quality analyzer for this business
             data_quality_analyzer = self._get_data_quality_analyzer(business_id)
             
-            # Get QBO data for analysis using QBOAPIClient directly
-            qbo_client = get_qbo_client(business_id, self.db)
-            qbo_data = {
-                "bills": qbo_client.get_bills(),
-                "invoices": qbo_client.get_invoices(),
-                "vendors": qbo_client.get_vendors(),
-                "customers": qbo_client.get_customers(),
-                "accounts": qbo_client.get_accounts(),
-                "company_info": qbo_client.get_company_info()
-            }
+            # Get QBO data for analysis using SmartSyncService
+            smart_sync = SmartSyncService(business_id, "", self.db)
+            qbo_data = await smart_sync.get_all_data()
             
             # Use core service for hygiene score calculation
             hygiene_analysis = data_quality_analyzer.calculate_hygiene_score(qbo_data)

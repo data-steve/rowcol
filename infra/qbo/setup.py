@@ -8,9 +8,9 @@ This service orchestrates QBO connection establishment using both
 QBOAuthService and QBOConnectionManager for robust first-time setup.
 """
 from sqlalchemy.orm import Session
-from domains.qbo.auth import QBOAuthService
-from domains.qbo.client import get_qbo_client
-from domains.qbo.config import qbo_config
+from .auth import QBOAuthService
+from .client import QBORawClient
+from .config import qbo_config
 from runway.experiences.test_drive import DemoTestDriveService
 from domains.core.models.integration import Integration
 from common.exceptions import IntegrationError
@@ -215,7 +215,7 @@ class QBOSetupService:
             # Test API connectivity using QBO client
             try:
                 # Simple test - try to get company info
-                get_qbo_client(business_id, self.db)
+                QBORawClient(business_id, "", self.db)
                 test_result = {"status": "success", "message": "API connectivity verified"}
             except Exception as e:
                 test_result = {"status": "error", "message": f"API connectivity test failed: {e}"}

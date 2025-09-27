@@ -12,7 +12,7 @@ from typing import List, Dict, Optional
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.ap.services.vendor import VendorService
-from infra.jobs import SmartSyncService
+from infra.qbo.smart_sync import SmartSyncService
 from domains.ap.schemas.vendor import VendorResponse, VendorCreate, VendorUpdate
 from common.exceptions import ValidationError
 

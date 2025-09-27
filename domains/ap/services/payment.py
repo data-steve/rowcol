@@ -48,9 +48,9 @@ class PaymentService(TenantAwareService):
         """
         super().__init__(db, business_id)
         
-        # NOTE: Providers parked for future strategy - using QBOAPIClient directly
-        from domains.qbo.client import get_qbo_client
-        self.qbo_provider = qbo_provider or get_qbo_client(business_id, self.db)
+        # Use SmartSyncService for QBO operations
+        from infra.qbo.smart_sync import SmartSyncService
+        self.smart_sync = SmartSyncService(business_id, "", self.db)
         self.runway_reserve_service = runway_reserve_service
         
         logger.info(f"Initialized PaymentService for business {business_id}")
@@ -243,7 +243,7 @@ class PaymentService(TenantAwareService):
             logger.error(f"Payment creation failed: {str(e)}")
             raise
     
-    def execute_payment_workflow(self, payment_id: int, 
+    async def execute_payment_workflow(self, payment_id: int, 
                                 confirmation_number: str = None) -> Payment:
         """Execute payment through the full workflow."""
         try:
@@ -261,7 +261,12 @@ class PaymentService(TenantAwareService):
             
             # Sync with QBO if configured
             try:
-                self.qbo_provider.sync_payment(payment)
+                await self.smart_sync.record_payment({
+                    "payment_id": payment.payment_id,
+                    "amount": float(payment.amount),
+                    "payment_date": payment.payment_date.isoformat(),
+                    "payment_method": payment.payment_method
+                })
             except Exception as e:
                 logger.warning(f"QBO sync failed for payment {payment_id}: {str(e)}")
                 # Don't fail the whole payment for QBO sync issues

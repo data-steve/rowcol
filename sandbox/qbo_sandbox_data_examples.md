@@ -246,3 +246,235 @@ def get_tray_data_provider(provider_type: str = "qbo", db: Session = None, busin
 4. **Clean up auth service** - Fix Integration model references
 5. **Remove TrayDataProvider classes** from `runway/experiences/tray.py` (moved to sandbox data service)
 6. **Clean up tray.py** - Remove duplicate versions and dead code
+
+
+from domains.qbo.client 
+```
+# Test data for QBO integration testing
+QBO_TEST_DATA = {
+    "bills": [
+        {
+            "qbo_id": "1",
+            "vendor_ref": {"value": "1", "name": "Office Supplies Co"},
+            "amount": 250.00,
+            "due_date": "2025-10-01",
+            "txn_date": "2025-09-15",
+            "balance": 250.00,
+            "doc_number": "BILL-001",
+            "memo": "Office supplies",
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2", 
+            "vendor_ref": {"value": "2", "name": "Software Solutions Inc"},
+            "amount": 1500.00,
+            "due_date": "2025-10-15",
+            "txn_date": "2025-09-20",
+            "balance": 1500.00,
+            "doc_number": "BILL-002",
+            "memo": "Monthly software license",
+            "sync_token": "0"
+        }
+    ],
+    "invoices": [
+        {
+            "qbo_id": "1",
+            "customer_ref": {"value": "1", "name": "Acme Corp"},
+            "amount": 5000.00,
+            "due_date": "2025-09-01",
+            "txn_date": "2025-08-15",
+            "balance": 5000.00,
+            "doc_number": "INV-001",
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2",
+            "customer_ref": {"value": "2", "name": "Tech Startup LLC"},
+            "amount": 2500.00,
+            "due_date": "2025-09-15",
+            "txn_date": "2025-08-30",
+            "balance": 2500.00,
+            "doc_number": "INV-002",
+            "sync_token": "0"
+        }
+    ],
+    "vendors": [
+        {
+            "qbo_id": "1",
+            "name": "Office Supplies Co",
+            "display_name": "Office Supplies Co",
+            "active": True,
+            "balance": 250.00,
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2",
+            "name": "Software Solutions Inc", 
+            "display_name": "Software Solutions Inc",
+            "active": True,
+            "balance": 1500.00,
+            "sync_token": "0"
+        }
+    ],
+    "customers": [
+        {
+            "qbo_id": "1",
+            "name": "Acme Corp",
+            "display_name": "Acme Corp",
+            "active": True,
+            "balance": 5000.00,
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2",
+            "name": "Tech Startup LLC",
+            "display_name": "Tech Startup LLC", 
+            "active": True,
+            "balance": 2500.00,
+            "sync_token": "0"
+        }
+    ],
+    "accounts": [
+        {
+            "qbo_id": "1",
+            "name": "Checking Account",
+            "account_type": "Bank",
+            "account_sub_type": "Checking",
+            "current_balance": 15000.00,
+            "active": True,
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2",
+            "name": "Savings Account",
+            "account_type": "Bank", 
+            "account_sub_type": "Savings",
+            "current_balance": 5000.00,
+            "active": True,
+            "sync_token": "0"
+        }
+    ],
+    "company_info": {
+        "qbo_id": "1",
+        "company_name": "Test Company Inc",
+        "legal_name": "Test Company Inc",
+        "country": "US",
+        "fiscal_year_start": "January",
+        "sync_token": "0"
+    }
+}
+```
+
+# Test data for QBO integration testing
+QBO_TEST_DATA = {
+    "bills": [
+        {
+            "qbo_id": "1",
+            "vendor_ref": {"value": "1", "name": "Office Supplies Co"},
+            "amount": 250.00,
+            "due_date": "2025-10-01",
+            "txn_date": "2025-09-15",
+            "balance": 250.00,
+            "doc_number": "BILL-001",
+            "memo": "Office supplies",
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2", 
+            "vendor_ref": {"value": "2", "name": "Software Solutions Inc"},
+            "amount": 1500.00,
+            "due_date": "2025-10-15",
+            "txn_date": "2025-09-20",
+            "balance": 1500.00,
+            "doc_number": "BILL-002",
+            "memo": "Monthly software license",
+            "sync_token": "0"
+        }
+    ],
+    "invoices": [
+        {
+            "qbo_id": "1",
+            "customer_ref": {"value": "1", "name": "Acme Corp"},
+            "amount": 5000.00,
+            "due_date": "2025-09-01",
+            "txn_date": "2025-08-15",
+            "balance": 5000.00,
+            "doc_number": "INV-001",
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2",
+            "customer_ref": {"value": "2", "name": "Tech Startup LLC"},
+            "amount": 2500.00,
+            "due_date": "2025-09-15",
+            "txn_date": "2025-08-30",
+            "balance": 2500.00,
+            "doc_number": "INV-002",
+            "sync_token": "0"
+        }
+    ],
+    "vendors": [
+        {
+            "qbo_id": "1",
+            "name": "Office Supplies Co",
+            "display_name": "Office Supplies Co",
+            "active": True,
+            "balance": 250.00,
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2",
+            "name": "Software Solutions Inc", 
+            "display_name": "Software Solutions Inc",
+            "active": True,
+            "balance": 1500.00,
+            "sync_token": "0"
+        }
+    ],
+    "customers": [
+        {
+            "qbo_id": "1",
+            "name": "Acme Corp",
+            "display_name": "Acme Corp",
+            "active": True,
+            "balance": 5000.00,
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2",
+            "name": "Tech Startup LLC",
+            "display_name": "Tech Startup LLC", 
+            "active": True,
+            "balance": 2500.00,
+            "sync_token": "0"
+        }
+    ],
+    "accounts": [
+        {
+            "qbo_id": "1",
+            "name": "Checking Account",
+            "account_type": "Bank",
+            "account_sub_type": "Checking",
+            "current_balance": 15000.00,
+            "active": True,
+            "sync_token": "0"
+        },
+        {
+            "qbo_id": "2",
+            "name": "Savings Account",
+            "account_type": "Bank", 
+            "account_sub_type": "Savings",
+            "current_balance": 5000.00,
+            "active": True,
+            "sync_token": "0"
+        }
+    ],
+    "company_info": {
+        "qbo_id": "1",
+        "company_name": "Test Company Inc",
+        "legal_name": "Test Company Inc",
+        "country": "US",
+        "fiscal_year_start": "January",
+        "sync_token": "0"
+    }
+}

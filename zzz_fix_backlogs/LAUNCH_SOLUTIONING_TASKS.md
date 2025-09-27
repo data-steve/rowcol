@@ -1,49 +1,154 @@
-# Launch Solutioning Tasks - Reusable Recipe
+# Launch Solutioning Tasks - Comprehensive Framework
 
-*This file contains the standard instructions for tackling tasks that need analysis and solution work*
+*This file contains the complete solutioning methodology for tackling complex tasks that require analysis, discovery, and solution design*
 
-## **Quick Start**
+## **CRITICAL: Read This Twice Before Starting**
 
-1. **Create Branch**: `git checkout -b solution/[task-name]`
-2. **Work One Task at a Time**: Focus on single task until fully solved
-3. **Document Solution**: Create executable task list when solution is complete
-4. **Archive When Done**: Move completed task file to `archive/` when solution is documented
+This framework exists because solutioning is fundamentally different from execution. You will be given tasks that require discovery, analysis, and design work before they can be executed. **DO NOT RUSH TO SOLUTIONS.** Follow this process religiously to avoid the mistakes that have been made before.
+
+## **Context for All Solutioning Tasks**
+
+### **What is Solutioning?**
+Solutioning is the process of taking complex, ambiguous problems and turning them into clear, executable tasks. Unlike execution tasks that are ready to implement, solutioning tasks require:
+
+- **Discovery work** - understanding what actually exists vs what you assume
+- **Analysis work** - identifying gaps, patterns, and relationships  
+- **Design work** - creating solutions that fit the current system
+- **Documentation work** - converting solutions into executable tasks
+
+### **Why This Process Exists**
+Complex software problems have dependencies, assumptions, and unknowns that must be discovered before solutions can be designed. Rushing to solutions without proper discovery leads to:
+- Wrong assumptions about what exists
+- Solutions that don't fit the current system
+- Wasted effort on problems that don't exist
+- Breaking things that were working
+
+### **The Solutioning Mindset**
+- **Be curious, not judgmental** - discover what exists before deciding what to fix
+- **Validate assumptions** - test every assumption against reality
+- **Trust the process** - don't skip steps or rush to solutions
+- **Document everything** - write down what you find vs what you assumed
+- **One task at a time** - focus deeply on each problem
+
+## **The Solutioning Process**
+
+### **Phase 0: Mandatory Discovery and Assumption Validation**
+
+**BEFORE doing any analysis or design work, you MUST complete discovery:**
+
+1. **Read the task completely** - understand what it's trying to solve
+2. **Run ALL discovery commands** - don't skip any, even if they seem obvious
+3. **Read ALL files listed in "Files to Read First"** - don't assume you know what's in them
+4. **Answer ALL "Required Analysis" questions** - don't skip any questions
+5. **Document what actually exists** - write down what you find vs what the task assumes
+6. **Validate every assumption** - test if things actually exist before proceeding
+
+**Discovery Commands (Run ALL of them):**
+```bash
+# Find all references to understand usage
+grep -r "pattern" . --include="*.py"
+
+# Understand file relationships  
+find . -name "*.py" -exec grep -l "pattern" {} \;
+
+# Check current imports
+grep -r "import.*pattern" . --include="*.py"
+
+# Test current state
+uvicorn main:app --reload
+pytest
+```
+
+**Discovery Documentation Template:**
+```
+## Discovery Findings for [Task Name]
+
+### What Actually Exists:
+- [List what you found that exists]
+
+### What the Task Assumed:
+- [List what the task assumed exists]
+
+### Assumptions That Were Wrong:
+- [List assumptions that don't match reality]
+
+### Files That Need Updates:
+- [List files that need changes based on discovery]
+
+### Dependencies Discovered:
+- [List dependencies that weren't obvious]
+```
+
+### **Phase 1: Analysis and Gap Identification**
+
+**Only after discovery is complete:**
+
+1. **Map current system state** - understand how things actually work
+2. **Identify gaps** - what's missing or unclear
+3. **Find patterns** - look at similar solutions in codebase
+4. **Understand relationships** - how different parts connect
+5. **Document findings** - write down what you learned
+
+### **Phase 2: Solution Design**
+
+**Only after analysis is complete:**
+
+1. **Design solution** - create clear implementation plan
+2. **Map dependencies** - understand what needs to be done first
+3. **Create patterns** - design reusable approaches
+4. **Plan verification** - how to test the solution works
+5. **Document solution** - write down the complete approach
+
+### **Phase 3: Solution Documentation**
+
+**Only after design is complete:**
+
+1. **Create executable task list** - convert solution to hands-free tasks
+2. **Write specific patterns** - provide code examples and patterns
+3. **Define verification steps** - specific commands to test success
+4. **Map dependencies** - clear order of execution
+5. **Update task status** - mark as complete
 
 ## **Progress Tracking**
 
 - `[ ]` - Not started
-- `[🔄]` - In progress (analysis phase)
+- `[🔄]` - In progress (discovery phase)
+- `[🔍]` - Analysis phase (after discovery complete)
 - `[💡]` - Solution identified (ready to implement)
 - `[✅]` - Solution documented (ready for executable phase)
 - `[❌]` - Blocked/Need help
 
 **IMPORTANT**: Always update the task status in the document as you work through tasks. This allows tracking progress and identifying which solutions are complete.
 
-## **Solutioning Pattern**
+## **Solutioning Checklist**
 
-### **For Each Task:**
-1. **Read the problem statement** - understand what needs to be figured out
-2. **Analyze existing code** - understand current state and relationships
-3. **Identify gaps** - what's missing or unclear
-4. **Research patterns** - look at similar solutions in codebase
-5. **Design solution** - create clear implementation plan
-6. **Document solution** - create executable task list with specific patterns
-7. **Validate solution** - ensure it can be executed hands-free
-8. **Update status in document** - change `[ ]` to `[✅]` when solution is complete
+### **Discovery Phase (MANDATORY):**
+- [ ] **All discovery commands run** - no shortcuts, no assumptions
+- [ ] **All files read** - understand what actually exists
+- [ ] **All analysis questions answered** - don't skip any
+- [ ] **Assumptions validated** - test every assumption against reality
+- [ ] **Current state documented** - write down what you found
 
-### **Definition of Done for Solutioning:**
-- **Clear problem statement** - what exactly needs to be solved
-- **Specific files to modify** - exact files and changes needed
-- **Implementation patterns** - code examples and patterns to follow
-- **Verification steps** - specific commands to test success
-- **No "figure out" language** - everything is specific and actionable
-- **Dependencies mapped** - clear order of execution
-- **Success criteria** - measurable outcomes
+### **Analysis Phase:**
+- [ ] **Current state mapped** - understand how things work
+- [ ] **Gaps identified** - what's missing or unclear
+- [ ] **Patterns found** - look at similar solutions
+- [ ] **Relationships understood** - how parts connect
+- [ ] **Findings documented** - write down what you learned
 
-### **After Solution is Documented:**
-1. **Create executable task list** - convert solution to hands-free tasks
-2. **Archive solution work** - move to `archive/solutions/` directory
-3. **Hand off to executable phase** - use LAUNCH_EXECUTABLE_TASKS.md
+### **Design Phase:**
+- [ ] **Solution designed** - clear implementation approach
+- [ ] **Dependencies mapped** - what needs to be done first
+- [ ] **Patterns created** - reusable approaches
+- [ ] **Verification planned** - how to test success
+- [ ] **Solution documented** - complete approach written down
+
+### **Documentation Phase:**
+- [ ] **Executable tasks created** - hands-free implementation tasks
+- [ ] **Specific patterns provided** - code examples and patterns
+- [ ] **Verification steps defined** - specific commands to test
+- [ ] **Dependencies mapped** - clear execution order
+- [ ] **Task status updated** - marked as complete
 
 ## **Common Analysis Commands**
 
@@ -60,27 +165,36 @@ grep -r "import.*pattern" . --include="*.py"
 # Test current state
 uvicorn main:app --reload
 pytest
+
+# Check for specific patterns
+grep -r "get_.*_for_digest" . --include="*.py"
+grep -r "SmartSyncService" . --include="*.py"
+grep -r "QBODataService" . --include="*.py"
 ```
 
-## **Solutioning Checklist**
+## **Definition of Done for Solutioning**
 
-- [ ] **Problem clearly defined** - no ambiguity about what needs to be solved
-- [ ] **Current state analyzed** - understand existing code and relationships
-- [ ] **Gaps identified** - what's missing or unclear
-- [ ] **Solution designed** - clear implementation approach
-- [ ] **Patterns documented** - specific code examples provided
-- [ ] **Verification defined** - specific test commands provided
-- [ ] **Dependencies mapped** - clear execution order
-- [ ] **Success criteria defined** - measurable outcomes
-- [ ] **No "figure out" language** - everything is specific and actionable
+- **Discovery complete** - all commands run, all files read, all assumptions validated
+- **Analysis complete** - current state mapped, gaps identified, patterns found
+- **Solution designed** - clear implementation approach with dependencies mapped
+- **Documentation complete** - executable tasks created with specific patterns
+- **No "figure out" language** - everything is specific and actionable
+- **Verification defined** - specific commands to test success
+- **Success criteria defined** - measurable outcomes
 
-## **Blocking Analysis**
+## **After Solution is Documented**
 
-Before starting solutioning work, identify:
-- **What executable tasks are blocked** by this solutioning work?
-- **What's the minimum viable solution** to unblock those tasks?
-- **What's the complete solution** for full functionality?
-- **What can be done incrementally** vs what needs to be done all at once?
+1. **Create executable task list** - convert solution to hands-free tasks
+2. **Archive solution work** - move to `archive/solutions/` directory  
+3. **Hand off to executable phase** - use LAUNCH_EXECUTABLE_TASKS.md
+
+## **Critical Success Factors**
+
+- **Trust the process** - don't rush to solutions, follow the phases
+- **Validate assumptions** - test every assumption against reality
+- **Document everything** - write down what you find vs what you assumed
+- **One task at a time** - focus deeply on each problem
+- **Be confident** - you need to not rush and trust the process
 
 ---
 
@@ -89,3 +203,5 @@ Before starting solutioning work, identify:
 *Attach your specific solutioning task list to this file*
 
 **⚠️ IMPORTANT: These tasks require analysis and solution work - do not attempt hands-free execution!**
+
+**⚠️ CRITICAL: Follow the discovery → analysis → design → document process religiously!**

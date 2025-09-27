@@ -5,7 +5,7 @@
 
 ## **Task Complexity Curation**
 
-**⚠️ NEEDS SOLUTION WORK (5 tasks)** - These tasks require:
+**⚠️ NEEDS SOLUTION WORK (8 tasks)** - These tasks require:
 - Analysis and discovery work
 - "Figure out" or "determine" language present
 - Dependencies on other solution tasks
@@ -15,6 +15,8 @@
 ---
 
 ## **Context for All Tasks**
+
+**IMPORTANT**: Before starting any solutioning work, read `LAUNCH_SOLUTIONING_TASKS.md` twice. It contains the complete solutioning framework and methodology you must follow.
 
 ### **What is zzz_fix_backlogs?**
 This directory contains cleanup tasks from a major infrastructure consolidation effort. The codebase was refactored to move scattered utilities into a consolidated `infra/jobs/` directory, but several architectural decisions need analysis and solution work before they can be executed.
@@ -47,325 +49,333 @@ Oodaloo is a cash runway management tool for service agencies ($1M–$5M, 10-30 
 
 **IMPORTANT**: Start your development session with:
 ```bash
+cd ~/projects/oodaloo
 poetry shell
+uvicorn main:app --reload
 ```
-This activates the virtual environment and saves you from typing `poetry run` before every command. You can then run commands directly like `uvicorn main:app --reload` instead of `poetry run uvicorn main:app --reload`.
+This activates the virtual environment and starts the application once. Keep uvicorn running in the background throughout your analysis work.
 
 ---
 
-## **Phase 1: SmartSyncService Integration (P1 High)**
+## **Phase 0: Solution Task Alignment and Validation (P0 Critical)**
 
-#### **Task 1: Test SmartSyncService Integration End-to-End**
-- **Status:** `[ ]` Not started
-- **Priority:** P1 High
-- **Justification:** After all refactoring, we need to verify that `SmartSyncService` works correctly for both user actions and background syncs across the entire application.
+#### **Task 0: Validate Solution Task Alignment with Architecture**
+- **Status:** `[🔄]` Discovery in progress
+- **Priority:** P0 Critical
+- **Justification:** Before starting any solution work, verify that all solution tasks align with ADR-005 architecture and current system state. This prevents analysis work on outdated or contradictory requirements.
 - **Code Pointers:**
-  - `infra/jobs/smart_sync.py` (main orchestrator)
-  - `runway/core/runway_calculator.py` (uses SmartSync for data sync)
-  - `runway/routes/bills.py` (uses SmartSync for user activity tracking)
-  - `domains/ar/services/invoice.py` (uses SmartSync for sync timing)
-- **Current Issues:**
-  - SmartSyncService is not fully integrated across all use cases
-  - Need to verify sync timing works correctly for different strategies
-  - Need to verify caching works for data sync operations
-  - Need to verify user activity tracking works for immediate actions
+  - `docs/architecture/ADR-005-qbo-api-strategy.md` - Current architecture
+  - `infra/jobs/smart_sync.py` - Current implementation
+  - All solution tasks in this document
+- **Current Issues to Resolve:**
+  - Solution tasks may reference outdated architecture patterns
+  - Tasks may contradict current SmartSyncService implementation
+  - Analysis work may be wasted on wrong assumptions
 - **Required Analysis:**
-  - Read `infra/jobs/smart_sync.py` to understand current implementation
-  - Test each use case to identify what's missing
-  - Determine what integration tests are needed
-  - Identify gaps in functionality
+  - Read ADR-005 to understand current architecture
+  - Review each solution task for alignment with current patterns
+  - Identify any tasks that contradict the architecture
+  - Determine which tasks need updates before analysis can begin
 - **Discovery Commands to Run:**
-  - `grep -r "SmartSyncService" . --include="*.py"` - Find all current usage
-  - `grep -r "from infra.jobs import SmartSyncService" . --include="*.py"` - Check imports
-  - `grep -r "smart_sync\." . --include="*.py"` - Find method calls
-  - `uvicorn main:app --reload` - Test application startup
-  - `pytest tests/ -k "smart_sync"` - Run existing SmartSync tests
+  - `grep -r "SmartSyncService" . --include="*.py"` - Find current usage patterns
+  - `grep -r "from infra.jobs import" . --include="*.py"` - Check current import patterns
+  - `uvicorn main:app --reload` - Verify application starts
+  - `pytest tests/ -k "smart_sync"` - Check existing tests
 - **Files to Read First:**
   - `docs/architecture/ADR-005-qbo-api-strategy.md` - Complete API strategy
   - `infra/jobs/smart_sync.py` - Current implementation
-  - `dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md` - Product context
   - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Overall architecture
-- **Dependencies:** `Fix SmartSyncService Usage in Domain Services` (from executable tasks)
+  - `zzz_fix_backlogs/LAUNCH_SOLUTIONING_TASKS.md` - Solutioning framework
+  - `zzz_fix_backlogs/LAUNCH_EXECUTABLE_TASKS.md` - Execution framework
+- **Dependencies:** None
 - **Verification:** 
-  - Current SmartSyncService is not fully integrated across all use cases
-  - Need to create integration tests
-  - Need to verify all use cases work correctly
+  - All solution tasks align with ADR-005 architecture
+  - No tasks contradict current SmartSyncService implementation
+  - All tasks reference current system state
 - **Definition of Done:**
-  - SmartSyncService handles both user actions and background syncs
-  - Sync timing works correctly for different strategies
-  - Caching works for data sync operations
-  - User activity tracking works for immediate actions
-  - Integration tests cover all use cases
-- **Solution Required:** Analysis of current implementation, identification of gaps, creation of integration tests
+  - All solution tasks are verified to align with current architecture
+  - No contradictory or outdated task requirements remain
+  - Analysis work can proceed with confidence
+- **Solution Required:** Review and validation of all solution tasks against current architecture
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting validation
+  - Update status to `[✅]` when all tasks are validated
+  - Update status to `[❌]` if tasks need major updates
 
 ---
 
-## **Phase 2: Digest Architecture Consolidation (P2 Medium)**
+## **Phase 1: Data Architecture Problems (P1 High)**
 
-#### **Task 2: Consolidate Digest Architecture**
+#### **Task 2: Fix Calculator → Experience Data Flow**
 - **Status:** `[ ]` Not started
-- **Priority:** P2 Medium
-- **Justification:** `digest.py` and `digest_jobs.py` have overlapping responsibilities. The digest experience should have a clear architecture for weekly email generation and sending.
-- **Specific Files to Analyze:**
-  - `runway/experiences/digest.py` - Contains digest experience logic and commented email service
-  - `infra/scheduler/digest_jobs.py` - Contains job scheduling for digest generation
+- **Priority:** P1 High
+- **Justification:** Each calculator in `runway/core/` should feed its specific `runway/experiences/` with the right data for their goals. Current data flow is broken or inconsistent, causing experiences to show wrong or missing data.
+- **Code Pointers:**
+  - `runway/core/` - Calculator services that should feed experiences
+  - `runway/experiences/` - Experience services that need calculator data
+  - `domains/qbo/data_service.py` - Current data service implementation
+  - `infra/jobs/smart_sync.py` - SmartSync orchestration layer
 - **Current Issues to Resolve:**
-  - Unclear boundaries between experience logic and job scheduling
-  - Commented email service code in digest.py
-  - Potential duplicate functionality between files
+  - Calculator services not properly feeding experience services
+  - Data flow between runway/core and runway/experiences is unclear
+  - Each experience may be fetching data independently instead of using calculators
+  - Data consistency between calculators and experiences is broken
 - **Required Analysis:**
-  - Read both files to understand current responsibilities
-  - Identify overlapping or duplicate functionality
-  - Determine clear separation of concerns
-  - Decide on single architecture for digest experience
+  - Map current data flow from calculators to experiences
+  - Identify which calculators should feed which experiences
+  - Determine proper data passing patterns
+  - Design consistent data flow architecture
 - **Discovery Commands to Run:**
-  - `grep -r "digest" runway/experiences/ infra/scheduler/` - Find all digest usage
-  - `grep -r "DigestService" . --include="*.py"` - Find service usage
-  - `grep -r "digest_jobs" . --include="*.py"` - Find job usage
-  - `ls -la runway/experiences/digest.py infra/scheduler/digest_jobs.py` - Check file existence
-  - `uvicorn main:app --reload` - Test application startup
+  - `grep -r "runway_calculator" runway/experiences/` - Find calculator usage in experiences
+  - `grep -r "get_.*_data" runway/core/` - Find data methods in calculators
+  - `grep -r "from runway.core" runway/experiences/` - Find calculator imports
+  - `grep -r "for_digest" . --include="*.py"` - Find remaining for_digest methods
 - **Files to Read First:**
-  - `runway/experiences/digest.py` - Experience logic
-  - `infra/scheduler/digest_jobs.py` - Job scheduling
-  - `dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md` - Digest requirements
-  - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Background jobs architecture
-- **Dependencies:** `Fix QBODataService Scope and Remove Bulk Methods` (from executable tasks)
+  - `runway/core/runway_calculator.py` - Main calculator service
+  - `runway/experiences/digest.py` - Digest experience data needs
+  - `runway/experiences/tray.py` - Tray experience data needs
+  - `runway/experiences/test_drive.py` - Test drive experience data needs
+  - `zzz_fix_backlogs/backlog/006_experiences_cleanup_and_consolidation.md` - Known experience issues
+- **Dependencies:** `Create Solution Analysis Framework`
 - **Verification:** 
-  - Run `grep -r "digest" runway/experiences/ infra/scheduler/` - understand current usage
-  - Read both files completely to understand responsibilities
-  - Identify specific areas of overlap or confusion
+  - Clear data flow from calculators to experiences
+  - Each experience gets data from appropriate calculator
+  - No duplicate data fetching across experiences
+  - Data consistency maintained
 - **Definition of Done:**
-  - Single clear architecture for digest experience
-  - `digest_jobs.py` handles scheduling via `infra/jobs/`
-  - `digest.py` handles data formatting and email generation
-  - No duplicate or conflicting logic
-  - Clear documentation of responsibilities
-- **Solution Required:** Analysis of current files, architectural decision on separation of concerns, implementation of consolidated architecture
+  - Calculator → Experience data flow clearly designed
+  - Each experience uses appropriate calculator for data
+  - No duplicate data fetching patterns
+  - Data consistency patterns established
+- **Solution Required:** Analysis of current data flow, design of calculator → experience patterns
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting analysis
+  - Update status to `[💡]` when solution is identified
+  - Update status to `[✅]` when solution is documented
+  - Update status to `[❌]` if blocked or need help
 
 ---
 
-#### **Task 3: Update Runway Calculators to Use SmartSyncService**
+#### **Task 3: Clean Up Experience Services Data Patterns**
 - **Status:** `[ ]` Not started
-- **Priority:** P2 Medium
-- **Justification:** Runway calculators currently use individual sync utilities directly. They should use `SmartSyncService` as the orchestrator for consistent sync behavior across the application.
-- **Specific Files to Fix:**
-  - `runway/core/runway_calculator.py` - Replace SyncTimingManager with SmartSyncService
-  - `runway/experiences/tray.py` - Replace SyncTimingManager with SmartSyncService
-  - `runway/experiences/digest.py` - Replace SyncTimingManager with SmartSyncService
-- **Current Issues:**
-  - Calculators use individual sync utilities directly
-  - Inconsistent sync behavior across calculators
-  - Need to verify SmartSyncService works for all calculator use cases
+- **Priority:** P1 High
+- **Justification:** Experience services in `runway/experiences/` have scattered mocks, providers, and broken data patterns. Need to inspect and fix each experience service to use proper data patterns.
+- **Code Pointers:**
+  - `runway/experiences/digest.py` - Digest service data patterns
+  - `runway/experiences/tray.py` - Tray service data patterns
+  - `runway/experiences/test_drive.py` - Test drive service data patterns
+  - `zzz_fix_backlogs/backlog/006_experiences_cleanup_and_consolidation.md` - Known issues
+- **Current Issues to Resolve:**
+  - Experience services have scattered mocks and providers
+  - Data patterns are inconsistent across experiences
+  - Some services may be broken or non-functional
+  - Mock violations in experience data
 - **Required Analysis:**
-  - Read each calculator to understand current sync usage
-  - Determine how to replace individual utilities with SmartSyncService
-  - Test that SmartSyncService works for all calculator scenarios
-  - Verify no functionality is lost in the transition
+  - Audit each experience service for data patterns
+  - Identify mock violations and broken patterns
+  - Determine proper data access patterns for each experience
+  - Design consistent experience data architecture
 - **Discovery Commands to Run:**
-  - `grep -r "SyncTimingManager" runway/` - Find current usage
-  - `grep -r "from infra\.jobs\.sync_strategies import SyncTimingManager"` - Check imports
-  - `grep -r "sync_timing\." runway/` - Find method calls
-  - `grep -r "SyncCache" runway/` - Find cache usage
-  - `uvicorn main:app --reload` - Test application startup
+  - `grep -r "mock" runway/experiences/` - Find mock usage in experiences
+  - `grep -r "provider" runway/experiences/` - Find provider usage in experiences
+  - `grep -r "get_.*_for_digest" runway/experiences/` - Find for_digest usage
+  - `grep -r "SmartSyncService" runway/experiences/` - Find SmartSync usage
 - **Files to Read First:**
-  - `runway/core/runway_calculator.py` - Main calculator
-  - `runway/experiences/tray.py` - Tray experience
-  - `runway/experiences/digest.py` - Digest experience
-  - `infra/jobs/smart_sync.py` - SmartSync implementation
-  - `docs/architecture/ADR-005-qbo-api-strategy.md` - API strategy
-- **Dependencies:** `Test SmartSyncService Integration End-to-End` (this phase)
+  - `runway/experiences/digest.py` - Digest service implementation
+  - `runway/experiences/tray.py` - Tray service implementation
+  - `runway/experiences/test_drive.py` - Test drive service implementation
+  - `zzz_fix_backlogs/backlog/006_experiences_cleanup_and_consolidation.md` - Known issues
+- **Dependencies:** `Create Solution Analysis Framework`
 - **Verification:** 
-  - Run `grep -r "SyncTimingManager" runway/`
-  - Run `grep -r "from infra\.jobs\.sync_strategies import SyncTimingManager"`
-  - Test each calculator to ensure it still works
+  - All experience services use consistent data patterns
+  - No mock violations in experience data
+  - All services are functional and tested
+  - Data patterns align with calculator → experience flow
 - **Definition of Done:**
-  - All runway calculators use `SmartSyncService` from `infra.jobs`
-  - Individual sync utility imports are removed
-  - Sync behavior is consistent across all calculators
-  - SmartSyncService handles timing, caching, and retry logic
-- **Solution Required:** Analysis of current calculator sync usage, determination of SmartSyncService integration approach, testing of all calculator scenarios
+  - All experience services cleaned up and functional
+  - Consistent data patterns across all experiences
+  - No mock violations in experience data
+  - All services properly integrated with calculators
+- **Solution Required:** Audit and cleanup of experience services, design of consistent patterns
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting analysis
+  - Update status to `[💡]` when solution is identified
+  - Update status to `[✅]` when solution is documented
+  - Update status to `[❌]` if blocked or need help
 
 ---
 
-## **Phase 3: Final Cleanup and Validation (P2 Medium)**
-
-#### **Task 4: Audit and Fix All Remaining Import Errors**
+#### **Task 4: Fix Digest Data Architecture - Replace Wrong `get_qbo_data_for_digest` Pattern**
 - **Status:** `[ ]` Not started
-- **Priority:** P2 Medium
-- **Justification:** After all refactoring, there may be remaining import errors or circular dependencies that need to be resolved to ensure the application starts correctly.
-- **Current Issues:**
-  - Unknown import errors may exist
-  - Circular dependencies may have been introduced
-  - Need to discover what's broken
+- **Priority:** P1 High
+- **Justification:** Digest is using the wrong data pattern (`get_qbo_data_for_digest`) instead of proper bulk operations. Digest needs to pull across lots of entities and run calculators for all customers on Friday morning jobs - this requires bulk operations on 2 dimensions, not generic data fetching. The `get_qbo_data_for_digest` pattern was decided against because it's a singular solution for every experience when each experience should get data from its specific calculator.
+- **Code Pointers:**
+  - `runway/experiences/digest.py` - Currently uses wrong `get_qbo_data_for_digest` pattern
+  - `domains/qbo/data_service.py` - Contains `get_qbo_data_for_digest` methods that need removal
+  - `domains/qbo/service.py` - QBOBulkScheduledService for proper bulk operations
+  - `infra/jobs/smart_sync.py` - SmartSync orchestration for bulk operations
+- **Current Issues to Resolve:**
+  - Digest uses `get_qbo_data_for_digest` which is the wrong pattern
+  - Need proper bulk operations that pull across lots of entities for all customers
+  - Friday morning jobs need coordinated bulk data fetching, not individual data calls
+  - `get_qbo_data_for_digest` pattern exists throughout domains and needs removal
 - **Required Analysis:**
-  - Run `uvicorn main:app --reload` to discover import errors
-  - Run `pytest` to discover test import failures
-  - Analyze each error to determine root cause
-  - Determine fix for each error
+  - Analyze current `get_qbo_data_for_digest` usage across all files
+  - Design proper bulk operations architecture for digest
+  - Determine how digest should pull across lots of entities for all customers
+  - Design Friday morning job coordination for bulk operations
 - **Discovery Commands to Run:**
-  - `uvicorn main:app --reload` - Check for startup import errors
-  - `pytest` - Check for test import failures
-  - `python -c "import main"` - Test basic import chain
-  - `grep -r "from infra\.(cache|queue|scheduler)" . --include="*.py"` - Find old imports
-  - `grep -r "import infra\.(cache|queue|scheduler)" . --include="*.py"` - Find old imports
-  - `grep -r "circular import" . --include="*.py"` - Find circular import issues
+  - `grep -r "get_qbo_data_for_digest" . --include="*.py"` - Find all usage of wrong pattern
+  - `grep -r "for_digest" . --include="*.py"` - Find all for_digest methods that need removal
+  - `grep -r "get_.*_for_digest" domains/` - Find scattered for_digest methods in domains
+  - `grep -r "bulk" runway/experiences/digest.py` - Check current bulk operations
 - **Files to Read First:**
-  - `main.py` - Application entry point
-  - `infra/jobs/__init__.py` - Consolidated exports
-  - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Import structure
-  - `infrastructure_consolidation_plan.md` - Consolidation history
-- **Commands to Run:**
-  - `uvicorn main:app --reload` - Check for startup import errors
-  - `pytest` - Check for test import failures
-  - `python -c "import main"` - Test basic import chain
-- **Common Import Issues to Check:**
-  - Circular imports between domains and infra
-  - Missing imports after file moves
-  - Incorrect import paths after consolidation
-- **Dependencies:** `Update All Imports to Use infra/jobs/ Structure` (from executable tasks)
+  - `runway/experiences/digest.py` - Current wrong implementation
+  - `domains/qbo/data_service.py` - Contains wrong pattern methods
+  - `domains/qbo/service.py` - QBOBulkScheduledService for proper bulk
+  - `infra/jobs/smart_sync.py` - SmartSync for bulk orchestration
+- **Dependencies:** `Create Solution Analysis Framework`
 - **Verification:** 
-  - Run `uvicorn main:app --reload` - should start without errors
-  - Run `pytest` - should pass without import failures
-  - Run `python -c "import main"` - should complete without errors
+  - All `get_qbo_data_for_digest` usage removed from digest
+  - Proper bulk operations implemented for Friday morning jobs
+  - Digest pulls across lots of entities for all customers efficiently
+  - No more scattered `get_X_for_digest` methods in domains
 - **Definition of Done:**
-  - No import errors in `uvicorn` startup
-  - All tests pass without import failures
-  - No circular import dependencies
-  - Application starts successfully
-- **Solution Required:** Discovery of import errors, analysis of root causes, implementation of fixes
+  - Digest uses proper bulk operations instead of `get_qbo_data_for_digest`
+  - Friday morning jobs coordinate bulk data fetching for all customers
+  - All `get_X_for_digest` methods removed from domains
+  - Digest efficiently pulls across lots of entities in coordinated bulk operations
+- **Solution Required:** Analysis of wrong pattern usage, design of proper bulk operations architecture
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting analysis
+  - Update status to `[💡]` when solution is identified
+  - Update status to `[✅]` when solution is documented
+  - Update status to `[❌]` if blocked or need help
 
 ---
 
-#### **Task 5: Update Documentation to Reflect New Architecture**
+#### **Task 5: Replace Mock Violations with Real QBO Data**
+- **Status:** `[ ]` Not started
+- **Priority:** P1 High
+- **Justification:** Replace hardcoded mocks with real QBO API calls and need realistic sandbox data for testing. Current system has mock violations that break the "no more mocks" commitment.
+- **Code Pointers:**
+  - `dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md` - Mock violation requirements
+  - `qbo_sandbox_data_examples.md` - Sandbox data examples
+  - `domains/qbo/client.py` - QBO client implementation
+  - `infra/jobs/smart_sync.py` - SmartSync orchestration
+- **Current Issues to Resolve:**
+  - Hardcoded mock values in KPI calculations
+  - Mock violations throughout the system
+  - Need realistic sandbox data for testing
+  - Tests using mocks instead of real QBO data
+- **Required Analysis:**
+  - Identify all mock violations in the system
+  - Design realistic sandbox data strategy
+  - Determine proper QBO API integration patterns
+  - Design testing strategy with real data
+- **Discovery Commands to Run:**
+  - `grep -r "mock" . --include="*.py" | grep -v test` - Find mock usage outside tests
+  - `grep -r "hardcoded" . --include="*.py"` - Find hardcoded values
+  - `grep -r "TODO.*mock" . --include="*.py"` - Find mock TODOs
+  - `grep -r "NotImplementedError" . --include="*.py"` - Find unimplemented methods
+- **Files to Read First:**
+  - `dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md` - Mock violation requirements
+  - `qbo_sandbox_data_examples.md` - Sandbox data examples
+  - `domains/qbo/client.py` - QBO client implementation
+  - `infra/jobs/smart_sync.py` - SmartSync orchestration
+- **Dependencies:** `Create Solution Analysis Framework`
+- **Verification:** 
+  - All mock violations identified and replaced
+  - Realistic sandbox data available for testing
+  - All tests use real QBO data
+  - No hardcoded mock values in production code
+- **Definition of Done:**
+  - All mock violations replaced with real QBO data
+  - Realistic sandbox data strategy implemented
+  - All tests use real data instead of mocks
+  - System works with real QBO API calls
+- **Solution Required:** Analysis of mock violations, design of real data strategy
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting analysis
+  - Update status to `[💡]` when solution is identified
+  - Update status to `[✅]` when solution is documented
+  - Update status to `[❌]` if blocked or need help
+
+---
+
+## **Phase 2: Testing and Validation (P2 Medium)**
+
+#### **Task 6: Design Comprehensive Testing Strategy**
 - **Status:** `[ ]` Not started
 - **Priority:** P2 Medium
-- **Justification:** The infrastructure consolidation and SmartSync refactoring have changed the architecture significantly. Documentation needs to be updated to reflect the new structure and service responsibilities.
-- **Current Issues:**
-  - Documentation is outdated
-  - Need to identify what needs updating
-  - Need to determine how to document new architecture
+- **Justification:** After all data architecture problems are solved, need to design comprehensive testing strategy that covers all the new patterns and ensures system reliability.
+- **Code Pointers:**
+  - `tests/` - Current test structure
+  - `infra/jobs/smart_sync.py` - Needs comprehensive testing
+  - `domains/qbo/` - QBO integration testing
+  - `runway/experiences/` - Experience testing
+- **Current Issues to Resolve:**
+  - Testing strategy may not cover new data patterns
+  - Integration tests may be missing
+  - Error handling tests may be incomplete
+  - Performance tests may be missing
 - **Required Analysis:**
-  - Read existing documentation to understand current state
-  - Identify specific sections that need updates
-  - Check for outdated references to old architecture
-  - Determine what new documentation is needed
+  - Analyze current test coverage
+  - Design tests for new data patterns
+  - Design integration test strategy
+  - Design performance test strategy
 - **Discovery Commands to Run:**
-  - `grep -r "infra\.(cache|queue|scheduler)" docs/` - Find old references
-  - `grep -r "SmartSyncService" docs/` - Find SmartSync references
-  - `grep -r "QBOBulkScheduledService" docs/` - Find bulk service references
-  - `grep -r "domains/qbo" docs/` - Find QBO references
-  - `find docs/ -name "*.md" -exec grep -l "infra/" {} \;` - Find infra references
+  - `find tests/ -name "*.py" | wc -l` - Count test files
+  - `grep -r "def test_" tests/ | wc -l` - Count test functions
+  - `pytest --collect-only` - See all tests
 - **Files to Read First:**
-  - `infrastructure_consolidation_plan.md` - Consolidation plan
-  - `README.md` - Main documentation
-  - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Architecture docs
-  - `docs/architecture/ADR-005-qbo-api-strategy.md` - API strategy
-  - `dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md` - Build plan
-- **Specific Files to Update:**
-  - `infrastructure_consolidation_plan.md` - Update status and mark completed phases
-  - `README.md` - Update architecture section with new structure
-  - `docs/` directory - Update any architecture documentation
-- **Key Changes to Document:**
-  - New `infra/jobs/` consolidated structure
-  - SmartSyncService as main orchestrator
-  - User Actions vs Data Syncs distinction
-  - QBOBulkScheduledService deprecation
-  - QBODataService scope limitation
-- **Dependencies:** `Audit and Fix All Remaining Import Errors` (this phase)
+  - `tests/` - Current test structure
+  - `infra/jobs/smart_sync.py` - Needs testing
+  - `domains/qbo/` - QBO testing
+  - `runway/experiences/` - Experience testing
+- **Dependencies:** All previous solution tasks
 - **Verification:** 
-  - Read existing documentation to understand current state
-  - Identify specific sections that need updates
-  - Check for outdated references to old architecture
+  - Comprehensive testing strategy designed
+  - All new patterns have tests
+  - Integration tests cover all scenarios
+  - Performance tests are included
 - **Definition of Done:**
-  - All documentation reflects new `infra/jobs/` structure
-  - Service responsibilities are clearly documented
-  - User Actions vs Data Syncs distinction is explained
-  - Architecture diagrams are updated
-  - No references to deprecated patterns
-- **Solution Required:** Analysis of current documentation, identification of what needs updating, implementation of documentation updates
+  - Comprehensive testing strategy designed
+  - All new patterns have test coverage
+  - Integration tests cover all scenarios
+  - Performance tests are included
+- **Solution Required:** Analysis of current testing, design of comprehensive strategy
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting analysis
+  - Update status to `[💡]` when solution is identified
+  - Update status to `[✅]` when solution is documented
+  - Update status to `[❌]` if blocked or need help
 
 ---
 
 ## **Summary**
 
-- **Total Tasks:** 5
-- **P1 High:** 2 tasks
-- **P2 Medium:** 3 tasks
-- **Status:** ⚠️ **NEEDS SOLUTION WORK - NOT READY FOR HANDS-FREE EXECUTION**
+- **Total Tasks:** 6
+- **P0 Critical:** 2 tasks (alignment and framework)
+- **P1 High:** 3 tasks (data architecture problems)
+- **P2 Medium:** 1 task (testing)
 
-**Key Characteristics of Solution Tasks:**
-- Require analysis and discovery work
-- Have "figure out" or "determine" language
-- Dependencies on other solution tasks
-- Architectural decisions that need human input
-- Cannot be executed without solution phase
+**Key Solutioning Patterns:**
+- **Task 0**: Always validate alignment before starting analysis
+- **Task 1**: Create consistent analysis framework
+- **Tasks 2-5**: Data architecture problems (calculator flow, experience cleanup, bulk operations, mock violations)
+- **Task 6**: Comprehensive testing strategy
 
-**Recommended Approach:**
-1. **Complete executable tasks first** - get the foundation working
-2. **Review solution tasks** - understand what needs analysis work
-3. **Tackle one at a time** - work through them together when you have bandwidth
-4. **Document solutions** - once solved, they can become executable tasks
+**Critical Success Factors:**
+- All tasks must align with ADR-005 architecture
+- Consistent analysis framework prevents scattered work
+- Focus on real data problems, not theoretical architecture
+- Solutions must be documented as executable tasks
 
-**Next Steps:**
-1. Execute executable tasks to get a clean, working codebase
-2. Review solution tasks to understand the analysis work needed
-3. Work through solution tasks one at a time when you have time for analysis
-4. Convert solved solution tasks into executable tasks for future work
+**Data Architecture Focus:**
+- Calculator → Experience data flow
+- Experience services cleanup and consistency
+- Digest bulk operations efficiency
+- Mock violations replacement with real QBO data
 
-This backlog contains tasks that require **analysis, discovery, and solution work** and should not be executed hands-free.
-
----
-
-## **How to Use This Backlog**
-
-### **For New Threads Starting This Work**
-
-1. **Read the Context Section First** - Understand what zzz_fix_backlogs is and the current architecture state
-2. **Read the Key Architecture Principle** - Understand the SmartSyncService vs direct API calls distinction
-3. **Read the QBO Fragility Context** - Understand why SmartSyncService is necessary
-4. **Read the Product Context** - Understand what Oodaloo is and why it matters
-
-### **For Each Task**
-
-1. **Read the Files to Read First** - Get the necessary context before starting
-2. **Run the Discovery Commands** - Understand the current state
-3. **Analyze the Current Issues** - Understand what needs to be solved
-4. **Follow the Required Analysis** - Work through the analysis systematically
-5. **Document Your Solution** - Once solved, document the approach for future reference
-
-### **Common Patterns to Look For**
-
-- **Import Issues**: Look for old `infra.cache`, `infra.queue`, `infra.scheduler` imports
-- **Service Misuse**: Look for QBOBulkScheduledService used for user actions
-- **Missing Integration**: Look for direct QBO calls not wrapped in SmartSyncService
-- **Circular Dependencies**: Look for domains importing from runway or vice versa
-
-### **Decision Making Guidelines**
-
-- **When in doubt, use SmartSyncService** - It's the central orchestration layer
-- **User actions = direct QBO calls wrapped in SmartSyncService** - Not bulk operations
-- **Background syncs = SmartSyncService + QBOBulkScheduledService** - Not direct calls
-- **Experience data = QBODataService** - Only for runway/experiences/ formatting
-
-### **Testing Strategy**
-
-- **Always test uvicorn startup** - `uvicorn main:app --reload`
-- **Always run pytest** - `pytest` to check for test failures
-- **Test the specific functionality** - Don't just check imports
-- **Verify the solution works** - Don't just fix the immediate error
-
-### **When You're Stuck**
-
-1. **Read the ADR-005** - It has the complete API strategy
-2. **Read the Comprehensive Architecture** - It has the overall system design
-3. **Read the Build Plan** - It has the product context and requirements
-4. **Check the executable tasks** - They might have solved similar problems
-5. **Ask for help** - These are complex architectural decisions
-
-### **Success Criteria**
-
-- **Application starts without errors** - `uvicorn main:app --reload` works
-- **All tests pass** - `pytest` passes
-- **Architecture is consistent** - All services follow the same patterns
-- **Documentation is updated** - Reflects the new architecture
-- **Solution is documented** - Future developers can understand the decisions
+This backlog contains only tasks that require **analysis and solution work** before they can be executed.

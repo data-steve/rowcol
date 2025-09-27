@@ -22,10 +22,9 @@ from enum import Enum
 import time
 import json
 
-from domains.core.services.base_service import TenantAwareService
-from domains.core.models.integration import Integration, IntegrationStatuses
 from common.exceptions import IntegrationError
 from .config import qbo_config
+from .dtos import QBOIntegrationDTO, QBOIntegrationStatuses
 
 logger = logging.getLogger(__name__)
 
@@ -38,23 +37,27 @@ class QBOEnvironment(Enum):
     PRODUCTION = "production"
     MOCK = "mock"
 
-class QBOAuthService(TenantAwareService):
+class QBOAuthService:
     """
     Centralized QBO authentication service.
     
     This service handles all QBO OAuth flows, token management, and connection
     status tracking. It replaces the scattered auth logic in onboarding.
+    
+    Note: This service works with DTOs to avoid circular dependencies.
+    Domain services should handle the actual database operations.
     """
     
     def __init__(self, db: Session, business_id: str, override_environment: QBOEnvironment = None):
-        super().__init__(db, business_id)
-        self.logger = logging.getLogger(__name__)
+        self.db = db
+        self.business_id = business_id
+        self.environment = override_environment or self._determine_environment()
+        self.logger = logging.getLogger(f"{__name__}.{business_id}")
         
         # QBO configuration from centralized config
         self.client_id = qbo_config.client_id
         self.client_secret = qbo_config.client_secret
         self.redirect_uri = qbo_config.redirect_uri
-        self.environment = override_environment or self._determine_environment()
         
         self.logger.info(f"Initialized QBOAuthService for business {business_id} in {self.environment.value} mode")
     
@@ -443,7 +446,7 @@ class QBOAuthService(TenantAwareService):
             if integration:
                 # For mock databases, direct assignment is sufficient
                 # For real DB, a session.begin() would be needed
-                integration.status = IntegrationStatuses.DISCONNECTED
+                integration.status = IntegrationStatuses.DISCONNECTED.value
                 integration.disconnected_at = datetime.utcnow()
                 # Clear sensitive data
                 integration.access_token = None

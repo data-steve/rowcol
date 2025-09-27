@@ -41,6 +41,17 @@ class QBOIntegrationDTO:
     connected_at: Optional[datetime] = None
     disconnected_at: Optional[datetime] = None
     oauth_state: Optional[str] = None
+    token_expires_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+
+
+class QBOIntegrationStatuses:
+    """QBO integration status constants."""
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    ERROR = "error"
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses."""

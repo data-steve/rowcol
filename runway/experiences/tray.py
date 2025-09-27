@@ -15,7 +15,7 @@ Key Changes:
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from runway.models.tray_item import TrayItem
-from infra.jobs import SmartSyncService
+from infra.qbo.smart_sync import SmartSyncService
 from runway.core.reserve_runway import RunwayReserveService
 from runway.core.payment_priority_calculator import PaymentPriorityCalculator
 from runway.core.tray_priority_calculator import TrayPriorityCalculator

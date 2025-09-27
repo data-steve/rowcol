@@ -21,7 +21,7 @@ from fastapi import UploadFile, HTTPException
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.bill import Bill, BillStatus, BillPriority
 from domains.ap.models.vendor import Vendor
-from domains.qbo.client import QBOAPIClient
+from infra.qbo.smart_sync import SmartSyncService
 from common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -58,9 +58,8 @@ class BillService(TenantAwareService):
         """
         super().__init__(db, business_id, validate_business=validate_business)
         
-        # NOTE: Providers parked for future strategy - using QBOAPIClient directly
-        from domains.qbo.client import get_qbo_client
-        self.qbo_client = qbo_provider or get_qbo_client(business_id, self.db)
+        # Use SmartSyncService for QBO operations
+        self.smart_sync = SmartSyncService(business_id, "", self.db)
         self.document_processor = document_processor  # TODO: Implement when provider strategy decided
         self.runway_reserve_service = runway_reserve_service
         
@@ -200,14 +199,14 @@ class BillService(TenantAwareService):
         
         return {"status": "success", "bill_id": bill.bill_id}
     
-    def sync_bills_from_qbo(self, days_back: int = 90) -> List[Bill]:
+    async def sync_bills_from_qbo(self, days_back: int = 90) -> List[Bill]:
         """Sync bills from QBO for the specified time period."""
         try:
             logger.info(f"Syncing bills from QBO for business {self.business_id}, {days_back} days back")
             
-            # Get bills from QBO
+            # Get bills from QBO using SmartSyncService
             since_date = datetime.utcnow() - timedelta(days=days_back)
-            qbo_bills = self.qbo_client.get_bills(since_date=since_date)
+            qbo_bills = await self.smart_sync.get_bills_for_digest()
             
             synced_bills = []
             for qbo_bill_data in qbo_bills:

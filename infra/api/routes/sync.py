@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from infra.database.session import get_db
-from infra.jobs import SmartSyncService
-from domains.qbo.client import QBOClient
+from infra.qbo.smart_sync import SmartSyncService
 from infra.jobs.enums import SyncStrategy, SyncPriority
 from typing import Dict, Any
 
@@ -17,7 +16,7 @@ async def sync_on_demand(
     """User explicitly requests a sync."""
     try:
         if platform == "qbo":
-            smart_sync = SmartSyncService(business_id)
+            smart_sync = SmartSyncService(business_id, "", db)
             qbo_client = QBOClient(business_id)
             
             # Check if sync is needed
@@ -52,7 +51,7 @@ async def sync_event_triggered(
     """Sync triggered by user action (opening dashboard, etc.)."""
     try:
         if platform == "qbo":
-            smart_sync = SmartSyncService(business_id)
+            smart_sync = SmartSyncService(business_id, "", db)
             qbo_client = QBOClient(business_id)
             
             # Check if sync is needed
@@ -86,7 +85,7 @@ async def get_sync_status(
     """Get current sync status for a platform."""
     try:
         if platform == "qbo":
-            smart_sync = SmartSyncService(business_id)
+            smart_sync = SmartSyncService(business_id, "", db)
             # Return basic status info
             return {
                 "platform": platform, 
@@ -113,7 +112,7 @@ async def get_all_sync_status(
         status = {}
         for platform in platforms:
             if platform == "qbo":
-                smart_sync = SmartSyncService(business_id)
+                smart_sync = SmartSyncService(business_id, "", db)
                 status[platform] = {
                     "platform": platform, 
                     "status": "available", 
@@ -139,7 +138,7 @@ async def test_sync(
     """Test sync without actually performing it."""
     try:
         if platform == "qbo":
-            smart_sync = SmartSyncService(business_id)
+            smart_sync = SmartSyncService(business_id, "", db)
             return {
                 "platform": platform,
                 "would_sync": smart_sync.should_sync("qbo", SyncStrategy.SCHEDULED),

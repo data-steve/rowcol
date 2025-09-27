@@ -143,33 +143,141 @@ class SmartSyncService:
 - Drift alerts maintain trust
 - No interruption to user experience
 
-## Service Responsibilities
+## Service Architecture
 
-### SmartSyncService (infra/jobs/)
-**Purpose**: Central orchestration layer for all QBO interactions
+### **Dependency Direction**
+```
+Service/Route → QBOClient → SmartSyncService → QBO API
+```
+
+**QBOClient** is the integration service that internally uses **SmartSyncService** for orchestration. This pattern ensures:
+- Single responsibility: QBOClient handles QBO integration, SmartSyncService handles orchestration
+- Clean interfaces: Services only need to import QBOClient
+- Reusability: SmartSyncService can be used by other integrations (Plaid, Stripe, etc.)
+- Consistency: All QBO operations get the same orchestration behavior
+- Testability: QBO integration can be tested separately from orchestration logic
+
+### **Service Responsibilities**
+
+#### SmartSyncService (infra/jobs/)
+**Purpose**: Central orchestration layer for ALL QBO interactions
 **Responsibilities**:
 - Rate limit management and prioritization
-- Retry logic with exponential backoff
+- Retry logic with exponential backoff  
 - Deduplication to prevent duplicate actions
 - Caching and data consistency management
 - User activity tracking for sync timing
 - Background reconciliation scheduling
+- Error handling and fallback strategies
 
-### QBOUserActionService (domains/qbo/)
-**Purpose**: Direct QBO API calls for user actions
-**Responsibilities**:
-- Immediate API calls for user-triggered operations
-- Payment creation, reminder sending, invoice updates
-- Status checking and verification
-- Error handling and response formatting
+**Interface**:
+```python
+class SmartSyncService:
+    def __init__(self, business_id: str)
+    
+    # Orchestration methods
+    async def execute_qbo_operation(self, operation: str, *args, **kwargs) -> Any
+    async def execute_qbo_batch_operation(self, operations: List[Dict]) -> Dict[str, Any]
+    
+    # Caching methods
+    def get_cache(self, platform: str, key: Optional[str] = None) -> Optional[Dict]
+    def set_cache(self, platform: str, data: Dict, ttl_minutes: Optional[int] = None) -> None
+    
+    # Timing methods
+    def should_sync(self, platform: str, strategy: SyncStrategy) -> bool
+    def record_sync(self, platform: str, strategy: SyncStrategy, success: bool = True) -> None
+```
 
-### QBOBulkScheduledService (domains/qbo/)
-**Purpose**: Bulk data fetching for background operations
+#### QBOClient (domains/qbo/)
+**Purpose**: QBO integration service that internally uses SmartSyncService for orchestration
 **Responsibilities**:
-- Comprehensive data fetching for digest generation
+- Provide clean interface for all QBO operations
+- Internally use SmartSyncService for orchestration (retry, deduplication, rate limiting, caching)
+- Handle QBO-specific data transformations
+- Return standardized data structures
+- Categorize API calls by type (User Actions, Data Fetching, Bulk Operations, Health Checks)
+- Configure SmartSyncService behavior based on API call type
+
+**Interface**:
+```python
+class QBOClient:
+    def __init__(self, business_id: str, realm_id: str, db: Session)
+    
+    # Data fetching methods
+    async def get_bills(self, due_days: int = 30) -> List[Dict[str, Any]]
+    async def get_invoices(self, aging_days: int = 30) -> List[Dict[str, Any]]
+    async def get_customers(self) -> List[Dict[str, Any]]
+    async def get_vendors(self) -> List[Dict[str, Any]]
+    async def get_accounts(self) -> List[Dict[str, Any]]
+    async def get_company_info(self) -> Dict[str, Any]
+    
+    # User action methods
+    async def create_payment(self, payment_data: Dict) -> Dict[str, Any]
+    async def send_reminder(self, invoice_id: str, reminder_data: Dict) -> Dict[str, Any]
+    async def approve_bill(self, bill_id: str) -> Dict[str, Any]
+    
+    # Batch operations
+    async def get_all_data_batch(self) -> Dict[str, Any]
+    async def execute_batch_operations(self, operations: List[Dict]) -> Dict[str, Any]
+    
+    # Health check methods
+    async def health_check(self) -> Dict[str, Any]
+    async def get_status(self) -> Dict[str, Any]
+```
+
+### **API Call Categorization**
+
+#### **1. User Actions (Immediate Response <300ms)**
+**Pattern**: `Route → QBOClient.user_action_method() → SmartSyncService.execute_qbo_operation() → QBO API`
+**Examples**: 
+- Bill approval: `POST /bills/{bill_id}/approve`
+- Payment execution: `POST /payments/{payment_id}/execute`
+- Invoice reminders: `POST /invoices/{invoice_id}/send-reminder`
+
+**Characteristics**:
+- User-triggered actions requiring immediate feedback
+- Financial operations that need deduplication
+- Operations that affect cash runway calculations
+- QBOClient internally uses SmartSyncService with high priority and deduplication
+- SmartSyncService handles retry, deduplication, rate limiting
+
+#### **2. Data Fetching (For Calculations and Dashboards)**
+**Pattern**: `Route/Experience → QBOClient.get_data_method() → SmartSyncService.execute_qbo_operation() → QBO API`
+**Examples**:
+- Dashboard data: `GET /dashboard`, `GET /operational`
+- Tray items: `TrayService.get_tray_items()`
+- KPI calculations: `KPIService.get_cash_flow_kpis()`
+
+**Characteristics**:
+- Data needed for calculations, dashboards, analysis
+- Can be cached for performance
+- QBOClient internally uses SmartSyncService with caching enabled
+- SmartSyncService handles caching, rate limiting
+
+#### **3. Bulk Operations (Background Processing)**
+**Pattern**: `Background Job → QBOClient.batch_method() → SmartSyncService.execute_qbo_batch_operation() → QBO API`
+**Examples**:
+- Digest generation: `POST /digest/send-all`
+- Batch payments: `POST /payments/batch-execute`
 - Analytics data collection
-- Batch operations for efficiency
-- Historical data synchronization
+
+**Characteristics**:
+- Background operations that can be queued
+- Batch processing for efficiency
+- QBOClient internally uses SmartSyncService with low priority
+- SmartSyncService handles timing, rate limiting, retry logic
+
+#### **4. Health Checks (Direct API Calls)**
+**Pattern**: `Route → QBOClient.health_check()` (No SmartSyncService)
+**Examples**:
+- QBO connection status: `GET /qbo_setup/{business_id}/health`
+- API availability checks
+
+**Characteristics**:
+- Direct API calls for health/status checks
+- No orchestration needed
+- Immediate response required
+- Used for monitoring and diagnostics
 
 ## QBO Fragility Handling
 

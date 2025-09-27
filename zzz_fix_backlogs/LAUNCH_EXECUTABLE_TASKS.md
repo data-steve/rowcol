@@ -12,6 +12,10 @@
 6. **Update Status**: Change `[ ]` to `[✅]` when complete
 7. **Archive When Done**: Move completed task file to `archive/` when all tasks complete
 
+## Review these files first:
+- docs/build_plan_v5.md
+- docs/architecture/
+
 ## **Progress Tracking**
 
 - `[ ]` - Not started

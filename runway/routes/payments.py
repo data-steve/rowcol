@@ -132,21 +132,13 @@ async def execute_payment(
             confirmation_number=execution_data.confirmation_number
         )
         
-        # Execute direct QBO API call with retry logic
-        from domains.qbo.client import QBOClient
-        qbo_client = QBOClient(business_id)
-        
-        # Record payment in QBO
-        qbo_payment = await smart_sync.execute_with_retry(
-            qbo_client.record_payment, 
-            {
-                "payment_id": payment.qbo_payment_id,
-                "confirmation_number": payment.confirmation_number,
-                "execution_date": payment.execution_date.isoformat(),
-                "amount": float(payment.amount)
-            }, 
-            max_attempts=3
-        )
+        # Record payment in QBO using SmartSyncService
+        qbo_payment = await smart_sync.record_payment({
+            "payment_id": payment.qbo_payment_id,
+            "confirmation_number": payment.confirmation_number,
+            "execution_date": payment.execution_date.isoformat(),
+            "amount": float(payment.amount)
+        })
         
         # Update local DB with QBO confirmation
         await smart_sync.update_local_db("payment_execution", str(payment_id), {

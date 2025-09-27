@@ -37,7 +37,7 @@ from domains.core.models.integration import Integration
 from domains.qbo.client import QBOAPIClient, get_qbo_client
 from domains.qbo.health import QBOHealthMonitor, QBOConnectionStatus
 from domains.qbo.auth import QBOAuthService
-from domains.qbo.smart_sync import SmartSyncService
+from infra.qbo.smart_sync import SmartSyncService
 from common.exceptions import IntegrationError
 
 

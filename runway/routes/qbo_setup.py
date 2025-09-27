@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 from infra.database.session import get_db
-from domains.qbo.setup import QBOSetupService
+from infra.qbo.setup import QBOSetupService
 
 router = APIRouter(prefix="/qbo-setup", tags=["qbo-setup"])
 

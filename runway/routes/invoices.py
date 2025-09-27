@@ -48,22 +48,12 @@ async def list_invoices(
         business_id = services["reserve_service"].business_id
         
         # Get QBO invoice data using SmartSyncService
-        from infra.jobs import SmartSyncService
-        from domains.qbo.client import QBOClient
+        from infra.qbo.smart_sync import SmartSyncService
         
-        smart_sync = SmartSyncService(business_id)
-        qbo_client = QBOClient(business_id)
+        smart_sync = SmartSyncService(business_id, "", db)
         
-        # Check if sync is needed
-        if not smart_sync.should_sync("qbo", "SCHEDULED"):
-            qbo_data = smart_sync.get_cache("qbo") or {}
-        else:
-            # Execute sync with retry logic
-            qbo_data = await smart_sync.execute_with_retry(
-                qbo_client.get_all_data, max_attempts=3
-            )
-            # Cache results
-            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
+        # Get QBO data using SmartSyncService
+        qbo_data = await smart_sync.get_all_data()
         
         invoices = qbo_data.get("invoices", [])
         
@@ -162,22 +152,12 @@ async def get_invoice(
         business_id = services["reserve_service"].business_id
         
         # Get QBO data using SmartSyncService
-        from infra.jobs import SmartSyncService
-        from domains.qbo.client import QBOClient
+        from infra.qbo.smart_sync import SmartSyncService
         
-        smart_sync = SmartSyncService(business_id)
-        qbo_client = QBOClient(business_id)
+        smart_sync = SmartSyncService(business_id, "", db)
         
-        # Check if sync is needed
-        if not smart_sync.should_sync("qbo", "SCHEDULED"):
-            qbo_data = smart_sync.get_cache("qbo") or {}
-        else:
-            # Execute sync with retry logic
-            qbo_data = await smart_sync.execute_with_retry(
-                qbo_client.get_all_data, max_attempts=3
-            )
-            # Cache results
-            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
+        # Get QBO data using SmartSyncService
+        qbo_data = await smart_sync.get_all_data()
         
         invoices = qbo_data.get("invoices", [])
         
@@ -315,22 +295,12 @@ async def get_payment_options(
         business_id = services["reserve_service"].business_id
         
         # Get invoice details using SmartSyncService
-        from infra.jobs import SmartSyncService
-        from domains.qbo.client import QBOClient
+        from infra.qbo.smart_sync import SmartSyncService
         
-        smart_sync = SmartSyncService(business_id)
-        qbo_client = QBOClient(business_id)
+        smart_sync = SmartSyncService(business_id, "", db)
         
-        # Check if sync is needed
-        if not smart_sync.should_sync("qbo", "SCHEDULED"):
-            qbo_data = smart_sync.get_cache("qbo") or {}
-        else:
-            # Execute sync with retry logic
-            qbo_data = await smart_sync.execute_with_retry(
-                qbo_client.get_all_data, max_attempts=3
-            )
-            # Cache results
-            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
+        # Get QBO data using SmartSyncService
+        qbo_data = await smart_sync.get_all_data()
         
         invoices = qbo_data.get("invoices", [])
         
@@ -420,22 +390,12 @@ async def get_invoices_runway_impact(
         daily_burn = runway_calc.get("daily_burn", 1)
         
         # Get outstanding invoices using SmartSyncService
-        from infra.jobs import SmartSyncService
-        from domains.qbo.client import QBOClient
+        from infra.qbo.smart_sync import SmartSyncService
         
-        smart_sync = SmartSyncService(business_id)
-        qbo_client = QBOClient(business_id)
+        smart_sync = SmartSyncService(business_id, "", db)
         
-        # Check if sync is needed
-        if not smart_sync.should_sync("qbo", "SCHEDULED"):
-            qbo_data = smart_sync.get_cache("qbo") or {}
-        else:
-            # Execute sync with retry logic
-            qbo_data = await smart_sync.execute_with_retry(
-                qbo_client.get_all_data, max_attempts=3
-            )
-            # Cache results
-            smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
+        # Get QBO data using SmartSyncService
+        qbo_data = await smart_sync.get_all_data()
         
         invoices = qbo_data.get("invoices", [])
         

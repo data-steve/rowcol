@@ -1,8 +1,7 @@
 from typing import Dict, Optional, List, Any
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
-from infra.jobs import SmartSyncService
-from domains.qbo.client import QBOClient
+from infra.qbo.smart_sync import SmartSyncService
 from domains.ap.models.bill import Bill as BillModel, BillStatus
 from domains.vendor_normalization.models import VendorCanonical as VendorCanonicalModel
 from domains.ap.schemas.bill import Bill
@@ -19,9 +18,8 @@ logger = logging.getLogger(__name__)
 class IngestionService(TenantAwareService):
     def __init__(self, db: Session, business_id: str):
         super().__init__(db, business_id)
-        # Use SmartSyncService for QBO orchestration and QBOClient for direct API calls
-        self.smart_sync = SmartSyncService(business_id)
-        self.qbo_client = QBOClient(business_id)
+        # Use SmartSyncService for QBO orchestration
+        self.smart_sync = SmartSyncService(business_id, "", db)
         # OCR is handled by QBO; no local OCRAdapter needed
         self.vendor_service = VendorNormalizationService(db)
         self.norm_cfg = load_normalize_cfg("domains/vendor_normalization/scripts/config/normalize.yaml")
@@ -47,15 +45,12 @@ class IngestionService(TenantAwareService):
         try:
             from domains.ap.services.bill_ingestion import BillService
 
-            # Use SmartSyncService for orchestration and QBOClient for direct API calls
-            smart_sync = SmartSyncService(business_id)
-            qbo_client = QBOClient(business_id)
+            # Use SmartSyncService for orchestration
+            smart_sync = SmartSyncService(business_id, "", self.db)
             bill_service = BillService(self.db, business_id)
             
             # Get QBO data using SmartSyncService
-            qbo_data = await smart_sync.execute_with_retry(
-                qbo_client.get_bills, max_attempts=3
-            )
+            qbo_data = await smart_sync.get_bills_for_digest()
             
             # Process bills through BillService
             processed_bills = []

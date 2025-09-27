@@ -12,15 +12,12 @@ Key Components:
 - SyncStrategies: Sync timing and strategy management
 """
 
-from .smart_sync import SmartSyncService
+# SmartSyncService moved to infra.qbo.smart_sync
 from .job_scheduler import JobScheduler, JobRunner, JobStatus, Job, JobProvider, get_job_provider
 from .job_storage import JobStorageProvider, CacheBasedJobStorage, RedisBasedJobStorage, get_job_storage_provider
 from .sync_strategies import SyncStrategy, SyncPriority, SyncTimingManager
 
 __all__ = [
-    # Main orchestrator
-    "SmartSyncService",
-    
     # Job management
     "JobScheduler", "JobRunner", "JobStatus", "Job",
     "JobProvider", "get_job_provider",

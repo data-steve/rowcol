@@ -35,7 +35,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
 from domains.qbo.client import QBOAPIClient
-from domains.qbo.smart_sync import SmartSyncService
+from infra.qbo.smart_sync import SmartSyncService
 
 
 class TestPaymentMatching:

@@ -22,7 +22,7 @@ from enum import Enum
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.integration import Integration
-from domains.qbo.client import QBOAPIClient
+from .client import QBORawClient
 
 class QBOConnectionStatus(Enum):
     """QBO connection health status."""
