@@ -275,8 +275,7 @@ class TestRunwayReserveE2E:
         Session = sessionmaker(bind=engine)
         
         with Session() as prod_session:
-            qbo_provider = get_qbo_client(qbo_business.business_id, prod_session)
-            smart_sync = SmartSyncService(prod_session, qbo_business.business_id)
+            smart_sync = SmartSyncService(qbo_business.business_id)
             
             # Test multiple rapid API calls (simulating Smart AP usage)
             api_calls = []
