@@ -670,6 +670,20 @@ This plan provides the architectural rigor and detailed task breakdown needed fo
   - [ ] API response caching with Redis. *Effort: 3h*.
   - [ ] Background job processing for digest sending. *Effort: 3h*.
 
+### Stage 6.6: Productionalization Tasks (Lower Priority)
+- **[ ] Monitoring & Observability Enhancement** *Effort: 8h* - **OPERATIONAL CONCERN**
+  - [ ] Enhanced application performance monitoring (APM) integration
+  - [ ] Centralized logging with structured logs and log aggregation
+  - [ ] Error tracking and alerting system with escalation procedures
+  - [ ] Health check endpoints for load balancer integration
+  - [ ] Metrics dashboard for operational monitoring
+- **[ ] Infrastructure Utilities & Tooling** *Effort: 6h* - **NICE TO HAVE**
+  - [ ] Database migration utilities and rollback procedures
+  - [ ] Backup and restore automation scripts
+  - [ ] Environment configuration management tools
+  - [ ] Development environment setup automation
+  - [ ] Code quality and security scanning automation
+
 **Success Criteria**: 
 - Application runs in production with 99.9% uptime
 - Real QBO data flows correctly with <2s API response times

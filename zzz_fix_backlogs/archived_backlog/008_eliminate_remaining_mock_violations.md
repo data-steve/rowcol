@@ -82,6 +82,51 @@ qbo_data = {
 }  # Mock data - VIOLATION
 ```
 
+### 10. Test Drive Mock Data
+```python
+# In runway/experiences/test_drive.py
+qbo_data = {
+    "bills": [],
+    "invoices": [],
+    "customers": [],
+    "vendors": []
+}  # Mock data - VIOLATION
+```
+
+### 11. Sandbox Data Creation Mock Tokens
+```python
+# In sandbox/create_sandbox_data.py
+business.qbo_access_token = "mock_access_token"  # Mock token - VIOLATION
+business.qbo_refresh_token = "mock_refresh_token"  # Mock token - VIOLATION
+```
+
+### 12. Test Fixture Mock Data
+```python
+# In tests/conftest.py
+test_business.qbo_access_token = "mock_qbo_token"  # Mock token - VIOLATION
+test_business.qbo_refresh_token = "mock_qbo_refresh"  # Mock token - VIOLATION
+```
+
+### 13. Test Drive Mock Integration
+```python
+# In tests/runway/unit/test_drive/test_test_drive.py
+mock_business.qbo_realm_id = "realm-123"  # Mock realm - VIOLATION
+mock_business.qbo_status = "connected"  # Mock status - VIOLATION
+```
+
+### 14. Integration Test Mock Data
+```python
+# In tests/integration/test_qbo_integration.py
+mock_provider.get_all_data_batch.return_value = {
+    "bills": [],
+    "invoices": [],
+    "customers": [],
+    "vendors": [],
+    "accounts": [],
+    "company_info": {}
+}  # Mock data - VIOLATION
+```
+
 ## Required Implementation
 
 ### Phase 1: Immediate Fix (2h)
@@ -133,6 +178,23 @@ qbo_data = {
 - **Integration Test Mocks**: Replace mock data in `tests/integration/qbo/test_qbo_integration.py`
 - **Implementation**: Use real domain service calls instead of hardcoded mock data
 - **Integration**: Connect to actual `SmartSyncService` methods for test data
+
+#### 2.8 Comprehensive Test Data Service Solution (8h)
+- **Problem**: All test files use hardcoded mock data instead of real QBO sandbox data
+- **Root Cause**: No centralized test data service for QBO sandbox integration
+- **Solution**: Create `infra/qbo/test_data_service.py` with:
+  - Real QBO sandbox connection using `infra/qbo/config.py` credentials
+  - Proper test data fixtures that use actual QBO API calls
+  - Test data caching and cleanup mechanisms
+  - Integration with `SmartSyncService` for consistent data access
+- **Files to Update**:
+  - `tests/conftest.py` - Replace mock fixtures with real QBO fixtures
+  - `sandbox/create_sandbox_data.py` - Use real QBO credentials from config
+  - `runway/experiences/test_drive.py` - Use test data service
+  - `sandbox/scenario_runner.py` - Use test data service
+  - All integration test files - Use real QBO sandbox data
+- **Dependencies**: QBO sandbox credentials must be available in environment
+- **Verification**: All tests pass with real QBO sandbox data, no mock violations remain
 
 ## Implementation Strategy
 
