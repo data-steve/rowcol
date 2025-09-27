@@ -83,6 +83,43 @@ For each task, ask:
 - **Does this need analysis work?** → Needs Solving
 - **Is this blocked by other tasks?** → Blocked
 
+### **CRITICAL: Recursive Discovery/Triage Pattern**
+
+**NEVER do blind search-and-replace!** This pattern prevents costly mistakes during task curation:
+
+1. **Search for all occurrences** of patterns mentioned in the task
+2. **Read the broader context** around each occurrence to understand what the method, service, route, or file is doing
+3. **Triage each occurrence** - determine what it actually does vs what the task assumes:
+   - What is this method's real purpose?
+   - What are its dependencies and relationships?
+   - What would break if we changed it?
+   - Is this a false positive or actually relevant?
+4. **Map the real system** - understand how things actually work vs how the task assumes they work
+5. **Document assumptions vs reality** - write down what you found vs what the task assumed
+6. **Plan based on reality** - design solutions based on what actually exists
+
+**Example Discovery Pattern:**
+```bash
+# Step 1: Find all occurrences
+grep -r "get_.*_for_digest" . --include="*.py"
+
+# Step 2: For each file found, read the broader context
+# - What is this method actually doing?
+# - What are its real dependencies?
+# - How is it being used in practice?
+# - What would break if we changed it?
+
+# Step 3: Map the real system
+# - How do these pieces actually connect?
+# - What are the real data flows?
+# - What are the real dependencies?
+
+# Step 4: Document reality vs assumptions
+# - What did the task assume vs what actually exists?
+# - What patterns are we seeing?
+# - What needs to be designed vs what can be fixed?
+```
+
 ### **Step 3: Preserve All Detail**
 - **Lift and shift** - don't edit or simplify
 - Preserve all critical warnings, search commands, verification steps

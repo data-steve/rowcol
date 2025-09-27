@@ -59,6 +59,43 @@ uvicorn main:app --reload
 pytest
 ```
 
+**CRITICAL: Recursive Discovery/Triage Pattern**
+
+**NEVER do blind search-and-replace!** This pattern prevents costly mistakes during discovery:
+
+1. **Search for all occurrences** of the pattern you need to understand
+2. **Read the broader context** around each occurrence to understand what the method, service, route, or file is doing
+3. **Triage each occurrence** - determine what it actually does vs what you assumed:
+   - What is this method's real purpose?
+   - What are its dependencies and relationships?
+   - What would break if you changed it?
+   - Is this a false positive or actually relevant?
+4. **Map the real system** - understand how things actually work vs how you assumed they work
+5. **Document assumptions vs reality** - write down what you found vs what you assumed
+6. **Plan based on reality** - design solutions based on what actually exists
+
+**Example Discovery Pattern:**
+```bash
+# Step 1: Find all occurrences
+grep -r "get_.*_for_digest" . --include="*.py"
+
+# Step 2: For each file found, read the broader context
+# - What is this method actually doing?
+# - What are its real dependencies?
+# - How is it being used in practice?
+# - What would break if we changed it?
+
+# Step 3: Map the real system
+# - How do these pieces actually connect?
+# - What are the real data flows?
+# - What are the real dependencies?
+
+# Step 4: Document reality vs assumptions
+# - What did we assume vs what actually exists?
+# - What patterns are we seeing?
+# - What needs to be designed vs what can be fixed?
+```
+
 **Discovery Documentation Template:**
 ```
 ## Discovery Findings for [Task Name]

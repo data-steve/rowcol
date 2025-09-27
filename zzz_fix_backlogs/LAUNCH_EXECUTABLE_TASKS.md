@@ -29,15 +29,53 @@
 
 ### **For Each Task:**
 1. **Read the task completely** - understand files to fix, patterns to implement
-2. **Follow the implementation pattern** - use the provided code examples
-3. **Run verification commands** - ensure changes work correctly
-4. **Test with pytest** - run the specified test commands
-5. **Update status in document** - change `[ ]` to `[✅]` in the task list
-6. **Surgical git commit** - commit only the files modified for this task:
+2. **CRITICAL: Use Recursive Discovery/Triage Pattern** - understand what actually needs to be done : 
+- from a basic grep, search recursively outward in that file until you understand what that code was intended to help with
+- then you will understand what the fix actually needs to be beyond simplistic search and replace
+- with that understanding you could even compare it to your understanding off broader task and ADRs, biulding plan etc
+3. **Follow the implementation pattern** - use the provided code examples
+4. **Run verification commands** - ensure changes work correctly
+5. **Test with pytest** - run the specified test commands
+6. **Update status in document** - change `[ ]` to `[✅]` in the task list
+7. **Surgical git commit** - commit only the files modified for this task:
    ```bash
    git add [specific-files-modified]
    git commit -m "feat: [task-description] - [brief-summary]"
    ```
+
+### **CRITICAL: Recursive Discovery/Triage Pattern**
+
+**NEVER do blind search-and-replace!** This pattern prevents costly mistakes:
+
+1. **Search for all occurrences** of the pattern you need to fix
+2. **Read the broader context** around each occurrence to understand what the method, service, route, or file is doing
+3. **Triage each occurrence** - determine if it needs:
+   - Simple replacement (exact match)
+   - Contextual update (needs broader changes)
+   - Complete overhaul (needs significant refactoring)
+   - No change (false positive or already correct)
+4. **Plan comprehensive updates** - ensure your fixes cover all cases and edge cases
+5. **Handle dependencies** - update related imports, method calls, and references
+6. **Verify the fix** - test that the change works in context
+
+**Example Pattern:**
+```bash
+# Step 1: Find all occurrences
+grep -r "get_.*_for_digest" . --include="*.py"
+
+# Step 2: For each file found, read the broader context
+# - What is this method doing?
+# - What are the dependencies?
+# - What needs to be updated beyond just the method name?
+
+# Step 3: Plan comprehensive updates
+# - Update method name
+# - Update all calls to the method
+# - Update imports if needed
+# - Update related logic if needed
+
+# Step 4: Implement with full context understanding
+```
 
 ### **After All Tasks:**
 1. **Archive task file** - move to `archive/` directory
