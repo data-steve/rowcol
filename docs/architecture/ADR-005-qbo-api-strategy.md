@@ -393,9 +393,111 @@ class QBOClient:
 - **User Trust**: 90%+ confidence in runway calculations
 - **Error Prevention**: Zero duplicate payments or financial errors
 
+## Circular Dependency Prevention
+
+### Problem
+
+During implementation, we encountered circular dependency issues where infrastructure modules (`infra/qbo/`) were importing domain models (`domains/core/models/`), creating import cycles that prevented the application from starting.
+
+### Solution: Infrastructure Independence
+
+**CRITICAL PRINCIPLE**: Infrastructure modules must NEVER directly import or query domain models from `domains/` packages.
+
+#### 1. Data Transfer Objects (DTOs)
+
+Use DTOs for data transfer between layers instead of direct domain model access:
+
+```python
+# infra/qbo/dtos.py
+@dataclass
+class QBOIntegrationDTO:
+    business_id: str
+    status: str
+    platform: str = "qbo"
+    access_token: Optional[str] = None
+    # ... other fields
+```
+
+#### 2. Parameter-Based Data Access
+
+Infrastructure services should accept data as parameters rather than querying it:
+
+```python
+# ❌ WRONG - Infrastructure querying domain models
+async def get_business_health_details(self, business_id: str):
+    business = self.db.query(Business).filter(Business.business_id == business_id).first()
+    business_name = business.name if business else "Unknown"
+
+# ✅ CORRECT - Infrastructure accepting data as parameters
+async def get_business_health_details(self, business_id: str, business_name: str = None, integration_details: Dict[str, Any] = None):
+    return {
+        "business_id": business_id,
+        "business_name": business_name or "Unknown",
+        "integration_details": integration_details or {}
+    }
+```
+
+#### 3. Lazy Initialization for Circular Dependencies
+
+Use lazy initialization to break circular import chains when necessary:
+
+```python
+class SmartSyncService:
+    def __init__(self, business_id: str, realm_id: str, db_session=None):
+        self.qbo_client = None  # Lazy initialization
+    
+    def _get_qbo_client(self):
+        """Lazy initialization to avoid circular imports."""
+        if self.qbo_client is None:
+            from .client import QBORawClient  # Imported here
+            self.qbo_client = QBORawClient(self.business_id, self.realm_id, self.db_session)
+        return self.qbo_client
+```
+
+### Architecture Flow
+
+```
+Domain Services → Query Domain Models → Pass Data to Infrastructure
+     ↓
+Infrastructure Services → Accept Data as Parameters → Process Data
+     ↓
+External APIs → Return Results → Domain Services Update Models
+```
+
+### Implementation Guidelines
+
+1. **Infrastructure modules** (`infra/`) should only contain:
+   - Raw HTTP clients
+   - Orchestration services
+   - Configuration
+   - DTOs for data transfer
+
+2. **Domain modules** (`domains/`) should contain:
+   - Business models
+   - Business logic services
+   - Data persistence operations
+
+3. **Data flow** should be:
+   - Domain services query models and pass data to infrastructure
+   - Infrastructure services accept data as parameters
+   - Results flow back through domain services to update models
+
+### Verification
+
+To verify no circular dependencies exist:
+
+```bash
+# Check for domain imports in infrastructure
+grep -r "from domains\." infra/
+grep -r "import domains\." infra/
+
+# Should return no results
+```
+
 ## References
 
 - [Oodaloo v4.5 Restructured Build Plan](../dev_plans/Oodaloo_v4.5_Restructured_Build_Plan.md)
 - [ADR-001: Domains/Runway Separation](./ADR-001-domains-runway-separation.md)
 - [Comprehensive Architecture](./COMPREHENSIVE_ARCHITECTURE.md)
 - [QBO API Strategy Analysis](../../API_STRATEGY_ANALYSIS.md)
+- [QBO Infrastructure README](../../infra/qbo/README.md)

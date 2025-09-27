@@ -50,6 +50,7 @@ Oodaloo is a cash runway management platform for service agencies ($1M–$5M, 10
 3. **Multi-Tenancy Strategy** (ADR-003): Business-centric tenant isolation
 4. **Model Complexity Standards** (ADR-004): Enterprise-grade models with comprehensive documentation
 5. **Service Method Delegation** (ADR-005): Business logic belongs in domain services, not orchestrators
+6. **Infrastructure Independence** (ADR-005): Infrastructure modules must never import domain models
 
 ---
 
@@ -804,8 +805,40 @@ INTEGRATION SERVICES (External APIs)
 1. **Runway → Domains**: ✅ Allowed (orchestration uses primitives)
 2. **Domains → Runway**: ❌ Forbidden (primitives can't depend on orchestration)
 3. **Domains → Domains**: ⚠️ Allowed with care (avoid circular dependencies)
-4. **External APIs**: Must go through `domains/integrations/` only
-5. **SmartSyncService**: Unified coordinator for all external integrations and cross-platform deduplication
+4. **Infrastructure → Domains**: ❌ **FORBIDDEN** (infrastructure must never import domain models)
+5. **External APIs**: Must go through `infra/qbo/` or `domains/integrations/` only
+6. **SmartSyncService**: Unified coordinator for all external integrations and cross-platform deduplication
+
+### Circular Dependency Prevention
+
+**CRITICAL PRINCIPLE**: Infrastructure modules (`infra/`) must NEVER directly import or query domain models from `domains/` packages.
+
+#### Problem
+During the QBO nuclear cleanup, we encountered circular dependency issues where infrastructure modules were importing domain models, creating import cycles that prevented the application from starting.
+
+#### Solution: Infrastructure Independence
+
+1. **Data Transfer Objects (DTOs)**: Use DTOs for data transfer between layers
+2. **Parameter-Based Data Access**: Infrastructure services accept data as parameters
+3. **Lazy Initialization**: Break circular import chains when necessary
+4. **Proper Data Flow**: Domain services query models and pass data to infrastructure
+
+#### Architecture Flow
+```
+Domain Services → Query Domain Models → Pass Data to Infrastructure
+     ↓
+Infrastructure Services → Accept Data as Parameters → Process Data
+     ↓
+External APIs → Return Results → Domain Services Update Models
+```
+
+#### Verification
+```bash
+# Check for domain imports in infrastructure
+grep -r "from domains\." infra/
+grep -r "import domains\." infra/
+# Should return no results
+```
 
 ---
 
