@@ -376,7 +376,7 @@ class QBORawClient:
     
     # ==================== MISSING METHODS NEEDED BY DOMAINS ====================
     
-    # get_all_data() method removed - use specific domain service methods instead
+    
     
     async def record_payment(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:
         """

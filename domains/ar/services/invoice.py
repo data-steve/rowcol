@@ -136,7 +136,7 @@ class InvoiceService(TenantAwareService):
         """Sync invoices from QBO via SmartSyncService."""
         try:
             # Use SmartSyncService for sync orchestration
-            qbo_data = await self.smart_sync.get_invoices_for_digest()
+            qbo_data = await self.smart_sync.get_invoices()
             
             qbo_invoices = qbo_data.get("invoices", [])
             

@@ -206,7 +206,7 @@ class BillService(TenantAwareService):
             
             # Get bills from QBO using SmartSyncService
             since_date = datetime.utcnow() - timedelta(days=days_back)
-            qbo_bills = await self.smart_sync.get_bills_for_digest()
+            qbo_bills = await self.smart_sync.get_bills()
             
             synced_bills = []
             for qbo_bill_data in qbo_bills:

@@ -141,8 +141,8 @@ class SmartSyncService:
     
     # ==================== CONVENIENCE METHODS ====================
     
-    async def get_bills_for_digest(self, due_days: int = 30) -> Dict[str, Any]:
-        """Get bills for digest generation with appropriate strategy."""
+    async def get_bills(self, due_days: int = 30) -> Dict[str, Any]:
+        """Get bills from QBO with appropriate strategy."""
         return await self.execute_qbo_call(
             "get_bills_from_qbo", 
             due_days=due_days,
@@ -150,8 +150,8 @@ class SmartSyncService:
             priority=SyncPriority.HIGH
         )
     
-    async def get_invoices_for_digest(self, aging_days: int = 30) -> Dict[str, Any]:
-        """Get invoices for digest generation with appropriate strategy."""
+    async def get_invoices(self, aging_days: int = 30) -> Dict[str, Any]:
+        """Get invoices from QBO with appropriate strategy."""
         return await self.execute_qbo_call(
             "get_invoices_from_qbo",
             aging_days=aging_days,
@@ -159,39 +159,39 @@ class SmartSyncService:
             priority=SyncPriority.HIGH
         )
     
-    async def get_customers_for_digest(self) -> Dict[str, Any]:
-        """Get customers for digest generation with appropriate strategy."""
+    async def get_customers(self) -> Dict[str, Any]:
+        """Get customers from QBO with appropriate strategy."""
         return await self.execute_qbo_call(
             "get_customers_from_qbo",
             strategy=SyncStrategy.DATA_FETCH,
             priority=SyncPriority.MEDIUM
         )
     
-    async def get_vendors_for_digest(self) -> Dict[str, Any]:
-        """Get vendors for digest generation with appropriate strategy."""
+    async def get_vendors(self) -> Dict[str, Any]:
+        """Get vendors from QBO with appropriate strategy."""
         return await self.execute_qbo_call(
             "get_vendors_from_qbo",
             strategy=SyncStrategy.DATA_FETCH,
             priority=SyncPriority.MEDIUM
         )
     
-    async def get_accounts_for_digest(self) -> Dict[str, Any]:
-        """Get accounts for digest generation with appropriate strategy."""
+    async def get_accounts(self) -> Dict[str, Any]:
+        """Get accounts from QBO with appropriate strategy."""
         return await self.execute_qbo_call(
             "get_accounts_from_qbo",
             strategy=SyncStrategy.DATA_FETCH,
             priority=SyncPriority.MEDIUM
         )
     
-    async def get_company_info_for_digest(self) -> Dict[str, Any]:
-        """Get company info for digest generation with appropriate strategy."""
+    async def get_company_info(self) -> Dict[str, Any]:
+        """Get company info from QBO with appropriate strategy."""
         return await self.execute_qbo_call(
             "get_company_info_from_qbo",
             strategy=SyncStrategy.DATA_FETCH,
             priority=SyncPriority.HIGH
         )
     
-    # get_all_data() method removed - use specific domain service methods instead
+    
     
     async def create_payment_immediate(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create payment immediately with high priority."""

@@ -5,7 +5,7 @@ import asyncio
 from domains.core.models import Business
 
 
-@patch('infra.qbo.smart_sync.SmartSyncService.get_bills_for_digest')
+@patch('infra.qbo.smart_sync.SmartSyncService.get_bills')
 def test_sync_bills_from_qbo(mock_bulk_sync, test_business, db):
     """Test syncing bills from QBO."""
     # Setup mock return value for the sync service

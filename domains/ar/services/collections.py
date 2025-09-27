@@ -56,7 +56,7 @@ class CollectionsService(TenantAwareService):
             # QBOClient import removed - using SmartSyncService directly
             
             # Get invoices using SmartSyncService
-            invoices = await self.smart_sync.get_invoices_for_digest()
+            invoices = await self.smart_sync.get_invoices()
             
             today = datetime.utcnow()
             overdue_invoices = []
@@ -189,7 +189,7 @@ class CollectionsService(TenantAwareService):
             # QBOClient import removed - using SmartSyncService directly
             
             # Get invoices using SmartSyncService
-            invoices = await self.smart_sync.get_invoices_for_digest()
+            invoices = await self.smart_sync.get_invoices()
             
             today = datetime.utcnow()
             aging_buckets = {
@@ -278,7 +278,7 @@ class CollectionsService(TenantAwareService):
             # QBOClient import removed - using SmartSyncService directly
             
             # Get invoices using SmartSyncService
-            invoices = await self.smart_sync.get_invoices_for_digest()
+            invoices = await self.smart_sync.get_invoices()
             
             customer_invoices = []
             total_invoiced = 0
