@@ -47,6 +47,41 @@ def _calculate_collection_efficiency(invoices_data: List[Dict]) -> float:
     return 78.5  # Mock efficiency score - VIOLATION
 ```
 
+### 7. QBO Integration Test Mocks
+```python
+# In tests/integration/qbo/test_qbo_integration.py
+mock_provider.get_all_data_batch.return_value = {
+    "bills": [],
+    "invoices": [], 
+    "customers": [],
+    "vendors": [],
+    "accounts": [],
+    "company_info": {}
+}  # Mock data - VIOLATION
+```
+
+### 8. Test Drive Mock Data
+```python
+# In runway/experiences/test_drive.py
+qbo_data = {
+    "bills": [],
+    "invoices": [],
+    "customers": [],
+    "vendors": []
+}  # Mock data - VIOLATION
+```
+
+### 9. Scenario Runner Mock Data
+```python
+# In sandbox/scenario_runner.py
+qbo_data = {
+    "bills": [],
+    "invoices": [],
+    "customers": [],
+    "vendors": []
+}  # Mock data - VIOLATION
+```
+
 ## Required Implementation
 
 ### Phase 1: Immediate Fix (2h)
@@ -91,6 +126,13 @@ def _calculate_collection_efficiency(invoices_data: List[Dict]) -> float:
 - **Timing efficiency**: How quickly collections are completed
 - **Customer segmentation**: Efficiency by customer type/size
 - **Integration**: Use `CollectionsService` and `CustomerService`
+
+#### 2.7 Test Data Mock Violations (2h)
+- **Test Drive Mock Data**: Replace mock QBO data in `runway/experiences/test_drive.py`
+- **Scenario Runner Mock Data**: Replace mock QBO data in `sandbox/scenario_runner.py`
+- **Integration Test Mocks**: Replace mock data in `tests/integration/qbo/test_qbo_integration.py`
+- **Implementation**: Use real domain service calls instead of hardcoded mock data
+- **Integration**: Connect to actual `SmartSyncService` methods for test data
 
 ## Implementation Strategy
 

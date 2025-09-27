@@ -127,13 +127,16 @@ class DemoTestDriveService:
             
             # Get QBO data for analysis using domain services
             # TODO: Replace with proper domain service calls when needed
-            # For now, use mock data for test drive demonstration
-            qbo_data = {
-                "bills": [],
-                "invoices": [],
-                "customers": [],
-                "vendors": []
-            }
+            # MOCK VIOLATION: Using mock data - see backlog/008_eliminate_remaining_mock_violations.md
+            # qbo_data = {
+            #     "bills": [],
+            #     "invoices": [],
+            #     "customers": [],
+            #     "vendors": []
+            # }
+            
+            # TEMPORARY: Use empty data until proper domain service calls are implemented
+            qbo_data = {"bills": [], "invoices": [], "customers": [], "vendors": []}
             
             # Use core service for hygiene score calculation
             hygiene_analysis = data_quality_analyzer.calculate_hygiene_score(qbo_data)
