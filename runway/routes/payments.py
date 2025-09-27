@@ -115,42 +115,12 @@ async def execute_payment(
     """
     try:
         payment_service = services["payment_service"]
-        smart_sync = services["smart_sync"]
-        business_id = services["smart_sync"].business_id
         
-        # Check rate limits and deduplication for user action
-        from infra.jobs.enums import SyncStrategy
-        if not smart_sync.should_sync("qbo", SyncStrategy.USER_ACTION):
-            raise HTTPException(status_code=429, detail="Rate limit exceeded")
-        
-        if smart_sync.deduplicate_action("payment_execution", str(payment_id), execution_data.dict()):
-            return {"status": "already_processed"}
-        
-        # Execute the payment workflow
-        payment = payment_service.execute_payment_workflow(
+        # Execute the payment workflow (handles QBO integration internally)
+        payment = await payment_service.execute_payment_workflow(
             payment_id=payment_id,
             confirmation_number=execution_data.confirmation_number
         )
-        
-        # Record payment in QBO using SmartSyncService
-        qbo_payment = await smart_sync.record_payment({
-            "payment_id": payment.qbo_payment_id,
-            "confirmation_number": payment.confirmation_number,
-            "execution_date": payment.execution_date.isoformat(),
-            "amount": float(payment.amount)
-        })
-        
-        # Update local DB with QBO confirmation
-        await smart_sync.update_local_db("payment_execution", str(payment_id), {
-            "qbo_confirmation": qbo_payment.get("Id"),
-            "status": "executed"
-        })
-        
-        # Record user activity
-        smart_sync.record_user_activity("payment_executed")
-        
-        # Trigger background reconciliation
-        await smart_sync.schedule_reconciliation("payment_execution", str(payment_id))
         
         return {
             "message": "Payment executed successfully",
@@ -268,14 +238,13 @@ async def batch_execute_payments(
     """
     try:
         payment_service = services["payment_service"]
-        smart_sync = services["smart_sync"]
         
         results = []
         total_amount = 0
         
         for payment_id in payment_ids:
             try:
-                payment = payment_service.execute_payment_workflow(payment_id)
+                payment = await payment_service.execute_payment_workflow(payment_id)
                 results.append({
                     "payment_id": payment_id,
                     "status": "executed",
@@ -290,10 +259,6 @@ async def batch_execute_payments(
                     "status": "failed",
                     "error": str(e)
                 })
-        
-        # Single QBO sync for all payments
-        smart_sync.record_user_activity("batch_payment_execution")
-        sync_result = smart_sync.sync_platform("qbo", smart_sync.SyncStrategy.ON_DEMAND)
         
         executed_count = len([r for r in results if r["status"] == "executed"])
         failed_count = len([r for r in results if r["status"] == "failed"])

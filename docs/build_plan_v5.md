@@ -91,7 +91,7 @@ This plan provides the architectural rigor and detailed task breakdown needed fo
 
 ### Outstanding Foundation Issues - **RESOLVED**
 - **[✅] Missing Core Domain Services** *Effort: 8h* - **COMPLETED**
-  - **[✅] Remove Task-related tests** - Task model is parked, test files don't exist *Effort: 1h*
+  - **[✅] Remove Task-related tests** - Task model removed, not needed for Oodaloo *Effort: 1h*
   - **[✅] Fix automation routes** - No longer blocking, integration tests working *Effort: 3h*
   - **[✅] Implement missing Bank services** - `BankTransactionService` implemented *Effort: 4h*
 - **[✅] Legacy Test Pattern Cleanup** *Effort: 6h* - **COMPLETED**

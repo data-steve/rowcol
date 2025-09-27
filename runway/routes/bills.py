@@ -13,7 +13,7 @@ from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id, get_current_user
 from domains.ap.services.bill_ingestion import BillService
 from domains.ap.services.payment import PaymentService
-from infra.qbo.smart_sync import SmartSyncService
+# SmartSyncService is now handled by domain services
 from runway.core.reserve_runway import RunwayReserveService
 from domains.ap.schemas.bill import BillResponse, BillApprovalRequest
 from domains.ap.schemas.payment import PaymentScheduleRequest
@@ -29,7 +29,6 @@ def get_services(
     return {
         "bill_service": BillService(db, business_id),
         "payment_service": PaymentService(db, business_id),
-        "smart_sync": SmartSyncService(business_id, "", db),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -247,14 +246,6 @@ async def schedule_bill_payment(
                 detail="Bill must be approved before scheduling payment"
             )
         
-        # Check rate limits and deduplication for user action
-        from infra.jobs.enums import SyncStrategy
-        if not smart_sync.should_sync("qbo", SyncStrategy.USER_ACTION):
-            raise HTTPException(status_code=429, detail="Rate limit exceeded")
-        
-        if smart_sync.deduplicate_action("payment", str(bill_id), payment_data.dict()):
-            return {"status": "already_processed"}
-        
         # Create the payment locally first
         payment = payment_service.create_payment(
             bill_id=bill_id,
@@ -264,28 +255,11 @@ async def schedule_bill_payment(
             created_by_user_id=current_user["user_id"]
         )
         
-        # Create payment in QBO using SmartSyncService
-        qbo_payment = await smart_sync.create_payment_immediate(
-            {
-                "bill_id": bill.qbo_bill_id,
-                "amount": float(payment.amount),
-                "payment_date": payment.payment_date.isoformat(),
-                "payment_method": payment.payment_method
-            }, 
-            max_attempts=3
+        # Execute payment workflow through domain service (handles QBO integration)
+        payment = await payment_service.execute_payment_workflow(
+            payment.payment_id,
+            confirmation_number=f"PAY_{bill_id}_{int(payment.payment_date.timestamp())}"
         )
-        
-        # Update local DB with QBO payment ID
-        await smart_sync.update_local_db("payment", str(bill_id), {
-            "qbo_payment_id": qbo_payment.get("Id"),
-            "status": "synced"
-        })
-        
-        # Record user activity
-        smart_sync.record_user_activity("payment_scheduled")
-        
-        # Trigger background reconciliation
-        await smart_sync.schedule_reconciliation("payment", str(bill_id))
         
         # Calculate runway impact
         reserve_service = services["reserve_service"]

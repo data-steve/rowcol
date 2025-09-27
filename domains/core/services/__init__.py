@@ -4,7 +4,7 @@ from .audit_log import AuditLogService
 from .document_review import DocumentReviewService
 from infra.files.document_processing import DocumentStorageService
 from .document_type import DocumentTypeService
-from .kpi import KPIService
+# KPIService removed - QBO has built-in KPIs
 # QBOIntegrationService removed - use QBODataService as single QBO coordination point
 # SmartSyncService removed - functionality moved to infra/utils and domains/qbo/data_service.py
 from .user import UserService
@@ -14,6 +14,5 @@ __all__ = [
     "DocumentReviewService", 
     "DocumentStorageService",
     "DocumentTypeService",
-    "KPIService",
     "UserService",
 ]

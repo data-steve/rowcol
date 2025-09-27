@@ -43,15 +43,11 @@ async def get_collections_dashboard(
         # Get current runway calculation
         runway_calc = reserve_service.calculate_runway_with_reserves()
         
-        # Get QBO data for AR analysis using SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
+        # Get AR data using domain service
+        invoice_service = services["invoice_service"]
         
-        smart_sync = SmartSyncService(business_id, "", db)
-        
-        # Get QBO data using SmartSyncService
-        qbo_data = await smart_sync.get_all_data()
-        
-        invoices = qbo_data.get("invoices", [])
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         # Calculate aging buckets
         today = datetime.utcnow()
@@ -64,9 +60,9 @@ async def get_collections_dashboard(
         }
         
         total_outstanding = 0
-        overdue_invoices = []
+        overdue_invoices_list = []
         
-        for invoice_data in invoices:
+        for invoice_data in overdue_invoices:
             if invoice_data.get("Balance", 0) <= 0:
                 continue  # Skip paid invoices
                 
@@ -84,7 +80,7 @@ async def get_collections_dashboard(
                     elif days_overdue <= 30:
                         aging_buckets["1_30_days"]["count"] += 1
                         aging_buckets["1_30_days"]["amount"] += amount
-                        overdue_invoices.append({
+                        overdue_invoices_list.append({
                             "invoice_id": invoice_data.get("Id"),
                             "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
                             "amount": amount,
@@ -94,7 +90,7 @@ async def get_collections_dashboard(
                     elif days_overdue <= 60:
                         aging_buckets["31_60_days"]["count"] += 1
                         aging_buckets["31_60_days"]["amount"] += amount
-                        overdue_invoices.append({
+                        overdue_invoices_list.append({
                             "invoice_id": invoice_data.get("Id"),
                             "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
                             "amount": amount,
@@ -104,7 +100,7 @@ async def get_collections_dashboard(
                     elif days_overdue <= 90:
                         aging_buckets["61_90_days"]["count"] += 1
                         aging_buckets["61_90_days"]["amount"] += amount
-                        overdue_invoices.append({
+                        overdue_invoices_list.append({
                             "invoice_id": invoice_data.get("Id"),
                             "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
                             "amount": amount,
@@ -114,7 +110,7 @@ async def get_collections_dashboard(
                     else:
                         aging_buckets["over_90_days"]["count"] += 1
                         aging_buckets["over_90_days"]["amount"] += amount
-                        overdue_invoices.append({
+                        overdue_invoices_list.append({
                             "invoice_id": invoice_data.get("Id"),
                             "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
                             "amount": amount,
@@ -133,7 +129,7 @@ async def get_collections_dashboard(
         
         # Sort overdue invoices by priority and amount
         priority_order = {"critical": 0, "high": 1, "medium": 2}
-        overdue_invoices.sort(key=lambda x: (priority_order.get(x["priority"], 3), -x["amount"]))
+        overdue_invoices_list.sort(key=lambda x: (priority_order.get(x["priority"], 3), -x["amount"]))
         
         return {
             "summary": {
@@ -144,11 +140,11 @@ async def get_collections_dashboard(
                 "potential_runway_extension_days": potential_runway_extension
             },
             "aging_buckets": aging_buckets,
-            "priority_collections": overdue_invoices[:10],  # Top 10 priority collections
+            "priority_collections": overdue_invoices_list[:10],  # Top 10 priority collections
             "recommendations": [
                 {
                     "type": "immediate_action",
-                    "message": f"Focus on {len([inv for inv in overdue_invoices if inv['priority'] == 'critical'])} critical overdue invoices",
+                    "message": f"Focus on {len([inv for inv in overdue_invoices_list if inv['priority'] == 'critical'])} critical overdue invoices",
                     "priority": "high"
                 },
                 {
@@ -180,20 +176,16 @@ async def get_overdue_invoices(
     try:
         business_id = services["reserve_service"].business_id
         
-        # Get QBO data using SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
+        # Get AR data using domain service
+        invoice_service = services["invoice_service"]
         
-        smart_sync = SmartSyncService(business_id, "", db)
-        
-        # Get QBO data using SmartSyncService
-        qbo_data = await smart_sync.get_all_data()
-        
-        invoices = qbo_data.get("invoices", [])
+        # Get overdue invoices using domain service
+        overdue_invoices_data = await invoice_service.get_overdue_invoices()
         
         today = datetime.utcnow()
         overdue_invoices = []
         
-        for invoice_data in invoices:
+        for invoice_data in overdue_invoices_data:
             if invoice_data.get("Balance", 0) <= 0:
                 continue  # Skip paid invoices
                 
@@ -280,20 +272,16 @@ async def get_customer_aging(
     try:
         business_id = services["reserve_service"].business_id
         
-        # Get QBO data using SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
+        # Get AR data using domain service
+        invoice_service = services["invoice_service"]
         
-        smart_sync = SmartSyncService(business_id, "", db)
-        
-        # Get QBO data using SmartSyncService
-        qbo_data = await smart_sync.get_all_data()
-        
-        invoices = qbo_data.get("invoices", [])
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         customer_invoices = []
         total_outstanding = 0
         
-        for invoice_data in invoices:
+        for invoice_data in overdue_invoices:
             if invoice_data.get("CustomerRef", {}).get("value") != customer_id:
                 continue
                 
@@ -315,7 +303,7 @@ async def get_customer_aging(
         customer_name = None
         if customer_invoices:
             # Get customer name from first invoice
-            for invoice_data in invoices:
+            for invoice_data in overdue_invoices:
                 if invoice_data.get("CustomerRef", {}).get("value") == customer_id:
                     customer_name = invoice_data.get("CustomerRef", {}).get("name", "Unknown")
                     break
@@ -392,19 +380,15 @@ async def get_collections_runway_impact(
         current_runway = runway_calc.get("runway_days", 0)
         daily_burn = runway_calc.get("daily_burn", 1)
         
-        # Get outstanding AR using SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
+        # Get outstanding AR using domain service
+        invoice_service = services["invoice_service"]
         
-        smart_sync = SmartSyncService(business_id, "", db)
-        
-        # Get QBO data using SmartSyncService
-        qbo_data = await smart_sync.get_all_data()
-        
-        invoices = qbo_data.get("invoices", [])
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         total_ar = sum(
             float(inv.get("Balance", 0)) 
-            for inv in invoices 
+            for inv in overdue_invoices 
             if float(inv.get("Balance", 0)) > 0
         )
         
@@ -432,7 +416,7 @@ async def get_collections_runway_impact(
         overdue_amount = 0
         critical_amount = 0
         
-        for invoice_data in invoices:
+        for invoice_data in overdue_invoices:
             balance = float(invoice_data.get("Balance", 0))
             if balance <= 0:
                 continue

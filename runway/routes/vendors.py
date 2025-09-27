@@ -12,7 +12,7 @@ from typing import List, Dict, Optional
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.ap.services.vendor import VendorService
-from infra.qbo.smart_sync import SmartSyncService
+# SmartSyncService is now handled by domain services
 from domains.ap.schemas.vendor import VendorResponse, VendorCreate, VendorUpdate
 from common.exceptions import ValidationError
 
@@ -24,8 +24,7 @@ def get_services(
 ):
     """Get all required services with business context."""
     return {
-        "vendor_service": VendorService(db, business_id),
-        "smart_sync": SmartSyncService(business_id)
+        "vendor_service": VendorService(db, business_id)
     }
 
 @router.get("/", response_model=List[VendorResponse])
@@ -106,7 +105,6 @@ async def create_vendor(
     """
     try:
         vendor_service = services["vendor_service"]
-        smart_sync = services["smart_sync"]
         
         # Create the vendor
         vendor = vendor_service.create_vendor(vendor_data.dict())
@@ -227,7 +225,6 @@ async def update_vendor(
     """Update vendor information with automatic QBO sync."""
     try:
         vendor_service = services["vendor_service"]
-        smart_sync = services["smart_sync"]
         
         # Update the vendor
         vendor = vendor_service.update_vendor(vendor_id, vendor_data.dict(exclude_unset=True))

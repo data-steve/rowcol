@@ -303,7 +303,7 @@ def verify_comprehensive_imports():
     """Verify comprehensive imports across all domains and runway modules."""
     comprehensive_imports = [
         # Domains - Core
-        ("domains.core.services", ["KPIService", "UserService"], "Core Services"),
+        ("domains.core.services", ["UserService"], "Core Services"),
         ("domains.core.models", ["Business", "User"], "Core Models"),
         
         # Domains - AP (Accounts Payable)

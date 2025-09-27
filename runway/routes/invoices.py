@@ -47,15 +47,11 @@ async def list_invoices(
         reserve_service = services["reserve_service"]
         business_id = services["reserve_service"].business_id
         
-        # Get QBO invoice data using SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
+        # Get invoice data using domain service
+        invoice_service = services["invoice_service"]
         
-        smart_sync = SmartSyncService(business_id, "", db)
-        
-        # Get QBO data using SmartSyncService
-        qbo_data = await smart_sync.get_all_data()
-        
-        invoices = qbo_data.get("invoices", [])
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         # Get current runway for impact calculations
         runway_calc = reserve_service.calculate_runway_with_reserves()
@@ -64,7 +60,7 @@ async def list_invoices(
         enhanced_invoices = []
         count = 0
         
-        for invoice_data in invoices:
+        for invoice_data in overdue_invoices:
             # Apply filters
             if status_filter:
                 balance = float(invoice_data.get("Balance", 0))
@@ -151,18 +147,14 @@ async def get_invoice(
         reserve_service = services["reserve_service"]
         business_id = services["reserve_service"].business_id
         
-        # Get QBO data using SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
+        # Get invoice data using domain service
+        invoice_service = services["invoice_service"]
         
-        smart_sync = SmartSyncService(business_id, "", db)
-        
-        # Get QBO data using SmartSyncService
-        qbo_data = await smart_sync.get_all_data()
-        
-        invoices = qbo_data.get("invoices", [])
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         # Find the specific invoice
-        target_invoice = next((inv for inv in invoices if inv.get("Id") == invoice_id), None)
+        target_invoice = next((inv for inv in overdue_invoices if inv.get("Id") == invoice_id), None)
         if not target_invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -294,17 +286,13 @@ async def get_payment_options(
         reserve_service = services["reserve_service"]
         business_id = services["reserve_service"].business_id
         
-        # Get invoice details using SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
+        # Get invoice details using domain service
+        invoice_service = services["invoice_service"]
         
-        smart_sync = SmartSyncService(business_id, "", db)
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
-        # Get QBO data using SmartSyncService
-        qbo_data = await smart_sync.get_all_data()
-        
-        invoices = qbo_data.get("invoices", [])
-        
-        target_invoice = next((inv for inv in invoices if inv.get("Id") == invoice_id), None)
+        target_invoice = next((inv for inv in overdue_invoices if inv.get("Id") == invoice_id), None)
         if not target_invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -389,15 +377,11 @@ async def get_invoices_runway_impact(
         current_runway = runway_calc.get("runway_days", 0)
         daily_burn = runway_calc.get("daily_burn", 1)
         
-        # Get outstanding invoices using SmartSyncService
-        from infra.qbo.smart_sync import SmartSyncService
+        # Get outstanding invoices using domain service
+        invoice_service = services["invoice_service"]
         
-        smart_sync = SmartSyncService(business_id, "", db)
-        
-        # Get QBO data using SmartSyncService
-        qbo_data = await smart_sync.get_all_data()
-        
-        invoices = qbo_data.get("invoices", [])
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         total_ar = 0
         overdue_ar = 0
@@ -407,7 +391,7 @@ async def get_invoices_runway_impact(
         
         today = datetime.utcnow()
         
-        for invoice_data in invoices:
+        for invoice_data in overdue_invoices:
             balance = float(invoice_data.get("Balance", 0))
             if balance <= 0:
                 continue
