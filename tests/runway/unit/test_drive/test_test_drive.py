@@ -12,7 +12,7 @@ from typing import Dict, Any
 
 from runway.experiences.test_drive import DemoTestDriveService
 from domains.core.models.business import Business
-from infra.qbo.integration_models import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model
 from common.exceptions import BusinessNotFoundError
 
 @pytest.fixture
@@ -165,11 +165,11 @@ class TestTestDrive:
     @pytest.mark.asyncio
     async def test_test_drive_integration_with_qbo_connection(self):
         """Test runway replay is generated during QBO connection."""
-        # Mock integration
-        mock_integration = Mock(spec=Integration)
-        mock_integration.business_id = "test-business-123"
-        mock_integration.created_by = "user-123"
-        mock_integration.realm_id = "realm-123"
+        # Mock business with QBO fields instead of integration
+        mock_business = Mock(spec=Business)
+        mock_business.business_id = "test-business-123"
+        mock_business.qbo_realm_id = "realm-123"
+        mock_business.qbo_status = "connected"
         
         # Mock business
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business

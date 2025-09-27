@@ -18,7 +18,7 @@ from typing import Dict, Any, List
 
 from sqlalchemy.orm import Session as SQLAlchemySession
 from domains.core.models.business import Business
-from infra.qbo.integration_models import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model
 from infra.qbo.client import QBORawClient
 from infra.qbo.smart_sync import SmartSyncService
 from runway.core.runway_calculator import RunwayCalculator
@@ -54,7 +54,7 @@ class TestRunwayReserveE2E:
         import os
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        from infra.qbo.integration_models import IntegrationStatuses
+        # from infra.qbo.integration_models import Integration  # Replaced with Business modelStatuses
         
         # Connect to MAIN database (not test database)
         database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
@@ -62,20 +62,17 @@ class TestRunwayReserveE2E:
         Session = sessionmaker(bind=engine)
         
         with Session() as session:
-            # Look for existing QBO integration in MAIN database
-            integration = session.query(Integration).filter(
-                Integration.platform == "qbo",
-                Integration.status == IntegrationStatuses.CONNECTED.value
+            # Look for existing QBO-connected business in MAIN database
+            from domains.core.models.business import Business
+            business = session.query(Business).filter(
+                Business.qbo_status == "connected",
+                Business.qbo_access_token.isnot(None)
             ).first()
 
-            if not integration:
-                pytest.skip("SKIPPING: No QBO integration found. Run token refresh script.")
-
-            # Get the associated business
-            business = session.query(Business).filter(Business.business_id == integration.business_id).first()
             if not business:
-                pytest.skip("SKIPPING: Business not found for QBO integration.")
+                pytest.skip("SKIPPING: No QBO-connected business found. Run token refresh script.")
 
+            # Business is already loaded above
             return business
     
     @pytest.mark.asyncio

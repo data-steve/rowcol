@@ -21,7 +21,7 @@ import stripe
 from datetime import datetime, timedelta
 from typing import Dict, Any
 from sqlalchemy.orm import Session
-from infra.qbo.integration_models import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model  # Replaced with Business model
 from infra.database.session import SessionLocal
 from dotenv import load_dotenv
 import os
@@ -67,18 +67,18 @@ def setup_qbo_sandbox(db: Session) -> Dict[str, Any]:
     if not access_token:
         raise ValueError("No QBO access token or refresh token available")
 
-    integration = Integration(
-        integration_id="qbo_001",
-        business_id="tenant_001",
-        platform="qbo",
-        access_token=access_token,
-        refresh_token=QBO_REFRESH_TOKEN,
-        expires_at=datetime.now() + timedelta(days=180),
-        account_id="qbo_account_001",
-        status="active"
-    )
-    db.add(integration)
-    db.commit()
+    # Update business with QBO integration fields instead of creating Integration
+    from domains.core.models.business import Business
+    business = session.query(Business).filter(Business.business_id == "tenant_001").first()
+    if business:
+        business.qbo_realm_id = "qbo_account_001"
+        business.qbo_access_token = access_token
+        business.qbo_refresh_token = QBO_REFRESH_TOKEN
+        business.qbo_connected_at = datetime.now()
+        business.qbo_status = "connected"
+        business.qbo_environment = "sandbox"
+        business.qbo_token_expires_at = datetime.now() + timedelta(days=180)
+        session.commit()
 
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -132,18 +132,19 @@ def setup_jobber_sandbox(db: Session) -> Dict[str, Any]:
     if not all([JOBBER_CLIENT_ID, JOBBER_CLIENT_SECRET, JOBBER_ACCESS_TOKEN]):
         raise ValueError("Missing Jobber credentials in .env")
 
-    integration = Integration(
-        integration_id="jobber_001",
-        business_id="tenant_001",
-        platform="jobber",
-        access_token=JOBBER_ACCESS_TOKEN,
-        refresh_token=os.getenv("JOBBER_REFRESH_TOKEN", "mock_refresh"),
-        expires_at=datetime.now() + timedelta(days=180),
-        account_id="jobber_account_001",
-        status="active"
-    )
-    db.add(integration)
-    db.commit()
+    # Jobber integration commented out - focus on QBO only for now
+    # integration = Integration(
+    #     integration_id="jobber_001",
+    #     business_id="tenant_001",
+    #     platform="jobber",
+    #     access_token=JOBBER_ACCESS_TOKEN,
+    #     refresh_token=os.getenv("JOBBER_REFRESH_TOKEN", "mock_refresh"),
+    #     expires_at=datetime.now() + timedelta(days=180),
+    #     account_id="jobber_account_001",
+    #     status="active"
+    # )
+    # db.add(integration)
+    # db.commit()
 
     headers = {
         "Authorization": f"Bearer {JOBBER_ACCESS_TOKEN}",
@@ -232,18 +233,19 @@ def setup_stripe_sandbox(db: Session) -> Dict[str, Any]:
 
     stripe.api_key = STRIPE_SECRET_KEY
 
-    integration = Integration(
-        integration_id="stripe_001",
-        business_id="tenant_001",
-        platform="stripe",
-        access_token=STRIPE_SECRET_KEY,
-        refresh_token=None,
-        expires_at=None,
-        account_id="stripe_account_001",
-        status="active"
-    )
-    db.add(integration)
-    db.commit()
+    # Stripe integration commented out - focus on QBO only for now
+    # integration = Integration(
+    #     integration_id="stripe_001",
+    #     business_id="tenant_001",
+    #     platform="stripe",
+    #     access_token=STRIPE_SECRET_KEY,
+    #     refresh_token=None,
+    #     expires_at=None,
+    #     account_id="stripe_account_001",
+    #     status="active"
+    # )
+    # db.add(integration)
+    # db.commit()
 
     # Seed 50 charges
     for i in range(50):

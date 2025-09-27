@@ -21,7 +21,7 @@ from unittest.mock import patch, AsyncMock
 
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
-from infra.qbo.integration_models import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model
 from infra.qbo.smart_sync import SmartSyncService
 from infra.qbo.client import QBORawClient
 from runway.core.runway_calculator import RunwayCalculator

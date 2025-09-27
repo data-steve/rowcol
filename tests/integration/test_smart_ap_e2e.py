@@ -17,7 +17,7 @@ from typing import Dict, Any, List
 
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
-from infra.qbo.integration_models import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model
 from domains.ap.models.bill import Bill, BillStatus
 from domains.ap.models.vendor import Vendor
 from domains.ap.services.bill_ingestion import BillService  # Available service
