@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from enum import Enum
-from domains.core.models.base import Base, TimestampMixin, TenantMixin
+from infra.database.models import Base, TimestampMixin, TenantMixin
 
 class IntegrationStatuses(Enum):
     """Integration status enumeration."""

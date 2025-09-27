@@ -16,7 +16,7 @@ Features:
 
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration
+from infra.qbo.integration_models import Integration
 from infra.qbo.smart_sync import SmartSyncService
 from typing import Dict, Any, Optional
 from runway.core.scenario_data import BusinessScenarioProvider, BusinessScenario

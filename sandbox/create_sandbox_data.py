@@ -21,7 +21,7 @@ import stripe
 from datetime import datetime, timedelta
 from typing import Dict, Any
 from sqlalchemy.orm import Session
-from domains.core.models.integration import Integration
+from infra.qbo.integration_models import Integration
 from infra.database.session import SessionLocal
 from dotenv import load_dotenv
 import os

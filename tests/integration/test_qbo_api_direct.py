@@ -11,7 +11,7 @@ import httpx
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from domains.core.models.integration import Integration, IntegrationStatuses
+from infra.qbo.integration_models import Integration, IntegrationStatuses
 
 
 @pytest.mark.qbo_real_api

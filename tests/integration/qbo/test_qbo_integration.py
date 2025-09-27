@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration
+from infra.qbo.integration_models import Integration
 from domains.qbo.client import QBOAPIClient, get_qbo_client
 from domains.qbo.health import QBOHealthMonitor, QBOConnectionStatus
 from domains.qbo.auth import QBOAuthService

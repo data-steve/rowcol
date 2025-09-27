@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import relationship
-from .base import Base, TimestampMixin, TenantMixin
+from infra.database.models import Base, TimestampMixin, TenantMixin
 
 class Job(Base, TimestampMixin, TenantMixin):
     __tablename__ = "jobs"

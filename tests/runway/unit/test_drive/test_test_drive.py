@@ -12,7 +12,7 @@ from typing import Dict, Any
 
 from runway.experiences.test_drive import DemoTestDriveService
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration
+from infra.qbo.integration_models import Integration
 from common.exceptions import BusinessNotFoundError
 
 @pytest.fixture

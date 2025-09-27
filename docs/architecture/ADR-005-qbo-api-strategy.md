@@ -2,7 +2,7 @@
 
 **Date**: 2025-01-27  
 **Status**: Accepted  
-**Decision**: Use SmartSyncService as the central orchestration layer for all QBO interactions, handling fragility while enabling immediate user actions through direct API calls.
+**Decision**: Use SmartSyncService as the central orchestration layer for all QBO interactions, with domain services handling their own CRUD operations and QBORawClient making raw HTTP calls to QBO endpoints.
 
 ## Context
 
@@ -23,92 +23,109 @@ Without proper handling, these issues expose users to:
 
 ## Decision
 
-**SmartSyncService as Orchestration Layer**: Use SmartSyncService as the central coordinator for all QBO interactions, handling fragility while enabling immediate user actions through direct API calls.
+**SmartSyncService as Orchestration Layer**: Use SmartSyncService as the central coordinator for all QBO interactions, with domain services handling their own business logic and CRUD operations, and QBORawClient making raw HTTP calls to QBO endpoints.
 
 ### Core Principle
 
 The question isn't "SmartSyncService vs direct API calls" - it's "How do we use SmartSyncService to handle QBO's fragility while maintaining the UX of immediate user actions?"
 
-**Answer**: SmartSyncService as the orchestration layer that handles retries, deduplication, rate limiting, and caching, while still allowing direct API calls for user actions.
+**Answer**: SmartSyncService as the orchestration layer that handles retries, deduplication, rate limiting, and caching, while domain services handle their own business logic and QBORawClient makes raw HTTP calls to QBO endpoints.
 
 ## Architecture Patterns
 
-### Pattern 1: User Actions (Immediate, Direct API Calls with SmartSyncService Protection)
+### Pattern 1: User Actions (Domain Service → SmartSyncService → Raw QBO HTTP Calls)
 
-For user actions like "Pay Bill" or "Send Reminder," use direct QBO API calls wrapped in SmartSyncService's protective mechanisms.
+For user actions like "Pay Bill" or "Send Reminder," domain services handle business logic and use SmartSyncService for orchestration.
 
 ```python
-# runway/routes/ap.py
+# runway/routes/abills.py
 @router.post("/bills/{bill_id}/pay")
 async def pay_bill(bill_id: str, payment_data: PaymentRequest, business_id: str = Depends(get_business_id)):
-    smart_sync = SmartSyncService(business_id)
-    
-    # Check rate limits before proceeding
-    if not smart_sync.should_sync("qbo", SyncStrategy.USER_ACTION):
-        raise HTTPException(status_code=429, detail="Rate limit exceeded, try again shortly")
-    
-    # Deduplicate to prevent double payments
-    if smart_sync.deduplicate_action("payment", bill_id, payment_data.dict()):
-        return {"status": "already_processed", "payment_id": bill_id}
-    
-    # Execute direct QBO API call with retry logic
-    qbo_client = QBOUserActionService(business_id)
-    payment = await smart_sync.execute_with_retry(
-        qbo_client.create_payment,
-        payment_data,
-        max_attempts=3,
-        backoff_factor=2
-    )
-    
-    # Update local DB and record activity
-    await smart_sync.update_local_db("payment", bill_id, {"status": "paid", "payment_id": payment.id})
-    smart_sync.record_user_activity("bill_payment")
-    
-    # Trigger background reconciliation
-    await smart_sync.schedule_reconciliation("payment", bill_id)
-    
+    # Domain service handles business logic
+    bill_service = BillService(db, business_id)
+    payment = await bill_service.create_payment(bill_id, payment_data)
     return {"status": "paid", "payment_id": payment.id, "runway_impact": "+2 days"}
+
+# domains/ap/services/bill_ingestion.py
+class BillService(TenantAwareService):
+    def __init__(self, db: Session, business_id: str):
+        super().__init__(db, business_id)
+        self.smart_sync = SmartSyncService(business_id, "", db)
+    
+    async def create_payment(self, bill_id: str, payment_data: PaymentRequest) -> Payment:
+        """Create payment - domain handles its own CRUD."""
+        # SmartSyncService handles orchestration (retry, dedup, rate limiting)
+        qbo_result = await self.smart_sync.create_payment_immediate({
+            "bill_id": bill_id,
+            "amount": float(payment_data.amount),
+            "payment_date": payment_data.payment_date.isoformat(),
+            "payment_method": payment_data.payment_method
+        })
+        
+        # Domain service handles business logic and data persistence
+        payment = Payment(
+            bill_id=bill_id,
+            amount=payment_data.amount,
+            payment_date=payment_data.payment_date,
+            qbo_payment_id=qbo_result.get("id")
+        )
+        self.db.add(payment)
+        self.db.commit()
+        
+        return payment
 ```
 
 **Key Characteristics**:
-- Direct QBO API calls for immediacy (<300ms response)
-- SmartSyncService handles retries, deduplication, rate limiting
+- Domain services handle business logic and CRUD operations
+- SmartSyncService handles orchestration (retry, dedup, rate limiting, caching)
+- QBORawClient makes raw HTTP calls to QBO endpoints
 - Immediate user feedback with background reconciliation
 - Financial error prevention through deduplication
 
-### Pattern 2: Background Syncs (Batch Operations with SmartSyncService)
+### Pattern 2: Background Syncs (Domain Service → SmartSyncService → Raw QBO HTTP Calls)
 
-For background tasks like weekly digest generation, use SmartSyncService to coordinate batch data fetches with caching and reconciliation.
+For background tasks like weekly digest generation, domain services use SmartSyncService to coordinate batch data fetches with caching and reconciliation.
 
 ```python
-# runway/services/digest.py
-async def generate_digest_background(business_id: str) -> DigestSchema:
-    smart_sync = SmartSyncService(business_id)
+# runway/core/runway_calculator.py
+class RunwayCalculator(TenantAwareService):
+    def __init__(self, db: Session, business_id: str):
+        super().__init__(db, business_id)
+        self.smart_sync = SmartSyncService(business_id, "", self.db)
     
-    # Check if sync is needed
-    if not smart_sync.should_sync("qbo", SyncStrategy.SCHEDULED):
-        cached_data = smart_sync.get_cache("qbo")
-        if cached_data:
-            return DigestService.calculate_runway(cached_data)
+    async def calculate_current_runway(self, qbo_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Calculate current runway - domain handles its own business logic."""
+        if qbo_data is None:
+            qbo_data = await self._get_qbo_data_for_digest()
+        
+        # Domain service handles business logic and calculations
+        runway_days = self._calculate_runway_days(qbo_data)
+        daily_burn = await self._calculate_daily_burn_rate()
+        
+        return {
+            "runway_days": runway_days,
+            "daily_burn": daily_burn,
+            "last_updated": datetime.utcnow()
+        }
     
-    # Fetch fresh data with rate limit handling
-    qbo_bulk = QBOBulkScheduledService(business_id)
-    qbo_data = await smart_sync.execute_with_retry(
-        qbo_bulk.get_qbo_data_for_digest,
-        max_attempts=3,
-        backoff_factor=2
-    )
-    
-    # Cache results and update local DB
-    smart_sync.set_cache("qbo", qbo_data, ttl_minutes=240)
-    await smart_sync.update_local_db("digest", business_id, qbo_data)
-    
-    return DigestService.calculate_runway(qbo_data)
+    async def _get_qbo_data_for_digest(self) -> Dict[str, Any]:
+        """Get QBO data for digest - SmartSyncService handles orchestration."""
+        # SmartSyncService handles caching, rate limiting, retry logic
+        bills = await self.smart_sync.get_bills_for_digest()
+        invoices = await self.smart_sync.get_invoices_for_digest()
+        company_info = await self.smart_sync.get_company_info()
+        
+        return {
+            "bills": bills,
+            "invoices": invoices,
+            "company_info": company_info
+        }
 ```
 
 **Key Characteristics**:
-- Batch data fetching for efficiency
-- SmartSyncService manages timing, caching, rate limits
+- Domain services handle business logic and calculations
+- SmartSyncService manages timing, caching, rate limits, retry logic
+- QBORawClient makes raw HTTP calls to QBO endpoints
 - Cached results for instant access
 - Periodic reconciliation for data consistency
 
@@ -147,19 +164,19 @@ class SmartSyncService:
 
 ### **Dependency Direction**
 ```
-Service/Route → QBOClient → SmartSyncService → QBO API
+Domain Service → SmartSyncService → QBORawClient → QBO API
 ```
 
-**QBOClient** is the integration service that internally uses **SmartSyncService** for orchestration. This pattern ensures:
-- Single responsibility: QBOClient handles QBO integration, SmartSyncService handles orchestration
-- Clean interfaces: Services only need to import QBOClient
+**Domain Services** handle business logic and CRUD operations, **SmartSyncService** provides orchestration, and **QBORawClient** makes raw HTTP calls. This pattern ensures:
+- Single responsibility: Domain services handle business logic, SmartSyncService handles orchestration, QBORawClient handles HTTP calls
+- Clean interfaces: Domain services only need to import SmartSyncService
 - Reusability: SmartSyncService can be used by other integrations (Plaid, Stripe, etc.)
 - Consistency: All QBO operations get the same orchestration behavior
-- Testability: QBO integration can be tested separately from orchestration logic
+- Testability: Each layer can be tested independently
 
 ### **Service Responsibilities**
 
-#### SmartSyncService (infra/jobs/)
+#### SmartSyncService (infra/qbo/)
 **Purpose**: Central orchestration layer for ALL QBO interactions
 **Responsibilities**:
 - Rate limit management and prioritization
@@ -169,15 +186,20 @@ Service/Route → QBOClient → SmartSyncService → QBO API
 - User activity tracking for sync timing
 - Background reconciliation scheduling
 - Error handling and fallback strategies
+- QBO-specific orchestration methods
 
 **Interface**:
 ```python
 class SmartSyncService:
-    def __init__(self, business_id: str)
+    def __init__(self, business_id: str, realm_id: str, db_session=None)
     
-    # Orchestration methods
-    async def execute_qbo_operation(self, operation: str, *args, **kwargs) -> Any
-    async def execute_qbo_batch_operation(self, operations: List[Dict]) -> Dict[str, Any]
+    # QBO orchestration methods
+    async def execute_qbo_call(self, operation: str, *args, **kwargs) -> Any
+    async def get_bills_for_digest(self) -> List[Dict[str, Any]]
+    async def get_invoices_for_digest(self) -> List[Dict[str, Any]]
+    async def get_company_info(self) -> Dict[str, Any]
+    async def create_payment_immediate(self, payment_data: Dict) -> Dict[str, Any]
+    async def record_payment(self, payment_data: Dict) -> Dict[str, Any]
     
     # Caching methods
     def get_cache(self, platform: str, key: Optional[str] = None) -> Optional[Dict]
@@ -188,47 +210,58 @@ class SmartSyncService:
     def record_sync(self, platform: str, strategy: SyncStrategy, success: bool = True) -> None
 ```
 
-#### QBOClient (domains/qbo/)
-**Purpose**: QBO integration service that internally uses SmartSyncService for orchestration
+#### QBORawClient (infra/qbo/)
+**Purpose**: Raw HTTP client for QBO API calls
 **Responsibilities**:
-- Provide clean interface for all QBO operations
-- Internally use SmartSyncService for orchestration (retry, deduplication, rate limiting, caching)
-- Handle QBO-specific data transformations
-- Return standardized data structures
-- Categorize API calls by type (User Actions, Data Fetching, Bulk Operations, Health Checks)
-- Configure SmartSyncService behavior based on API call type
+- Make raw HTTP calls to QBO endpoints
+- Handle QBO-specific authentication
+- Return raw QBO API responses
+- No business logic, no orchestration, just HTTP calls
 
 **Interface**:
 ```python
-class QBOClient:
-    def __init__(self, business_id: str, realm_id: str, db: Session)
+class QBORawClient:
+    def __init__(self, business_id: str, realm_id: str, db_session=None)
     
-    # Data fetching methods
-    async def get_bills(self, due_days: int = 30) -> List[Dict[str, Any]]
-    async def get_invoices(self, aging_days: int = 30) -> List[Dict[str, Any]]
-    async def get_customers(self) -> List[Dict[str, Any]]
-    async def get_vendors(self) -> List[Dict[str, Any]]
-    async def get_accounts(self) -> List[Dict[str, Any]]
-    async def get_company_info(self) -> Dict[str, Any]
+    # Raw QBO API methods
+    async def get_bills_from_qbo(self, due_days: int = 30) -> Dict[str, Any]
+    async def get_invoices_from_qbo(self, aging_days: int = 30) -> Dict[str, Any]
+    async def get_customers_from_qbo(self) -> Dict[str, Any]
+    async def get_vendors_from_qbo(self) -> Dict[str, Any]
+    async def get_accounts_from_qbo(self) -> Dict[str, Any]
+    async def get_company_info_from_qbo(self) -> Dict[str, Any]
+    async def create_payment_in_qbo(self, payment_data: Dict) -> Dict[str, Any]
+    async def get_kpi_data(self) -> Dict[str, Any]
+    async def get_aging_report(self) -> Dict[str, Any]
+    async def get_payment_history(self, entity_type: str, entity_id: str) -> Dict[str, Any]
+```
+
+#### Domain Services (domains/*/services/)
+**Purpose**: Handle business logic and CRUD operations
+**Responsibilities**:
+- Business logic and rules
+- Data transformation and validation
+- CRUD operations on domain models
+- Use SmartSyncService for QBO orchestration
+- Handle user workflows and business processes
+
+**Interface**:
+```python
+class BillService(TenantAwareService):
+    def __init__(self, db: Session, business_id: str):
+        super().__init__(db, business_id)
+        self.smart_sync = SmartSyncService(business_id, "", db)
     
-    # User action methods
-    async def create_payment(self, payment_data: Dict) -> Dict[str, Any]
-    async def send_reminder(self, invoice_id: str, reminder_data: Dict) -> Dict[str, Any]
-    async def approve_bill(self, bill_id: str) -> Dict[str, Any]
-    
-    # Batch operations
-    async def get_all_data_batch(self) -> Dict[str, Any]
-    async def execute_batch_operations(self, operations: List[Dict]) -> Dict[str, Any]
-    
-    # Health check methods
-    async def health_check(self) -> Dict[str, Any]
-    async def get_status(self) -> Dict[str, Any]
+    # Business logic methods
+    async def sync_bills_from_qbo(self, days_back: int = 90) -> List[Bill]
+    async def create_payment(self, bill_id: str, payment_data: PaymentRequest) -> Payment
+    async def get_bills_due_soon(self, days: int = 30) -> List[Bill]
 ```
 
 ### **API Call Categorization**
 
 #### **1. User Actions (Immediate Response <300ms)**
-**Pattern**: `Route → QBOClient.user_action_method() → SmartSyncService.execute_qbo_operation() → QBO API`
+**Pattern**: `Route → Domain Service → SmartSyncService → QBORawClient → QBO API`
 **Examples**: 
 - Bill approval: `POST /bills/{bill_id}/approve`
 - Payment execution: `POST /payments/{payment_id}/execute`
@@ -238,11 +271,12 @@ class QBOClient:
 - User-triggered actions requiring immediate feedback
 - Financial operations that need deduplication
 - Operations that affect cash runway calculations
-- QBOClient internally uses SmartSyncService with high priority and deduplication
+- Domain services handle business logic and CRUD
 - SmartSyncService handles retry, deduplication, rate limiting
+- QBORawClient makes raw HTTP calls to QBO
 
 #### **2. Data Fetching (For Calculations and Dashboards)**
-**Pattern**: `Route/Experience → QBOClient.get_data_method() → SmartSyncService.execute_qbo_operation() → QBO API`
+**Pattern**: `Route/Experience → Domain Service → SmartSyncService → QBORawClient → QBO API`
 **Examples**:
 - Dashboard data: `GET /dashboard`, `GET /operational`
 - Tray items: `TrayService.get_tray_items()`
@@ -251,11 +285,12 @@ class QBOClient:
 **Characteristics**:
 - Data needed for calculations, dashboards, analysis
 - Can be cached for performance
-- QBOClient internally uses SmartSyncService with caching enabled
-- SmartSyncService handles caching, rate limiting
+- Domain services handle business logic and data transformation
+- SmartSyncService handles caching, rate limiting, retry logic
+- QBORawClient makes raw HTTP calls to QBO
 
 #### **3. Bulk Operations (Background Processing)**
-**Pattern**: `Background Job → QBOClient.batch_method() → SmartSyncService.execute_qbo_batch_operation() → QBO API`
+**Pattern**: `Background Job → Domain Service → SmartSyncService → QBORawClient → QBO API`
 **Examples**:
 - Digest generation: `POST /digest/send-all`
 - Batch payments: `POST /payments/batch-execute`
@@ -264,11 +299,12 @@ class QBOClient:
 **Characteristics**:
 - Background operations that can be queued
 - Batch processing for efficiency
-- QBOClient internally uses SmartSyncService with low priority
+- Domain services handle business logic and data processing
 - SmartSyncService handles timing, rate limiting, retry logic
+- QBORawClient makes raw HTTP calls to QBO
 
 #### **4. Health Checks (Direct API Calls)**
-**Pattern**: `Route → QBOClient.health_check()` (No SmartSyncService)
+**Pattern**: `Route → Domain Service → QBORawClient → QBO API` (No SmartSyncService)
 **Examples**:
 - QBO connection status: `GET /qbo_setup/{business_id}/health`
 - API availability checks
@@ -310,20 +346,22 @@ class QBOClient:
 
 ### User Action Flow
 1. User clicks action (e.g., "Pay Bill")
-2. Check rate limits and deduplication
-3. Execute direct QBO API call with retry logic
-4. Update local database
-5. Record user activity
-6. Return immediate response
-7. Schedule background reconciliation
+2. Route calls domain service
+3. Domain service calls SmartSyncService for orchestration
+4. SmartSyncService calls QBORawClient for HTTP call
+5. QBORawClient makes raw HTTP call to QBO
+6. Domain service handles business logic and updates local database
+7. Return immediate response
+8. Schedule background reconciliation
 
 ### Background Sync Flow
-1. Check timing rules and cache validity
-2. Use cached data if available
-3. Fetch fresh data if needed with rate limiting
-4. Cache results with appropriate TTL
-5. Update local database
-6. Process data for consumption
+1. Domain service calls SmartSyncService for orchestration
+2. SmartSyncService checks timing rules and cache validity
+3. Use cached data if available
+4. If needed, SmartSyncService calls QBORawClient for HTTP call
+5. QBORawClient makes raw HTTP call to QBO
+6. SmartSyncService caches results with appropriate TTL
+7. Domain service processes data and updates local database
 
 ### Error Handling Strategy
 - **User Actions**: Fail fast with cached fallback, show retry options
@@ -368,22 +406,27 @@ class QBOClient:
 
 ## Implementation Timeline
 
-### Phase 1: Core SmartSyncService Enhancement (20h)
-- Enhance execute_with_retry for user actions and background syncs
-- Integrate SyncTimingManager for rate limit tracking
-- Add deduplicate_action for all user actions
+### Phase 1: Core Infrastructure (20h)
+- Create QBORawClient for raw HTTP calls
+- Move SmartSyncService to infra/qbo/ with QBO orchestration
+- Implement execute_qbo_call with retry, dedup, rate limiting
 
-### Phase 2: Route Updates (15h)
-- Update runway routes to use QBOUserActionService wrapped in SmartSyncService
+### Phase 2: Domain Service Updates (15h)
+- Update domain services to use SmartSyncService
+- Implement business logic and CRUD operations
+- Add QBO orchestration calls
+
+### Phase 3: Route Updates (10h)
+- Update routes to use domain services
+- Remove direct QBO client usage
 - Implement reconciliation and drift alerts
-- Add UI feedback for failed actions
 
-### Phase 3: Testing and Validation (15h)
+### Phase 4: Testing and Validation (15h)
 - Test with QBO sandbox failure simulation
 - Validate retry and deduplication logic
 - Verify UX trust metrics
 
-**Total Effort**: ~50h over 4 weeks
+**Total Effort**: ~60h over 4 weeks
 
 ## Success Metrics
 
@@ -501,3 +544,5 @@ grep -r "import domains\." infra/
 - [Comprehensive Architecture](./COMPREHENSIVE_ARCHITECTURE.md)
 - [QBO API Strategy Analysis](../../API_STRATEGY_ANALYSIS.md)
 - [QBO Infrastructure README](../../infra/qbo/README.md)
+- [Nuclear Cleanup Plan](../../zzz_fix_backlogs/smart_sync_reset/NUCLEAR_CLEANUP_PLAN.md)
+- [Executable Nuclear Tasks](../../zzz_fix_backlogs/smart_sync_reset/0_EXECUTABLE_NUCLEAR_TASKS.md)

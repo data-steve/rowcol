@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.user import User
-from domains.core.models.integration import Integration
+from infra.qbo.integration_models import Integration
 from domains.core.services.audit_log import AuditLogService
 from infra.qbo.smart_sync import SmartSyncService
 from infra.qbo.setup import QBOSetupService

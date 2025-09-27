@@ -47,7 +47,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 ## **Phase 1: Nuclear Cleanup (P0 Critical)**
 
 #### **Task 1: Delete Circular Dependency Mess**
-- **Status:** `[ ]` Not started
+- **Status:** `[x]` ✅ COMPLETED
 - **Priority:** P0 Critical
 - **Justification:** Delete all the circular dependency files that are preventing the application from starting. These files contain mixed responsibilities and circular imports.
 - **Files to Delete:**
@@ -83,7 +83,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 ## **Phase 2: Build Clean Foundation (P0 Critical)**
 
 #### **Task 2: Create Raw QBO HTTP Client**
-- **Status:** `[ ]` Not started
+- **Status:** `[x]` ✅ COMPLETED
 - **Priority:** P0 Critical
 - **Justification:** Create a clean raw QBO HTTP client that only makes HTTP calls to QBO endpoints. No business logic, no orchestration, just HTTP calls.
 - **File to Create:**
@@ -139,7 +139,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 ---
 
 #### **Task 3: Move SmartSyncService to infra/qbo/ and Enhance with QBO Operations**
-- **Status:** `[ ]` Not started
+- **Status:** `[x]` ✅ COMPLETED
 - **Priority:** P0 Critical
 - **Justification:** Move SmartSyncService to infra/qbo/ since it's QBO-specific orchestration, not general job infrastructure. Then enhance it to handle QBO operations with resilience (retry, dedup, rate limiting, caching).
 - **Files to Move/Update:**
@@ -179,7 +179,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 ## **Phase 3: Fix Import Errors (P0 Critical)**
 
 #### **Task 4: Fix Import Errors After Foundation is Built**
-- **Status:** `[ ]` Not started
+- **Status:** `[x]` ✅ COMPLETED
 - **Priority:** P0 Critical
 - **Justification:** After building the foundation (raw QBO client + SmartSyncService), fix all import errors by updating imports to use the new services.
 - **CRITICAL PROCESS - NO BLIND SEARCH-REPLACE:**
@@ -226,7 +226,7 @@ This activates the virtual environment and saves you from typing `poetry run` be
 ## **Phase 4: Update Documentation (P0 Critical)**
 
 #### **Task 5: Update ADR-005 to Reflect Nuclear Architecture**
-- **Status:** `[ ]` Not started
+- **Status:** `[x]` ✅ COMPLETED
 - **Priority:** P0 Critical
 - **Justification:** ADR-005 currently describes the old architecture with QBOClient. It needs to be updated to reflect the new nuclear architecture: Domain Service → SmartSyncService → Raw QBO HTTP Calls.
 - **File to Fix:**
@@ -343,6 +343,102 @@ This activates the virtual environment and saves you from typing `poetry run` be
 
 ---
 
+## **Phase 6: Integration Model Simplification (P1 High)**
+
+#### **Task 8: Remove Integration Model and Add QBO Fields to Business**
+- **Status:** `[ ]` Not started
+- **Priority:** P1 High
+- **Justification:** Since QBO is mandatory and the only integration, we don't need a complex Integration table. Add QBO connection details directly to the Business model for simplicity and performance.
+- **Files to Modify:**
+  - `domains/core/models/business.py` - Add QBO connection fields
+  - `domains/core/models/__init__.py` - Remove Integration import
+  - `infra/qbo/integration_models.py` - Delete this file
+  - All files importing from `infra.qbo.integration_models` - Update to use Business model
+- **Required Changes to Business Model:**
+  ```python
+  class Business:
+      # ... existing fields ...
+      qbo_realm_id = Column(String(255), nullable=True)
+      qbo_access_token = Column(String(500), nullable=True) 
+      qbo_refresh_token = Column(String(500), nullable=True)
+      qbo_connected_at = Column(DateTime, nullable=True)
+      qbo_status = Column(String(50), default="disconnected")
+      qbo_environment = Column(String(50), default="sandbox")
+  ```
+- **Dependencies:** `Update Route Files to Use Domain Services`
+- **Verification:** 
+  - Run `grep -r "from infra.qbo.integration_models" . --include="*.py"` - should return no results
+  - Run `grep -r "Integration" domains/core/models/__init__.py` - should return no results
+  - Run `uvicorn main:app --reload` - should start without import errors
+  - Run `pytest tests/domains/` - domain tests should pass
+- **Git Commit:**
+  - Run `git add . && git commit -m "feat: simplify integration model - add QBO fields to Business"`
+- **Definition of Done:**
+  - Integration model removed entirely
+  - QBO connection fields added to Business model
+  - All references updated to use Business model
+  - Application starts without import errors
+  - Cleaner, simpler data model
+
+---
+
+#### **Task 9: Comprehensive Integration Model Cleanup**
+- **Status:** `[ ]` Not started
+- **Priority:** P1 High
+- **Justification:** Integration model references are scattered throughout the entire codebase - tests, routes, services, models, configs, and documentation. All must be cleaned up to prevent broken references.
+- **CRITICAL PROCESS - COMPREHENSIVE CLEANUP:**
+  1. **Search for ALL Integration references** using multiple grep patterns
+  2. **Categorize by file type** (tests, routes, services, models, configs, docs)
+  3. **Update each category systematically** to use Business model
+  4. **Verify no references remain** anywhere in the codebase
+  5. **Test thoroughly** after each category cleanup
+- **Search Commands to Run:**
+  - `grep -r "from infra.qbo.integration_models" . --include="*.py"`
+  - `grep -r "from domains.core.models.integration" . --include="*.py"`
+  - `grep -r "Integration\." . --include="*.py"`
+  - `grep -r "integration\." . --include="*.py"`
+  - `grep -r "Integration" . --include="*.py" | grep -v "integration_models"`
+  - `grep -r "integration" . --include="*.py" | grep -v "integration_models"`
+- **Files to Update by Category:**
+  - **Test Files:** All files in `tests/` directory
+  - **Route Files:** All files in `runway/routes/` and `infra/api/routes/`
+  - **Service Files:** All files in `domains/*/services/` and `runway/*/services/`
+  - **Model Files:** All files in `domains/core/models/`
+  - **Config Files:** All files in `infra/qbo/` and `domains/qbo/`
+  - **Documentation:** All files in `docs/` directory
+- **Required Pattern Updates:**
+  ```python
+  # Instead of: from infra.qbo.integration_models import Integration
+  # Use: from domains.core.models.business import Business
+  
+  # Instead of: integration.realm_id
+  # Use: business.qbo_realm_id
+  
+  # Instead of: integration.access_token
+  # Use: business.qbo_access_token
+  
+  # Instead of: integration.status
+  # Use: business.qbo_status
+  ```
+- **Dependencies:** `Remove Integration Model and Add QBO Fields to Business`
+- **Verification:** 
+  - Run `grep -r "from infra.qbo.integration_models" . --include="*.py"` - should return no results
+  - Run `grep -r "from domains.core.models.integration" . --include="*.py"` - should return no results
+  - Run `grep -r "Integration\." . --include="*.py"` - should return no results
+  - Run `grep -r "integration\." . --include="*.py"` - should return no results
+  - Run `uvicorn main:app --reload` - should start without import errors
+  - Run `pytest tests/` - all tests should pass
+- **Git Commit:**
+  - Run `git add . && git commit -m "feat: comprehensive cleanup - remove all Integration model references"`
+- **Definition of Done:**
+  - No Integration model references anywhere in codebase
+  - All QBO references use Business model fields
+  - All tests pass
+  - Application starts without import errors
+  - Clean, consistent data access patterns
+
+---
+
 ## **Success Criteria**
 
 ### **System Health**
@@ -366,11 +462,11 @@ This activates the virtual environment and saves you from typing `poetry run` be
 
 ## **Summary**
 
-- **Total Tasks:** 7
+- **Total Tasks:** 9
 - **P0 Critical:** 5 tasks (nuclear cleanup + foundation + import fixes + documentation)
-- **P1 High:** 2 tasks (domain service updates)
-- **Completed:** 0 tasks
-- **Remaining:** 7 tasks
+- **P1 High:** 4 tasks (domain service updates + integration simplification)
+- **Completed:** 4 tasks (Tasks 1-4)
+- **Remaining:** 5 tasks (Tasks 5-9)
 - **Status:** ✅ **READY FOR HANDS-FREE EXECUTION**
 
 **Quick Reference Commands:**
@@ -380,6 +476,12 @@ grep -r "from domains.qbo" . --include="*.py"
 
 # Check for old integrations imports
 grep -r "from domains.integrations.qbo" . --include="*.py"
+
+# Check for Integration model references
+grep -r "from infra.qbo.integration_models" . --include="*.py"
+grep -r "from domains.core.models.integration" . --include="*.py"
+grep -r "Integration\." . --include="*.py"
+grep -r "integration\." . --include="*.py"
 
 # Test application startup
 uvicorn main:app --reload

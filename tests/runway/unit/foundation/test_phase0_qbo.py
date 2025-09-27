@@ -72,7 +72,7 @@ async def test_qbo_provider_get_bills_real():
     import os
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from domains.core.models.integration import Integration, IntegrationStatuses
+    from infra.qbo.integration_models import Integration, IntegrationStatuses
     from domains.core.models.business import Business
     
     # Connect to MAIN database (not test database) to get real QBO integration
@@ -117,7 +117,7 @@ async def test_qbo_provider_get_invoices_real():
     import os
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from domains.core.models.integration import Integration, IntegrationStatuses
+    from infra.qbo.integration_models import Integration, IntegrationStatuses
     from domains.core.models.business import Business
     
     # Connect to MAIN database (not test database) to get real QBO integration

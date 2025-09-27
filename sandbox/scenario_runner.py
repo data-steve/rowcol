@@ -43,7 +43,7 @@ from infra.qbo.client import QBORawClient
 from infra.qbo.health import QBOHealthMonitor
 from infra.qbo.smart_sync import SmartSyncService
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration
+from infra.qbo.integration_models import Integration
 from runway.core.scenario_data import BusinessScenarioProvider
 
 

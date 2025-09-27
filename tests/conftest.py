@@ -101,7 +101,7 @@ def real_qbo_business_from_prod():
     import os
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from domains.core.models.integration import Integration
+    from infra.qbo.integration_models import Integration
     
     database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
     engine = create_engine(database_url)
@@ -142,7 +142,7 @@ def real_qbo_business_with_prod_session():
     import os
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from domains.core.models.integration import Integration
+    from infra.qbo.integration_models import Integration
     
     database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
     engine = create_engine(database_url)
@@ -384,7 +384,7 @@ def qbo_auth_setup():
 @pytest.fixture
 def qbo_integration_with_mock_data(db, test_business):
     """Create QBO integration with realistic test data and mock HTTP responses."""
-    from domains.core.models.integration import Integration, IntegrationStatuses
+    from infra.qbo.integration_models import Integration, IntegrationStatuses
     from unittest.mock import patch, AsyncMock, MagicMock
     import json
     

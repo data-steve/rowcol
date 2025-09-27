@@ -18,7 +18,7 @@ from typing import Dict, Any, List
 
 from sqlalchemy.orm import Session as SQLAlchemySession
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration
+from infra.qbo.integration_models import Integration
 from domains.qbo.client import get_qbo_client
 from domains.qbo.smart_sync import SmartSyncService
 from runway.core.runway_calculator import RunwayCalculator
@@ -54,7 +54,7 @@ class TestRunwayReserveE2E:
         import os
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        from domains.core.models.integration import IntegrationStatuses
+        from infra.qbo.integration_models import IntegrationStatuses
         
         # Connect to MAIN database (not test database)
         database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
