@@ -19,8 +19,8 @@ from typing import Dict, Any, List
 from sqlalchemy.orm import Session as SQLAlchemySession
 from domains.core.models.business import Business
 from infra.qbo.integration_models import Integration
-from domains.qbo.client import get_qbo_client
-from domains.qbo.smart_sync import SmartSyncService
+from infra.qbo.client import QBORawClient
+from infra.qbo.smart_sync import SmartSyncService
 from runway.core.runway_calculator import RunwayCalculator
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
 from runway.core.reserve_runway import RunwayReserveService

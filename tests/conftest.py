@@ -8,7 +8,8 @@ from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
 from domains.core.models.base import Base
-from domains.core.models import Business, Balance, Integration
+from domains.core.models import Business, Balance
+from infra.qbo.integration_models import Integration
 from domains.ap.models import Bill, Vendor
 from domains.ap.models.payment import Payment as APPayment
 from domains.ar.models import Invoice, Customer
@@ -372,7 +373,7 @@ def mock_payment():
 @pytest.fixture(scope="function") 
 def qbo_auth_setup():
     """Setup QBO auth service for tests without creating a business."""
-    from domains.qbo.auth import QBOAuthService
+    from infra.qbo.auth import QBOAuthService
     
     # Create a mock auth service for testing
     auth_service = QBOAuthService(None, "test-business")

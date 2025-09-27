@@ -14,13 +14,13 @@ Test Categories:
 
 Usage:
     # Run all product scenario tests
-    python -m pytest domains/integrations/qbo/tests/test_product_scenarios.py -v
+    python -m pytest tests/infra/qbo/test_product_scenarios.py -v
     
     # Run specific scenario
-    python -m pytest domains/integrations/qbo/tests/test_product_scenarios.py::TestPaymentMatching -v
+    python -m pytest tests/infra/qbo/test_product_scenarios.py::TestPaymentMatching -v
     
     # Run with real QBO sandbox
-    QBO_TEST_MODE=sandbox python -m pytest domains/integrations/qbo/tests/test_product_scenarios.py -v
+    QBO_TEST_MODE=sandbox python -m pytest tests/infra/qbo/test_product_scenarios.py -v
 """
 
 import pytest
@@ -34,7 +34,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 
-from domains.qbo.client import QBOAPIClient
+from infra.qbo.client import QBORawClient
 from infra.qbo.smart_sync import SmartSyncService
 
 

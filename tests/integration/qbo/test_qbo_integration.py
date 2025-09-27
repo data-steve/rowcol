@@ -34,9 +34,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../..'))
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from infra.qbo.integration_models import Integration
-from domains.qbo.client import QBOAPIClient, get_qbo_client
-from domains.qbo.health import QBOHealthMonitor, QBOConnectionStatus
-from domains.qbo.auth import QBOAuthService
+from infra.qbo.client import QBORawClient
+from infra.qbo.health import QBOHealthMonitor, QBOConnectionStatus
+from infra.qbo.auth import QBOAuthService
 from infra.qbo.smart_sync import SmartSyncService
 from common.exceptions import IntegrationError
 

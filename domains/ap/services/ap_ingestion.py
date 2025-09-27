@@ -56,8 +56,9 @@ class IngestionService(TenantAwareService):
             processed_bills = []
             for bill_data in qbo_data:
                 try:
-                    processed_bill = bill_service.process_bill_from_qbo(bill_data)
-                    processed_bills.append(processed_bill)
+                    processed_bill = bill_service._process_qbo_bill(bill_data)
+                    if processed_bill:
+                        processed_bills.append(processed_bill)
                 except Exception as e:
                     logger.error(f"Error processing bill {bill_data.get('id', 'unknown')}: {e}")
             
@@ -68,6 +69,6 @@ class IngestionService(TenantAwareService):
                 "errors": len(qbo_data) - len(processed_bills)
             }
         except Exception as e:
-            self.logger.error(f"Error syncing bills for business {business_id}: {e}", exc_info=True)
+            logger.error(f"Error syncing bills for business {business_id}: {e}", exc_info=True)
             # Re-raising as ValueError is not ideal, but keeping consistent with original code
             raise ValueError(f"QBO bill sync failed: {str(e)}")
