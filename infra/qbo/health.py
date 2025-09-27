@@ -20,8 +20,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from enum import Enum
 from sqlalchemy.orm import Session
-from domains.core.models.business import Business
-from domains.core.models.integration import Integration
+# Removed domains dependencies - using DTOs instead
 from .client import QBORawClient
 
 class QBOConnectionStatus(Enum):
@@ -149,34 +148,30 @@ class QBOHealthMonitor:
             last_updated=datetime.now()
         )
     
-    async def get_business_health_details(self, business_id: str) -> Optional[Dict[str, Any]]:
-        """Get detailed health information for a specific business."""
+    async def get_business_health_details(self, business_id: str, business_name: str = None, integration_details: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
+        """Get detailed health information for a specific business.
+        
+        Args:
+            business_id: Business identifier
+            business_name: Business name (provided by domain layer)
+            integration_details: Integration details (provided by domain layer)
+        """
         health = self.connection_manager.get_connection_health(business_id)
         if not health:
             return None
         
-        # Get business name
-        business = self.db.query(Business).filter(Business.business_id == business_id).first()
-        business_name = business.name if business else "Unknown"
-        
         # Get active alerts
         alerts = self.active_alerts.get(business_id, [])
         
-        # Get integration details
-        integration = self.db.query(Integration).filter(
-            Integration.business_id == business_id,
-            Integration.platform == "qbo"
-        ).first()
-        
         return {
             "business_id": business_id,
-            "business_name": business_name,
+            "business_name": business_name or "Unknown",
             "health": asdict(health),
             "active_alerts": [asdict(alert) for alert in alerts],
-            "integration_details": {
-                "realm_id": integration.realm_id if integration else None,
-                "connected_at": integration.connected_at.isoformat() if integration and integration.connected_at else None,
-                "status": integration.status if integration else "unknown"
+            "integration_details": integration_details or {
+                "realm_id": None,
+                "connected_at": None,
+                "status": "unknown"
             }
         }
     
@@ -202,21 +197,8 @@ class QBOHealthMonitor:
     
     async def _perform_health_sweep(self):
         """Perform health checks for all businesses."""
-        # Get all businesses with QBO integrations
-        businesses = self.db.query(Business).join(Integration).filter(
-            Integration.platform == "qbo"
-        ).all()
-        
-        logger.debug(f"Performing health sweep for {len(businesses)} businesses")
-        
-        # Check health for each business
-        tasks = []
-        for business in businesses:
-            task = self.connection_manager.ensure_healthy_connection(business.business_id)
-            tasks.append(task)
-        
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+        # TODO: Get all businesses with QBO integrations - this needs to be implemented with DTOs
+        logger.debug("Health sweep not implemented - needs DTO-based business lookup")
     
     async def _generate_alerts(self):
         """Generate alerts based on current health status."""
