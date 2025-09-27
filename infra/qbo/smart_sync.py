@@ -245,6 +245,32 @@ class SmartSyncService:
             priority=SyncPriority.MEDIUM
         )
     
+    async def get_kpi_data(self) -> Dict[str, Any]:
+        """Get KPI data for dashboard calculations with orchestration."""
+        return await self.execute_qbo_call(
+            "get_kpi_data",
+            strategy=SyncStrategy.ON_DEMAND,
+            priority=SyncPriority.HIGH
+        )
+    
+    async def get_aging_report(self) -> Dict[str, Any]:
+        """Get detailed aging report data with orchestration."""
+        return await self.execute_qbo_call(
+            "get_aging_report",
+            strategy=SyncStrategy.ON_DEMAND,
+            priority=SyncPriority.HIGH
+        )
+    
+    async def get_payment_history(self, entity_type: str, entity_id: str) -> Dict[str, Any]:
+        """Get payment history for a specific entity with orchestration."""
+        return await self.execute_qbo_call(
+            "get_payment_history",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            strategy=SyncStrategy.ON_DEMAND,
+            priority=SyncPriority.MEDIUM
+        )
+    
     async def health_check(self) -> Dict[str, Any]:
         """Check QBO API health."""
         return await self.execute_qbo_call(

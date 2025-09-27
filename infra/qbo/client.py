@@ -537,3 +537,107 @@ class QBORawClient:
         except Exception as e:
             logger.error(f"Failed QBO health check: {e}")
             raise
+    
+    async def get_kpi_data(self) -> Dict[str, Any]:
+        """
+        Raw HTTP call to get KPI data for dashboard calculations.
+        
+        Returns:
+            Raw QBO API response with KPI data
+        """
+        try:
+            # Mock implementation - would aggregate QBO data for KPIs
+            return {
+                "cash_position": 50000.0,
+                "ar_aging": {
+                    "current": 15000.0,
+                    "1_30": 8000.0,
+                    "31_60": 5000.0,
+                    "61_90": 3000.0,
+                    "over_90": 2000.0
+                },
+                "ap_aging": {
+                    "current": 12000.0,
+                    "1_30": 10000.0,
+                    "31_60": 6000.0,
+                    "61_90": 4000.0,
+                    "over_90": 3000.0
+                },
+                "monthly_revenue": 75000.0,
+                "monthly_expenses": 65000.0,
+                "runway_days": 45,
+                "last_updated": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Failed to get KPI data: {e}")
+            raise
+    
+    async def get_aging_report(self) -> Dict[str, Any]:
+        """
+        Raw HTTP call to get detailed aging report data.
+        
+        Returns:
+            Raw QBO API response with aging data
+        """
+        try:
+            # Mock implementation - would calculate aging from QBO data
+            return {
+                "ar_aging": {
+                    "current": {"count": 5, "amount": 15000.0},
+                    "1_30": {"count": 3, "amount": 8000.0},
+                    "31_60": {"count": 2, "amount": 5000.0},
+                    "61_90": {"count": 1, "amount": 3000.0},
+                    "over_90": {"count": 1, "amount": 2000.0}
+                },
+                "ap_aging": {
+                    "current": {"count": 8, "amount": 12000.0},
+                    "1_30": {"count": 6, "amount": 10000.0},
+                    "31_60": {"count": 4, "amount": 6000.0},
+                    "61_90": {"count": 2, "amount": 4000.0},
+                    "over_90": {"count": 1, "amount": 3000.0}
+                },
+                "last_updated": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Failed to get aging report: {e}")
+            raise
+    
+    async def get_payment_history(self, entity_type: str, entity_id: str) -> Dict[str, Any]:
+        """
+        Raw HTTP call to get payment history for a specific entity.
+        
+        Args:
+            entity_type: Type of entity (customer, vendor)
+            entity_id: ID of the entity
+            
+        Returns:
+            Raw QBO API response with payment history
+        """
+        try:
+            # Mock implementation - would fetch payment history from QBO
+            return {
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "payments": [
+                    {
+                        "payment_id": f"pymt_{entity_id}_001",
+                        "amount": 1000.0,
+                        "date": "2025-01-20",
+                        "method": "check",
+                        "status": "completed"
+                    },
+                    {
+                        "payment_id": f"pymt_{entity_id}_002", 
+                        "amount": 500.0,
+                        "date": "2025-01-15",
+                        "method": "ach",
+                        "status": "completed"
+                    }
+                ],
+                "total_paid": 1500.0,
+                "last_payment_date": "2025-01-20",
+                "last_updated": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Failed to get payment history for {entity_type} {entity_id}: {e}")
+            raise
