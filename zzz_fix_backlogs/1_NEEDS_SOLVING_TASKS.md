@@ -1,11 +1,11 @@
-# Needs Solving Tasks - SmartSync & QBO Architecture Cleanup
+# Needs Solving Tasks - Data Architecture & Experience Cleanup
 
-*Generated from infrastructure consolidation cleanup on 2025-01-27*  
-*Status: ⚠️ NEEDS ANALYSIS AND SOLUTION WORK*
+*Updated after nuclear cleanup completion on 2025-01-27*  
+*Status: Ready
 
 ## **Task Complexity Curation**
 
-**⚠️ NEEDS SOLUTION WORK (8 tasks)** - These tasks require:
+**⚠️ NEEDS SOLUTION WORK (6 tasks)** - These tasks require:
 - Analysis and discovery work
 - "Figure out" or "determine" language present
 - Dependencies on other solution tasks
@@ -18,18 +18,56 @@
 
 **IMPORTANT**: Before starting any solutioning work, read `LAUNCH_SOLUTIONING_TASKS.md` twice. It contains the complete solutioning framework and methodology you must follow.
 
-### **What is zzz_fix_backlogs?**
-This directory contains cleanup tasks from a major infrastructure consolidation effort. The codebase was refactored to move scattered utilities into a consolidated `infra/jobs/` directory, but several architectural decisions need analysis and solution work before they can be executed.
+### **Nuclear Cleanup Foundation - COMPLETED ✅**
+The QBO architecture has been completely reset and rebuilt with clean separation of concerns:
 
-### **Current Architecture State**
-- **SmartSyncService** (`infra/jobs/smart_sync.py`): Central orchestration layer for ALL QBO interactions. Handles retries, deduplication, rate limiting, and caching while enabling immediate user actions through direct API calls. See [ADR-005: QBO API Strategy](../docs/architecture/ADR-005-qbo-api-strategy.md) for complete architecture.
-- **QBOBulkScheduledService** (`domains/qbo/service.py`): ONLY for bulk background data operations (like digest generation). NOT for user actions.
-- **Direct QBO API calls** (`domains/qbo/client.py`): For immediate user actions (pay bill, delay payment, send collection). Must be wrapped in SmartSyncService for fragility handling.
-- **QBODataService** (`domains/qbo/data_service.py`): ONLY for `runway/experiences/` data formatting. NOT a generic data fetcher.
-- **User Actions vs Data Syncs**: User actions = immediate QBO API calls wrapped in SmartSyncService. Data syncs = background operations coordinated by SmartSyncService.
+**✅ COMPLETED NUCLEAR CLEANUP:**
+- **Clean Architecture**: `Domain Service → SmartSyncService → Raw QBO HTTP Calls`
+- **No Circular Dependencies**: Infrastructure independence maintained
+- **Integration Model Simplified**: QBO fields moved to Business model
+- **SmartSync Test Patterns**: All tests use new architecture
+- **Database Fixtures**: Centralized database connection patterns
+- **Mock Violations Documented**: Ready for comprehensive test data service
+
+### **Current Architecture State (Post-Nuclear)**
+- **SmartSyncService** (`infra/qbo/smart_sync.py`): Central orchestration layer for ALL QBO interactions. Handles retries, deduplication, rate limiting, and caching. Provides resilience infrastructure for domain services.
+- **QBORawClient** (`infra/qbo/client.py`): Raw HTTP calls to QBO endpoints only. No business logic, no orchestration.
+- **Domain Services** (`domains/*/services/`): Handle their own CRUD operations and business logic using SmartSyncService.
+- **Business Model**: Contains QBO connection fields (`qbo_realm_id`, `qbo_access_token`, etc.) - Integration model removed.
 
 ### **Key Architecture Principle**
-The question isn't "SmartSyncService vs direct API calls" - it's "How do we use SmartSyncService to handle QBO's fragility while maintaining the UX of immediate user actions?" Answer: SmartSyncService as the orchestration layer that handles retries, deduplication, rate limiting, and caching, while still allowing direct API calls for user actions.
+Domain services handle their own business logic and CRUD operations. SmartSyncService provides resilience infrastructure (retry, dedup, rate limiting, caching). Raw QBO client just makes HTTP calls. Clean dependency flow with no circular dependencies.
+
+### **Critical Context for Future Developers**
+
+**🚨 READ THIS FIRST - What Was Accomplished in Nuclear Cleanup:**
+
+The QBO architecture was completely reset and rebuilt. Key changes that affect these solution tasks:
+
+1. **Deleted Components** (tasks may reference these - they're gone):
+   - `domains/qbo/` directory (entire directory deleted)
+   - `domains/integrations/qbo/` directory (entire directory deleted)
+   - `Integration` model (removed, QBO fields moved to Business model)
+   - `infra/jobs/smart_sync.py` (moved to `infra/qbo/smart_sync.py`)
+
+2. **New Components** (tasks should use these):
+   - `infra/qbo/smart_sync.py` - SmartSyncService (moved from infra/jobs/)
+   - `infra/qbo/client.py` - QBORawClient (new raw HTTP client)
+   - `domains/core/models/business.py` - Now has QBO fields (qbo_realm_id, qbo_access_token, etc.)
+   - `tests/conftest.py` - New database fixtures (prod_database_session, qbo_connected_business)
+
+3. **New Patterns** (tasks should follow these):
+   - Use `SmartSyncService` for all QBO operations
+   - Use `Business` model QBO fields instead of Integration model
+   - Use database fixtures instead of inline database connections
+   - Use new test patterns documented in nuclear cleanup
+
+4. **Mock Violations** (documented for cleanup):
+   - See `zzz_fix_backlogs/backlog/008_eliminate_remaining_mock_violations.md`
+   - Tests need comprehensive test data service solution
+   - Experience services have mock data that needs real QBO data
+
+**Before starting any solution task, verify it aligns with these changes!**
 
 ### **QBO Fragility Context**
 QuickBooks Online API has well-documented fragility that can disrupt the cash runway ritual:
@@ -59,44 +97,47 @@ This activates the virtual environment and starts the application once. Keep uvi
 
 ## **Phase 0: Solution Task Alignment and Validation (P0 Critical)**
 
-#### **Task 0: Validate Solution Task Alignment with Architecture**
-- **Status:** `[🔄]` Discovery in progress
+#### **Task 0: Validate Solution Task Alignment with Post-Nuclear Architecture**
+- **Status:** `[ ]` Not started
 - **Priority:** P0 Critical
-- **Justification:** Before starting any solution work, verify that all solution tasks align with ADR-005 architecture and current system state. This prevents analysis work on outdated or contradictory requirements.
+- **Justification:** After nuclear cleanup completion, verify that all solution tasks align with the new clean architecture. The nuclear cleanup has fundamentally changed the system, so tasks may reference outdated patterns.
 - **Code Pointers:**
-  - `docs/architecture/ADR-005-qbo-api-strategy.md` - Current architecture
-  - `infra/jobs/smart_sync.py` - Current implementation
+  - `infra/qbo/smart_sync.py` - New SmartSyncService location
+  - `infra/qbo/client.py` - New QBORawClient
+  - `domains/core/models/business.py` - QBO fields added to Business model
   - All solution tasks in this document
 - **Current Issues to Resolve:**
-  - Solution tasks may reference outdated architecture patterns
-  - Tasks may contradict current SmartSyncService implementation
-  - Analysis work may be wasted on wrong assumptions
+  - Tasks may reference old `domains/qbo/` patterns (now deleted)
+  - Tasks may reference old `infra/jobs/smart_sync.py` (moved to `infra/qbo/`)
+  - Tasks may reference Integration model (now removed)
+  - Tasks may not account for new database fixture patterns
 - **Required Analysis:**
-  - Read ADR-005 to understand current architecture
-  - Review each solution task for alignment with current patterns
-  - Identify any tasks that contradict the architecture
-  - Determine which tasks need updates before analysis can begin
+  - Review each solution task for alignment with post-nuclear architecture
+  - Identify tasks that reference deleted or moved components
+  - Update task requirements to reflect new patterns
+  - Ensure tasks account for new SmartSync test patterns
 - **Discovery Commands to Run:**
+  - `grep -r "domains/qbo" . --include="*.py"` - Should return no results (all deleted)
+  - `grep -r "infra/jobs/smart_sync" . --include="*.py"` - Should return no results (moved)
+  - `grep -r "Integration" . --include="*.py"` - Should return no results (removed)
   - `grep -r "SmartSyncService" . --include="*.py"` - Find current usage patterns
-  - `grep -r "from infra.jobs import" . --include="*.py"` - Check current import patterns
-  - `uvicorn main:app --reload` - Verify application starts
-  - `pytest tests/ -k "smart_sync"` - Check existing tests
+  - `grep -r "from infra.qbo" . --include="*.py"` - Check new import patterns
 - **Files to Read First:**
-  - `docs/architecture/ADR-005-qbo-api-strategy.md` - Complete API strategy
-  - `infra/jobs/smart_sync.py` - Current implementation
-  - `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Overall architecture
-  - `zzz_fix_backlogs/LAUNCH_SOLUTIONING_TASKS.md` - Solutioning framework
-  - `zzz_fix_backlogs/LAUNCH_EXECUTABLE_TASKS.md` - Execution framework
+  - `zzz_fix_backlogs/smart_sync_reset/0_EXECUTABLE_NUCLEAR_TASKS.md` - What was completed
+  - `infra/qbo/smart_sync.py` - New SmartSyncService implementation
+  - `infra/qbo/client.py` - New QBORawClient implementation
+  - `domains/core/models/business.py` - QBO fields in Business model
+  - `tests/conftest.py` - New database fixture patterns
 - **Dependencies:** None
 - **Verification:** 
-  - All solution tasks align with ADR-005 architecture
-  - No tasks contradict current SmartSyncService implementation
-  - All tasks reference current system state
+  - All solution tasks align with post-nuclear architecture
+  - No tasks reference deleted or moved components
+  - All tasks account for new patterns and fixtures
 - **Definition of Done:**
   - All solution tasks are verified to align with current architecture
   - No contradictory or outdated task requirements remain
   - Analysis work can proceed with confidence
-- **Solution Required:** Review and validation of all solution tasks against current architecture
+- **Solution Required:** Review and validation of all solution tasks against post-nuclear architecture
 - **Progress Tracking:**
   - Update status to `[🔄]` when starting validation
   - Update status to `[✅]` when all tasks are validated
@@ -106,48 +147,53 @@ This activates the virtual environment and starts the application once. Keep uvi
 
 ## **Phase 1: Data Architecture Problems (P1 High)**
 
-#### **Task 2: Fix Calculator → Experience Data Flow**
+#### **Task 1: Fix Calculator → Experience Data Flow**
 - **Status:** `[ ]` Not started
 - **Priority:** P1 High
-- **Justification:** Each calculator in `runway/core/` should feed its specific `runway/experiences/` with the right data for their goals. Current data flow is broken or inconsistent, causing experiences to show wrong or missing data.
+- **Justification:** Each calculator in `runway/core/` should feed its specific `runway/experiences/` with the right data for their goals. Current data flow is broken or inconsistent, causing experiences to show wrong or missing data. This is now possible with the clean SmartSync architecture.
 - **Code Pointers:**
-  - `runway/core/` - Calculator services that should feed experiences
+  - `runway/core/runway_calculator.py` - Main calculator service (now uses SmartSyncService)
   - `runway/experiences/` - Experience services that need calculator data
-  - `domains/qbo/data_service.py` - Current data service implementation
-  - `infra/jobs/smart_sync.py` - SmartSync orchestration layer
+  - `infra/qbo/smart_sync.py` - SmartSync orchestration layer (new location)
+  - `tests/conftest.py` - New database fixture patterns
 - **Current Issues to Resolve:**
   - Calculator services not properly feeding experience services
   - Data flow between runway/core and runway/experiences is unclear
   - Each experience may be fetching data independently instead of using calculators
   - Data consistency between calculators and experiences is broken
+  - Mock violations in experience data (documented in 008_eliminate_remaining_mock_violations.md)
 - **Required Analysis:**
   - Map current data flow from calculators to experiences
   - Identify which calculators should feed which experiences
-  - Determine proper data passing patterns
+  - Determine proper data passing patterns using SmartSyncService
   - Design consistent data flow architecture
+  - Address mock violations in experience data
 - **Discovery Commands to Run:**
   - `grep -r "runway_calculator" runway/experiences/` - Find calculator usage in experiences
   - `grep -r "get_.*_data" runway/core/` - Find data methods in calculators
   - `grep -r "from runway.core" runway/experiences/` - Find calculator imports
-  - `grep -r "for_digest" . --include="*.py"` - Find remaining for_digest methods
+  - `grep -r "SmartSyncService" runway/` - Find SmartSync usage in runway
+  - `grep -r "mock" runway/experiences/` - Find mock violations in experiences
 - **Files to Read First:**
-  - `runway/core/runway_calculator.py` - Main calculator service
+  - `runway/core/runway_calculator.py` - Main calculator service (updated for SmartSync)
   - `runway/experiences/digest.py` - Digest experience data needs
   - `runway/experiences/tray.py` - Tray experience data needs
   - `runway/experiences/test_drive.py` - Test drive experience data needs
-  - `zzz_fix_backlogs/backlog/006_experiences_cleanup_and_consolidation.md` - Known experience issues
-- **Dependencies:** `Create Solution Analysis Framework`
+  - `zzz_fix_backlogs/backlog/008_eliminate_remaining_mock_violations.md` - Mock violations
+- **Dependencies:** `Validate Solution Task Alignment with Post-Nuclear Architecture`
 - **Verification:** 
   - Clear data flow from calculators to experiences
   - Each experience gets data from appropriate calculator
   - No duplicate data fetching across experiences
   - Data consistency maintained
+  - No mock violations in experience data
 - **Definition of Done:**
   - Calculator → Experience data flow clearly designed
   - Each experience uses appropriate calculator for data
   - No duplicate data fetching patterns
   - Data consistency patterns established
-- **Solution Required:** Analysis of current data flow, design of calculator → experience patterns
+  - Mock violations addressed
+- **Solution Required:** Analysis of current data flow, design of calculator → experience patterns using SmartSyncService
 - **Progress Tracking:**
   - Update status to `[🔄]` when starting analysis
   - Update status to `[💡]` when solution is identified
@@ -356,26 +402,33 @@ This activates the virtual environment and starts the application once. Keep uvi
 ## **Summary**
 
 - **Total Tasks:** 6
-- **P0 Critical:** 2 tasks (alignment and framework)
-- **P1 High:** 3 tasks (data architecture problems)
-- **P2 Medium:** 1 task (testing)
+- **P0 Critical:** 1 task (alignment validation)
+- **P1 High:** 4 tasks (data architecture problems)
+- **P2 Medium:** 1 task (testing strategy)
 
 **Key Solutioning Patterns:**
-- **Task 0**: Always validate alignment before starting analysis
-- **Task 1**: Create consistent analysis framework
-- **Tasks 2-5**: Data architecture problems (calculator flow, experience cleanup, bulk operations, mock violations)
-- **Task 6**: Comprehensive testing strategy
+- **Task 0**: Validate alignment with post-nuclear architecture
+- **Tasks 1-4**: Data architecture problems (calculator flow, experience cleanup, bulk operations, mock violations)
+- **Task 5**: Comprehensive testing strategy
 
 **Critical Success Factors:**
-- All tasks must align with ADR-005 architecture
-- Consistent analysis framework prevents scattered work
-- Focus on real data problems, not theoretical architecture
+- All tasks must align with post-nuclear architecture
+- Use new SmartSync patterns and database fixtures
+- Address mock violations documented in 008_eliminate_remaining_mock_violations.md
 - Solutions must be documented as executable tasks
 
 **Data Architecture Focus:**
-- Calculator → Experience data flow
+- Calculator → Experience data flow using SmartSyncService
 - Experience services cleanup and consistency
 - Digest bulk operations efficiency
 - Mock violations replacement with real QBO data
+- Comprehensive test data service solution
+
+**Post-Nuclear Context:**
+- Clean architecture: `Domain Service → SmartSyncService → Raw QBO HTTP Calls`
+- No circular dependencies
+- Integration model simplified (QBO fields in Business model)
+- SmartSync test patterns established
+- Database connection fixtures created
 
 This backlog contains only tasks that require **analysis and solution work** before they can be executed.
