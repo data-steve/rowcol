@@ -191,13 +191,7 @@ class SmartSyncService:
             priority=SyncPriority.HIGH
         )
     
-    async def get_all_data(self) -> Dict[str, Any]:
-        """Get all QBO data for comprehensive analysis."""
-        return await self.execute_qbo_call(
-            "get_all_data",
-            strategy=SyncStrategy.DATA_FETCH,
-            priority=SyncPriority.HIGH
-        )
+    # get_all_data() method removed - use specific domain service methods instead
     
     async def create_payment_immediate(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create payment immediately with high priority."""

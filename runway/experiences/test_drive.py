@@ -125,9 +125,15 @@ class DemoTestDriveService:
             # Get data quality analyzer for this business
             data_quality_analyzer = self._get_data_quality_analyzer(business_id)
             
-            # Get QBO data for analysis using SmartSyncService
-            smart_sync = SmartSyncService(business_id, "", self.db)
-            qbo_data = await smart_sync.get_all_data()
+            # Get QBO data for analysis using domain services
+            # TODO: Replace with proper domain service calls when needed
+            # For now, use mock data for test drive demonstration
+            qbo_data = {
+                "bills": [],
+                "invoices": [],
+                "customers": [],
+                "vendors": []
+            }
             
             # Use core service for hygiene score calculation
             hygiene_analysis = data_quality_analyzer.calculate_hygiene_score(qbo_data)

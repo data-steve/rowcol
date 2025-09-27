@@ -5,6 +5,9 @@ from infra.qbo.smart_sync import SmartSyncService
 from infra.jobs.enums import SyncStrategy, SyncPriority
 from typing import Dict, Any
 
+# Note: This route is not currently used and needs to be redesigned
+# to follow the nuclear architecture: Route → Domain Service → SmartSyncService
+
 router = APIRouter()
 
 @router.post("/sync/{platform}/on-demand")
@@ -16,25 +19,13 @@ async def sync_on_demand(
     """User explicitly requests a sync."""
     try:
         if platform == "qbo":
-            smart_sync = SmartSyncService(business_id, "", db)
-            qbo_client = QBOClient(business_id)
-            
-            # Check if sync is needed
-            if not smart_sync.should_sync("qbo", SyncStrategy.USER_ACTION):
-                cached_data = smart_sync.get_cache("qbo")
-                if cached_data:
-                    return {"status": "success", "platform": platform, "data": cached_data, "cached": True}
-            
-            # Execute sync with retry logic
-            result = await smart_sync.execute_with_retry(
-                qbo_client.get_all_data, max_attempts=3
-            )
-            
-            # Cache results
-            smart_sync.set_cache("qbo", result, ttl_minutes=240)
-            smart_sync.record_user_activity("on_demand_sync")
-            
-            return {"status": "success", "platform": platform, "data": result, "cached": False}
+            # TODO: This route needs to be redesigned to use domain services
+            # instead of calling QBO directly. For now, return a placeholder.
+            return {
+                "status": "error", 
+                "message": "This sync route needs to be redesigned to use domain services",
+                "platform": platform
+            }
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
         
@@ -51,25 +42,14 @@ async def sync_event_triggered(
     """Sync triggered by user action (opening dashboard, etc.)."""
     try:
         if platform == "qbo":
-            smart_sync = SmartSyncService(business_id, "", db)
-            qbo_client = QBOClient(business_id)
-            
-            # Check if sync is needed
-            if not smart_sync.should_sync("qbo", SyncStrategy.EVENT_TRIGGERED):
-                cached_data = smart_sync.get_cache("qbo")
-                if cached_data:
-                    return {"status": "success", "platform": platform, "event_type": event_type, "data": cached_data, "cached": True}
-            
-            # Execute sync with retry logic
-            result = await smart_sync.execute_with_retry(
-                qbo_client.get_all_data, max_attempts=3
-            )
-            
-            # Cache results
-            smart_sync.set_cache("qbo", result, ttl_minutes=240)
-            smart_sync.record_user_activity(f"event_triggered_sync_{event_type}")
-            
-            return {"status": "success", "platform": platform, "event_type": event_type, "data": result, "cached": False}
+            # TODO: This route needs to be redesigned to use domain services
+            # instead of calling QBO directly. For now, return a placeholder.
+            return {
+                "status": "error", 
+                "message": "This sync route needs to be redesigned to use domain services",
+                "platform": platform,
+                "event_type": event_type
+            }
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
         

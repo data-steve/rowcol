@@ -376,31 +376,7 @@ class QBORawClient:
     
     # ==================== MISSING METHODS NEEDED BY DOMAINS ====================
     
-    async def get_all_data(self) -> Dict[str, Any]:
-        """
-        Raw HTTP call to get all QBO data for digest generation.
-        
-        This is a critical method used extensively by runway routes.
-        
-        Returns:
-            Raw QBO API response with all data
-        """
-        try:
-            # Get all major entities in one call
-            async with httpx.AsyncClient() as client:
-                # This would typically be a batch request or multiple parallel requests
-                # For now, we'll return a structure that matches what the runway expects
-                response = await client.get(
-                    f"{self.base_url}/reports/GeneralLedger",
-                    headers=self._get_headers(),
-                    timeout=60.0
-                )
-                response.raise_for_status()
-                return response.json()
-                
-        except Exception as e:
-            logger.error(f"Failed to get all QBO data: {e}")
-            raise
+    # get_all_data() method removed - use specific domain service methods instead
     
     async def record_payment(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:
         """
