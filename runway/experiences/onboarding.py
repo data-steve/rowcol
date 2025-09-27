@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 from domains.core.models.user import User
-from infra.qbo.integration_models import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model fields
 from domains.core.services.audit_log import AuditLogService
 from infra.qbo.smart_sync import SmartSyncService
 from infra.qbo.setup import QBOSetupService
@@ -50,11 +50,8 @@ class OnboardingService:
         if not business:
             raise HTTPException(status_code=404, detail="Business not found")
         
-        # Check QBO integration status
-        qbo_integration = self.db.query(Integration).filter(
-            Integration.business_id == business_id,
-            Integration.platform == "qbo"
-        ).first()
+        # Check QBO integration status using Business model
+        qbo_connected = business.qbo_status == "connected" and business.qbo_access_token is not None
         
         # Calculate completion percentage
         steps_completed = 0
@@ -62,7 +59,7 @@ class OnboardingService:
         
         steps = {
             "business_created": bool(business),
-            "qbo_connected": bool(qbo_integration and qbo_integration.status == "connected"),
+            "qbo_connected": qbo_connected,
             "initial_sync": await self._check_initial_sync_completed(business_id),
             "digest_configured": self._check_digest_configured(business_id),
             "first_tray_review": await self._check_first_tray_review(business_id)
@@ -219,12 +216,9 @@ class OnboardingService:
             # For now, assume digest is configured if business exists and QBO is connected
             # In the future, this could check for specific digest preferences
             business = self.db.query(Business).filter(Business.business_id == business_id).first()
-            integration = self.db.query(Integration).filter(
-                Integration.business_id == business_id,
-                Integration.platform == "qbo"
-            ).first()
+            # QBO integration status is now stored in Business model
             
-            return bool(business and integration and integration.status == "connected")
+            return bool(business and business.qbo_status == "connected" and business.qbo_access_token is not None)
         except Exception as e:
             logger.warning(f"Error checking digest configuration for business {business_id}: {e}")
             return False

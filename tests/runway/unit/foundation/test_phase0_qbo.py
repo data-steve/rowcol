@@ -8,7 +8,7 @@ import pytest
 import asyncio
 from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
-from domains.core.models import Business, Integration
+from domains.core.models import Business
 from infra.qbo.client import QBORawClient
 
 
@@ -33,37 +33,41 @@ def test_qbo_provider_factory_auto_realm_lookup(db: Session, test_business: Busi
     assert provider.realm_id == "mock_realm"
 
 
-def test_integration_model_structure():
-    """Test that Integration model has correct Phase 0 attributes"""
-    assert hasattr(Integration, 'integration_id')
-    assert hasattr(Integration, 'business_id')
-    assert hasattr(Integration, 'platform')
-    assert hasattr(Integration, 'access_token')
-    assert hasattr(Integration, 'refresh_token')
-    assert hasattr(Integration, 'expires_at')
-    assert Integration.__tablename__ == 'integrations'
+def test_business_qbo_fields_structure():
+    """Test that Business model has correct QBO integration fields"""
+    from domains.core.models.business import Business
+    assert hasattr(Business, 'qbo_realm_id')
+    assert hasattr(Business, 'qbo_access_token')
+    assert hasattr(Business, 'qbo_refresh_token')
+    assert hasattr(Business, 'qbo_connected_at')
+    assert hasattr(Business, 'qbo_status')
+    assert hasattr(Business, 'qbo_environment')
+    assert hasattr(Business, 'qbo_token_expires_at')
+    assert hasattr(Business, 'qbo_error_message')
+    assert Business.__tablename__ == 'businesses'
 
 
-def test_integration_creation(db: Session, test_business: Business):
-    """Test basic Integration model creation for QBO"""
+def test_business_qbo_fields_update(db: Session, test_business: Business):
+    """Test basic Business QBO fields update for QBO integration"""
     from datetime import datetime, timedelta
 
-    integration = Integration(
-        # Do not set integration_id as it's an auto-incremented Integer primary key
-        business_id=test_business.business_id,
-        platform="QBO",
-        access_token="mock_access_token",
-        refresh_token="mock_refresh_token",
-        expires_at=datetime.now() + timedelta(hours=1),
-        status="active"
-    )
+    # Update business with QBO integration fields
+    test_business.qbo_realm_id = "mock_realm_123"
+    test_business.qbo_access_token = "mock_access_token"
+    test_business.qbo_refresh_token = "mock_refresh_token"
+    test_business.qbo_connected_at = datetime.now()
+    test_business.qbo_status = "connected"
+    test_business.qbo_environment = "sandbox"
+    test_business.qbo_token_expires_at = datetime.now() + timedelta(hours=1)
 
-    db.add(integration)
     db.commit()
+    db.refresh(test_business)
 
-    assert integration.business_id == test_business.business_id
-    assert integration.platform == "QBO"
-    assert integration.status == "active"
+    assert test_business.qbo_realm_id == "mock_realm_123"
+    assert test_business.qbo_access_token == "mock_access_token"
+    assert test_business.qbo_refresh_token == "mock_refresh_token"
+    assert test_business.qbo_status == "connected"
+    assert test_business.qbo_environment == "sandbox"
 
 
 @pytest.mark.asyncio
@@ -72,31 +76,26 @@ async def test_qbo_provider_get_bills_real():
     import os
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from infra.qbo.integration_models import Integration, IntegrationStatuses
+    # from infra.qbo.integration_models import Integration, IntegrationStatuses  # Replaced with Business model
     from domains.core.models.business import Business
     
-    # Connect to MAIN database (not test database) to get real QBO integration
+    # Connect to MAIN database (not test database) to get real QBO-connected business
     database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
     engine = create_engine(database_url)
     Session = sessionmaker(bind=engine)
     
     with Session() as session:
-        # Look for existing QBO integration in MAIN database
-        integration = session.query(Integration).filter(
-            Integration.platform == "qbo",
-            Integration.status == IntegrationStatuses.CONNECTED.value
+        # Look for existing QBO-connected business in MAIN database
+        business = session.query(Business).filter(
+            Business.qbo_status == "connected",
+            Business.qbo_access_token.isnot(None)
         ).first()
 
-        if not integration:
-            pytest.skip("SKIPPING: No QBO integration found. Run token refresh script.")
-
-        if not all([integration.access_token, integration.refresh_token, integration.realm_id]):
-            pytest.skip("SKIPPING: QBO integration missing required tokens.")
-
-        # Get the associated business
-        business = session.query(Business).filter(Business.business_id == integration.business_id).first()
         if not business:
-            pytest.skip("SKIPPING: Business not found for QBO integration.")
+            pytest.skip("SKIPPING: No QBO-connected business found. Run token refresh script.")
+
+        if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
+            pytest.skip("SKIPPING: QBO business missing required tokens.")
 
         # Test with real QBO provider
         provider = get_qbo_client(business.business_id, session)
@@ -117,31 +116,26 @@ async def test_qbo_provider_get_invoices_real():
     import os
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from infra.qbo.integration_models import Integration, IntegrationStatuses
+    # from infra.qbo.integration_models import Integration, IntegrationStatuses  # Replaced with Business model
     from domains.core.models.business import Business
     
-    # Connect to MAIN database (not test database) to get real QBO integration
+    # Connect to MAIN database (not test database) to get real QBO-connected business
     database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
     engine = create_engine(database_url)
     Session = sessionmaker(bind=engine)
     
     with Session() as session:
-        # Look for existing QBO integration in MAIN database
-        integration = session.query(Integration).filter(
-            Integration.platform == "qbo",
-            Integration.status == IntegrationStatuses.CONNECTED.value
+        # Look for existing QBO-connected business in MAIN database
+        business = session.query(Business).filter(
+            Business.qbo_status == "connected",
+            Business.qbo_access_token.isnot(None)
         ).first()
 
-        if not integration:
-            pytest.skip("SKIPPING: No QBO integration found. Run token refresh script.")
-
-        if not all([integration.access_token, integration.refresh_token, integration.realm_id]):
-            pytest.skip("SKIPPING: QBO integration missing required tokens.")
-
-        # Get the associated business
-        business = session.query(Business).filter(Business.business_id == integration.business_id).first()
         if not business:
-            pytest.skip("SKIPPING: Business not found for QBO integration.")
+            pytest.skip("SKIPPING: No QBO-connected business found. Run token refresh script.")
+
+        if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
+            pytest.skip("SKIPPING: QBO business missing required tokens.")
 
         # Test with real QBO provider
         provider = get_qbo_client(business.business_id, session)

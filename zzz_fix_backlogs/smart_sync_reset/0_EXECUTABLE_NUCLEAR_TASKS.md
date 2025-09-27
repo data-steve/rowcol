@@ -382,7 +382,36 @@ This activates the virtual environment and saves you from typing `poetry run` be
 
 ---
 
-#### **Task 9: Comprehensive Integration Model Cleanup**
+#### **Task 9: Update Tests for SmartSync Architecture**
+- **Status:** `[ ]` Not started
+- **Priority:** P1 High
+- **Justification:** Tests are still using old QBO patterns with mock tokens and direct database connections. They need to be updated to use SmartSync architecture and real QBO connections (or proper test fixtures).
+- **Files to Fix:**
+  - `tests/runway/unit/foundation/test_phase0_qbo.py` - Update to use SmartSync patterns
+  - `tests/integration/test_real_qbo_api.py` - Update to use SmartSync patterns
+  - `tests/integration/test_qbo_api_direct.py` - Update to use SmartSync patterns
+  - All other test files with QBO integration patterns
+- **Required Changes:**
+  - Create proper test fixtures for QBO connections
+  - Remove mock token patterns (QBO rejects them)
+  - Update tests to use SmartSyncService instead of direct QBO calls
+  - Consolidate database connection code into fixtures
+- **Dependencies:** `Remove Integration Model and Add QBO Fields to Business`
+- **Verification:** 
+  - Run `pytest tests/runway/unit/foundation/` - QBO foundation tests should pass
+  - Run `pytest tests/integration/` - QBO integration tests should pass
+  - Run `uvicorn main:app --reload` - should start without import errors
+- **Git Commit:**
+  - Run `git add . && git commit -m "feat: update tests for SmartSync architecture"`
+- **Definition of Done:**
+  - All tests use SmartSync patterns instead of direct QBO calls
+  - No mock tokens that QBO will reject
+  - Database connection code consolidated into fixtures
+  - All tests pass with new architecture
+
+---
+
+#### **Task 10: Comprehensive Integration Model Cleanup**
 - **Status:** `[ ]` Not started
 - **Priority:** P1 High
 - **Justification:** Integration model references are scattered throughout the entire codebase - tests, routes, services, models, configs, and documentation. All must be cleaned up to prevent broken references.
@@ -462,11 +491,11 @@ This activates the virtual environment and saves you from typing `poetry run` be
 
 ## **Summary**
 
-- **Total Tasks:** 9
+- **Total Tasks:** 10
 - **P0 Critical:** 5 tasks (nuclear cleanup + foundation + import fixes + documentation)
-- **P1 High:** 4 tasks (domain service updates + integration simplification)
+- **P1 High:** 5 tasks (domain service updates + integration simplification + test updates)
 - **Completed:** 7 tasks (Tasks 1-7)
-- **Remaining:** 2 tasks (Tasks 8-9)
+- **Remaining:** 3 tasks (Tasks 8-10)
 - **Status:** ✅ **READY FOR HANDS-FREE EXECUTION**
 
 **Quick Reference Commands:**

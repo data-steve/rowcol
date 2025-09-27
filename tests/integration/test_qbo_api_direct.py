@@ -11,7 +11,7 @@ import httpx
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from infra.qbo.integration_models import Integration, IntegrationStatuses
+# from infra.qbo.integration_models import Integration, IntegrationStatuses  # Replaced with Business model
 
 
 @pytest.mark.qbo_real_api
@@ -32,28 +32,29 @@ class TestDirectQBOApi:
         Session = sessionmaker(bind=engine)
         
         with Session() as session:
-            integration = session.query(Integration).filter(
-                Integration.platform == "qbo",
-                Integration.status == IntegrationStatuses.CONNECTED.value
+            from domains.core.models.business import Business
+            business = session.query(Business).filter(
+                Business.qbo_status == "connected",
+                Business.qbo_access_token.isnot(None)
             ).first()
             
-            if not integration:
-                pytest.skip("No QBO integration found. Run get_qbo_tokens.py first.")
+            if not business:
+                pytest.skip("No QBO-connected business found. Run get_qbo_tokens.py first.")
             
-            if not all([integration.access_token, integration.refresh_token, integration.realm_id]):
-                pytest.skip("QBO integration missing tokens.")
+            if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
+                pytest.skip("QBO business missing tokens.")
             
-            print(f"✅ Found tokens for realm: {integration.realm_id}")
-            print(f"✅ Access token: {integration.access_token[:20]}...")
+            print(f"✅ Found tokens for realm: {business.qbo_realm_id}")
+            print(f"✅ Access token: {business.qbo_access_token[:20]}...")
             
             # Make direct API call to QBO
-            url = f"https://sandbox-quickbooks.api.intuit.com/v3/company/{integration.realm_id}/query"
+            url = f"https://sandbox-quickbooks.api.intuit.com/v3/company/{business.qbo_realm_id}/query"
             params = {
                 "query": "SELECT * FROM Bill WHERE DueDate <= '2025-10-23' AND Balance > '0'",
                 "minorversion": "65"
             }
             headers = {
-                "Authorization": f"Bearer {integration.access_token}",
+                "Authorization": f"Bearer {business.qbo_access_token}",
                 "Accept": "application/json"
             }
             

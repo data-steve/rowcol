@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
 from domains.core.models.base import Base
 from domains.core.models import Business, Balance
-from infra.qbo.integration_models import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model fields
 from domains.ap.models import Bill, Vendor
 from domains.ap.models.payment import Payment as APPayment
 from domains.ar.models import Invoice, Customer
@@ -102,7 +102,7 @@ def real_qbo_business_from_prod():
     import os
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from infra.qbo.integration_models import Integration
+    # from infra.qbo.integration_models import Integration  # Replaced with Business model fields
     
     database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
     engine = create_engine(database_url)
@@ -110,25 +110,20 @@ def real_qbo_business_from_prod():
     
     with Session() as prod_session:
         # Get real QBO integration from production database
-        integration = prod_session.query(Integration).filter(
-            Integration.platform == 'qbo'
-        ).first()
-        
-        if not integration:
-            pytest.skip("No QBO integration found in production database")
-        
-        # Get the business associated with this integration
         business = prod_session.query(Business).filter(
-            Business.business_id == integration.business_id
+            Business.qbo_status == 'connected',
+            Business.qbo_access_token.isnot(None)
         ).first()
         
         if not business:
-            pytest.skip(f"Business {integration.business_id} not found for QBO integration")
+            pytest.skip("No QBO-connected business found in production database")
         
-        # Get realm_id from environment or integration
-        realm_id = os.getenv('QBO_REALM_ID')
+        # Business is already loaded above
+        
+        # Get realm_id from environment or business
+        realm_id = os.getenv('QBO_REALM_ID') or business.qbo_realm_id
         if not realm_id:
-            pytest.skip("QBO_REALM_ID environment variable not set")
+            pytest.skip("QBO_REALM_ID environment variable not set and business has no realm_id")
         
         yield business, realm_id
 
@@ -143,7 +138,7 @@ def real_qbo_business_with_prod_session():
     import os
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
-    from infra.qbo.integration_models import Integration
+    # from infra.qbo.integration_models import Integration  # Replaced with Business model fields
     
     database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
     engine = create_engine(database_url)
@@ -151,25 +146,20 @@ def real_qbo_business_with_prod_session():
     
     with Session() as prod_session:
         # Get real QBO integration from production database
-        integration = prod_session.query(Integration).filter(
-            Integration.platform == 'qbo'
-        ).first()
-        
-        if not integration:
-            pytest.skip("No QBO integration found in production database")
-        
-        # Get the business associated with this integration
         business = prod_session.query(Business).filter(
-            Business.business_id == integration.business_id
+            Business.qbo_status == 'connected',
+            Business.qbo_access_token.isnot(None)
         ).first()
         
         if not business:
-            pytest.skip(f"Business {integration.business_id} not found for QBO integration")
+            pytest.skip("No QBO-connected business found in production database")
         
-        # Get realm_id from environment or integration
-        realm_id = os.getenv('QBO_REALM_ID')
+        # Business is already loaded above
+        
+        # Get realm_id from environment or business
+        realm_id = os.getenv('QBO_REALM_ID') or business.qbo_realm_id
         if not realm_id:
-            pytest.skip("QBO_REALM_ID environment variable not set")
+            pytest.skip("QBO_REALM_ID environment variable not set and business has no realm_id")
         
         yield business, realm_id, prod_session
 
@@ -255,18 +245,16 @@ def test_tray_item(db, test_business):
 
 @pytest.fixture
 def test_integration(db, test_business):
-    integration = Integration(
-        business_id=test_business.business_id,
-        integration_id="int_001",
-        platform="qbo",
-        access_token="mock_qbo_token",
-        refresh_token="mock_qbo_refresh",
-        status="active"
-    )
-    db.add(integration)
+    # Update business with QBO integration fields
+    test_business.qbo_realm_id = "test_realm_123"
+    test_business.qbo_access_token = "mock_qbo_token"
+    test_business.qbo_refresh_token = "mock_qbo_refresh"
+    test_business.qbo_status = "connected"
+    test_business.qbo_connected_at = datetime.utcnow()
+    test_business.qbo_environment = "sandbox"
     db.commit()
-    db.refresh(integration)
-    return integration
+    db.refresh(test_business)
+    return test_business
 
 @pytest.fixture
 def test_ap_payment(db, test_business, test_bill):
@@ -385,23 +373,20 @@ def qbo_auth_setup():
 @pytest.fixture
 def qbo_integration_with_mock_data(db, test_business):
     """Create QBO integration with realistic test data and mock HTTP responses."""
-    from infra.qbo.integration_models import Integration, IntegrationStatuses
+    # from infra.qbo.integration_models import Integration  # Replaced with Business model fields, IntegrationStatuses
     from unittest.mock import patch, AsyncMock, MagicMock
     import json
     
-    # Create QBO integration in database
-    integration = Integration(
-        business_id=test_business.business_id,
-        platform="qbo",
-        status=IntegrationStatuses.CONNECTED.value,
-        access_token="test_access_token_12345",
-        refresh_token="test_refresh_token_67890",
-        realm_id="test_realm_id_12345",
-        expires_at=datetime.utcnow() + timedelta(hours=1)
-    )
-    db.add(integration)
+    # Update business with QBO integration fields
+    test_business.qbo_realm_id = "test_realm_id_12345"
+    test_business.qbo_access_token = "test_access_token_12345"
+    test_business.qbo_refresh_token = "test_refresh_token_67890"
+    test_business.qbo_status = "connected"
+    test_business.qbo_connected_at = datetime.utcnow()
+    test_business.qbo_token_expires_at = datetime.utcnow() + timedelta(hours=1)
+    test_business.qbo_environment = "sandbox"
     db.commit()
-    db.refresh(integration)
+    db.refresh(test_business)
     
     # Mock QBO API responses with realistic data
     mock_qbo_data = {
