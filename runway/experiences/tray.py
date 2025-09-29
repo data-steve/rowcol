@@ -29,6 +29,9 @@ from datetime import datetime
 import os
 import logging
 
+# Import domain models for real database operations
+from domains.ap.models.bill import Bill
+
 logger = logging.getLogger(__name__)
 
 class TrayService:
@@ -355,31 +358,147 @@ class TrayService:
             }
 
     def _process_bill_payment(self, item: TrayItem, confirmation_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process bill payment with QBO integration."""
-        # This would integrate with QBO payment processing
-        # For now, return success response
-        return {
-            "success": True,
-            "message": f"Bill payment processed for {item.title}",
-            "qbo_payment_id": f"mock_payment_{item.tray_item_id}",
-            "amount": confirmation_data.get("amount", item.amount)
-        }
+        """Process bill payment with real QBO integration."""
+        try:
+            from domains.ap.services.bill_ingestion import BillService
+            
+            # Use real BillService for payment processing
+            bill_service = BillService(self.db, self.business_id, validate_business=False)
+            
+            # Get the actual bill from database
+            bill = self.db.query(Bill).filter(
+                Bill.business_id == self.business_id,
+                Bill.qbo_bill_id == item.qbo_id
+            ).first()
+            
+            if not bill:
+                return {
+                    "success": False,
+                    "message": f"Bill not found for {item.title}",
+                    "error": "bill_not_found"
+                }
+            
+            # Use real bill approval and scheduling
+            if bill_service.approve_bill_entity(bill, "api_user", "Approved via tray"):
+                if bill_service.schedule_bill_payment(bill, datetime.utcnow()):
+                    return {
+                        "success": True,
+                        "message": f"Bill payment processed for {item.title}",
+                        "qbo_bill_id": bill.qbo_bill_id,
+                        "amount": float(bill.amount)
+                    }
+            
+            return {
+                "success": False,
+                "message": f"Failed to process payment for {item.title}",
+                "error": "payment_processing_failed"
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to process bill payment: {e}")
+            return {
+                "success": False,
+                "message": f"Payment processing error: {str(e)}",
+                "error": "system_error"
+            }
 
     def _schedule_payment(self, item: TrayItem, confirmation_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Schedule payment for future date."""
-        scheduled_date = confirmation_data.get("scheduled_date")
-        return {
-            "success": True,
-            "message": f"Payment scheduled for {scheduled_date}",
-            "scheduled_date": scheduled_date,
-            "amount": confirmation_data.get("amount", item.amount)
-        }
+        """Schedule payment for future date using real BillService."""
+        try:
+            from domains.ap.services.bill_ingestion import BillService
+            from datetime import datetime
+            
+            scheduled_date = confirmation_data.get("scheduled_date")
+            if not scheduled_date:
+                return {
+                    "success": False,
+                    "message": "Scheduled date is required",
+                    "error": "missing_scheduled_date"
+                }
+            
+            # Parse scheduled date
+            if isinstance(scheduled_date, str):
+                scheduled_date = datetime.fromisoformat(scheduled_date)
+            
+            # Use real BillService for payment scheduling
+            bill_service = BillService(self.db, self.business_id, validate_business=False)
+            
+            # Get the actual bill from database
+            bill = self.db.query(Bill).filter(
+                Bill.business_id == self.business_id,
+                Bill.qbo_bill_id == item.qbo_id
+            ).first()
+            
+            if not bill:
+                return {
+                    "success": False,
+                    "message": f"Bill not found for {item.title}",
+                    "error": "bill_not_found"
+                }
+            
+            # Use real bill approval and scheduling
+            if bill_service.approve_bill_entity(bill, "api_user", "Scheduled via tray"):
+                if bill_service.schedule_bill_payment(bill, scheduled_date):
+                    return {
+                        "success": True,
+                        "message": f"Payment scheduled for {scheduled_date.isoformat()}",
+                        "scheduled_date": scheduled_date.isoformat(),
+                        "qbo_bill_id": bill.qbo_bill_id,
+                        "amount": float(bill.amount)
+                    }
+            
+            return {
+                "success": False,
+                "message": f"Failed to schedule payment for {item.title}",
+                "error": "scheduling_failed"
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to schedule payment: {e}")
+            return {
+                "success": False,
+                "message": f"Payment scheduling error: {str(e)}",
+                "error": "system_error"
+            }
 
     def _send_invoice_reminder(self, item: TrayItem, confirmation_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Send invoice reminder to customer."""
-        return {
-            "success": True,
-            "message": f"Reminder sent for invoice {item.title}",
-            "reminder_type": confirmation_data.get("reminder_type", "email")
-        }
+        """Send invoice reminder using real ARPlanService."""
+        try:
+            from runway.core.ar_plan_service import ARPlanService
+            
+            # Use real ARPlanService for reminder sending
+            ar_plan_service = ARPlanService(self.db)
+            
+            # Get the actual invoice from database
+            from domains.ar.models.invoice import Invoice as InvoiceModel
+            invoice = self.db.query(InvoiceModel).filter(
+                InvoiceModel.business_id == self.business_id,
+                InvoiceModel.qbo_invoice_id == item.qbo_id
+            ).first()
+            
+            if not invoice:
+                return {
+                    "success": False,
+                    "message": f"Invoice not found for {item.title}",
+                    "error": "invoice_not_found"
+                }
+            
+            # Use real AR plan service to send reminder
+            updated_invoice = ar_plan_service.send_reminder(self.business_id, invoice.invoice_id)
+            
+            return {
+                "success": True,
+                "message": f"Reminder sent for invoice {item.title}",
+                "reminder_type": confirmation_data.get("reminder_type", "email"),
+                "qbo_invoice_id": invoice.qbo_invoice_id,
+                "invoice_status": updated_invoice.status
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to send invoice reminder: {e}")
+            return {
+                "success": False,
+                "message": f"Reminder sending error: {str(e)}",
+                "error": "system_error"
+            }
 
