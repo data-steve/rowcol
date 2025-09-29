@@ -406,49 +406,37 @@ class BillService(TenantAwareService):
     
     async def schedule_bill_payment(self, bill: Bill, payment_date: datetime, 
                              payment_method: str = None, payment_account: str = None) -> bool:
-        """Schedule the bill for payment with real QBO API integration."""
+        """
+        Schedule the bill for payment with runway reserve integration.
+        
+        NOTE: This method delegates to runway/core/scheduled_payment_service.py for 
+        proper runway reserve integration. The scheduled payment service:
+        - Allocates runway reserves to earmark money (prevents double-spending)
+        - Creates QBO scheduled payment with future TxnDate
+        - Integrates with runway calculations for optimal timing
+        - Manages reserve allocation and release lifecycle
+        
+        This follows ADR-001 by keeping runway logic in runway/ layer while
+        maintaining domain service interface for bill operations.
+        """
         if bill.status != BillStatus.APPROVED:
             return False
         
-        # Execute real QBO payment scheduling
-        if self.smart_sync and bill.qbo_bill_id:
-            try:
-                # Prepare QBO payment data for scheduling
-                qbo_payment_data = {
-                    "TotalAmt": float(bill.amount),
-                    "TxnDate": payment_date.isoformat(),
-                    "PaymentRefNum": f"SCHED-{bill.bill_id}-{payment_date.strftime('%Y%m%d')}",
-                    "PrivateNote": f"Scheduled payment for bill {bill.qbo_bill_id}",
-                    "Line": [{
-                        "Amount": float(bill.amount),
-                        "LinkedTxn": [{
-                            "TxnId": bill.qbo_bill_id,
-                            "TxnType": "Bill"
-                        }]
-                    }]
-                }
-                
-                # Create scheduled payment record in QBO (NOT execute)
-                # TODO: Implement QBO payment scheduling API
-                # For now, just create local payment record without QBO execution
-                logger.info(f"Scheduling payment for bill {bill.qbo_bill_id} on {payment_date}")
-                # qbo_response = await self.smart_sync.schedule_payment_in_qbo(qbo_payment_data)
-                
-                # No QBO response for scheduling - payment will be executed later
-                # when the scheduled date arrives
-                    
-            except Exception as e:
-                logger.error(f"Failed to schedule payment in QBO: {e}")
-                # Continue with local scheduling even if QBO fails
-                # This allows for offline payment scheduling
+        # Delegate to runway layer for proper reserve integration
+        from runway.core.scheduled_payment_service import ScheduledPaymentService
         
-        # Update local status after QBO scheduling
-        bill.status = BillStatus.SCHEDULED
-        bill.scheduled_payment_date = payment_date
-        bill.payment_method = payment_method
-        bill.payment_account = payment_account
-        bill.updated_at = datetime.utcnow()
-        return True
+        scheduled_payment_service = ScheduledPaymentService(
+            db=self.db,
+            business_id=self.business_id,
+            runway_reserve_service=self.runway_reserve_service
+        )
+        
+        return await scheduled_payment_service.schedule_payment_with_reserve(
+            bill=bill,
+            payment_date=payment_date,
+            payment_method=payment_method,
+            payment_account=payment_account
+        )
     
     def _bill_to_dict(self, bill: Bill) -> Dict[str, Any]:
         """Convert bill to dictionary for API responses."""

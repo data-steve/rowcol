@@ -374,7 +374,7 @@ class TrayService:
                     "error": "bill_not_found"
                 }
             
-                # Use real bill approval and scheduling
+                # Use real bill approval and scheduling with runway reserve integration
                 if await bill_service.approve_bill_entity(bill, "api_user", "Approved via tray"):
                     if await bill_service.schedule_bill_payment(bill, datetime.utcnow()):
                         return {
