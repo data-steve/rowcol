@@ -362,10 +362,26 @@ class BillService(TenantAwareService):
         return bill.status in [BillStatus.PENDING, BillStatus.REVIEW] and bill.requires_approval
     
     def approve_bill_entity(self, bill: Bill, approved_by_user_id: str, notes: str = None) -> bool:
-        """Approve the bill entity (business logic extracted from model)."""
+        """
+        Approve the bill entity (business logic extracted from model).
+        
+        STATUS: This method only updates database status - it does NOT perform actual approval workflow.
+        For real approval workflow, this should integrate with:
+        - QBO bill approval API
+        - Email notifications to approvers
+        - Approval workflow state machine
+        - Audit logging for compliance
+        """
         if not self.can_bill_be_approved(bill):
             return False
         
+        # TODO: Implement real approval workflow
+        # - Call QBO bill approval API
+        # - Send approval notifications
+        # - Update approval workflow state
+        # - Log approval activity for audit
+        
+        # For now, just update local status (NOT REAL APPROVAL)
         bill.status = BillStatus.APPROVED
         bill.approval_status = "approved"
         bill.approved_by = approved_by_user_id
@@ -376,10 +392,26 @@ class BillService(TenantAwareService):
     
     def schedule_bill_payment(self, bill: Bill, payment_date: datetime, 
                              payment_method: str = None, payment_account: str = None) -> bool:
-        """Schedule the bill for payment (business logic extracted from model)."""
+        """
+        Schedule the bill for payment (business logic extracted from model).
+        
+        STATUS: This method only updates database status - it does NOT perform actual payment scheduling.
+        For real payment scheduling, this should integrate with:
+        - QBO bill payment scheduling API
+        - Payment processor scheduling (Stripe, PayPal, etc.)
+        - Bank payment scheduling
+        - Payment confirmation workflows
+        """
         if bill.status != BillStatus.APPROVED:
             return False
         
+        # TODO: Implement real payment scheduling
+        # - Call QBO bill payment scheduling API
+        # - Schedule with payment processor
+        # - Set up payment confirmation workflows
+        # - Handle payment failure scenarios
+        
+        # For now, just update local status (NOT REAL SCHEDULING)
         bill.status = BillStatus.SCHEDULED
         bill.scheduled_payment_date = payment_date
         bill.payment_method = payment_method

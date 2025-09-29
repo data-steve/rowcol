@@ -303,9 +303,9 @@ class PaymentService(TenantAwareService):
                 logger.warning(f"QBO sync failed for payment {payment_id}: {str(e)}")
                 # Don't fail the whole payment for QBO sync issues
             
-            # Update bill status
+            # Update bill status after successful payment execution
             if payment.bill:
-                payment.bill.status = "paid"
+                payment.bill.status = "paid"  # This is OK - payment was actually executed above
                 payment.bill.payment_reference = confirmation_number
             
             self.db.commit()
