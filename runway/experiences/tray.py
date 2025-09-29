@@ -1,14 +1,16 @@
 """
-TrayService - Refactored to use Canonical Calculation Services
+TrayService - Refactored to use Data Orchestrator Pattern and Focused Calculation Services
 
-This service orchestrates tray functionality while delegating all calculations
-to the canonical services in runway/core/services/. This eliminates duplication
-and establishes single sources of truth for all calculation logic.
+This service orchestrates tray functionality using the Data Orchestrator Pattern
+and focused calculation services. This eliminates duplication and establishes
+single sources of truth for all calculation logic.
 
 Key Changes:
-- All payment priority calculations → PaymentPriorityCalculator
-- All tray item priority calculations → TrayPriorityCalculator  
-- All runway impact calculations → RunwayCalculator (via priority calculators)
+- Data orchestrator handles data pulling + state management
+- RunwayCalculationService handles pure runway calculations
+- PriorityCalculationService handles all priority scoring
+- BillImpactCalculator handles bill-specific impact calculations (stateless)
+- TrayItemImpactCalculator handles tray item impact calculations (stateless)
 - Maintains orchestration and data provider functionality
 """
 
@@ -16,9 +18,11 @@ from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from runway.models.tray_item import TrayItem
 from runway.core.data_orchestrators.hygiene_tray_data_orchestrator import HygieneTrayDataOrchestrator
+from runway.core.runway_calculation_service import RunwayCalculationService
+from runway.core.priority_calculation_service import PriorityCalculationService
+from runway.core.bill_impact_calculator import BillImpactCalculator
+from runway.core.tray_item_impact_calculator import TrayItemImpactCalculator
 from runway.core.reserve_runway import RunwayReserveService
-from runway.core.payment_priority_calculator import PaymentPriorityCalculator
-from runway.core.tray_priority_calculator import TrayPriorityCalculator
 from common.exceptions import TrayItemNotFoundError
 from infra.config import TrayPriorities, TrayItemStatuses
 from datetime import datetime
@@ -32,23 +36,27 @@ class TrayService:
         self.db = db
         self.business_id = business_id
         
-        # Initialize data orchestrator
+        # Data orchestrator handles data pulling + state management
         self.data_orchestrator = HygieneTrayDataOrchestrator(db)
         self.reserve_service = RunwayReserveService(db, business_id)
         
-        # Canonical calculation services
-        self.payment_priority_calculator = PaymentPriorityCalculator(db, business_id, validate_business=False) if business_id else None
-        self.tray_priority_calculator = TrayPriorityCalculator(db, business_id, validate_business=False) if business_id else None
+        # Calculation services handle business logic
+        self.runway_calculator = RunwayCalculationService(db, business_id, validate_business=False) if business_id else None
+        self.priority_calculator = PriorityCalculationService(db, business_id, validate_business=False) if business_id else None
+        
+        # Stateless impact calculators (no dependencies)
+        self.bill_impact_calculator = BillImpactCalculator()
+        self.tray_item_impact_calculator = TrayItemImpactCalculator()
         
         # Use centralized QBO config
-        from domains.qbo.config import qbo_config
+        from infra.qbo.config import qbo_config
         self.qbo_base_url = qbo_config.api_base_url
-        self.realm_id = os.getenv("QBO_REALM_ID", "mock_realm_123")
+        self.realm_id = os.getenv("QBO_REALM_ID")
 
     def calculate_priority_score(self, item: TrayItem) -> int:
-        """Calculate priority score using canonical TrayPriorityCalculator."""
-        if not self.tray_priority_calculator:
-            raise RuntimeError("TrayPriorityCalculator not available - this is a critical service that should always be initialized")
+        """Calculate priority score using centralized PriorityCalculationService."""
+        if not self.priority_calculator:
+            raise RuntimeError("PriorityCalculationService not available - this is a critical service that should always be initialized")
         
         # Convert TrayItem to dict format for canonical service
         item_data = {
@@ -58,40 +66,88 @@ class TrayService:
             'metadata': getattr(item, 'metadata', {})
         }
         
-        priority_analysis = self.tray_priority_calculator.calculate_tray_item_priority(item_data)
+        priority_analysis = self.priority_calculator.calculate_tray_item_priority(item_data)
         return int(priority_analysis.get('priority_score', 50))
 
     async def get_tray_items(self, business_id: str) -> List[Dict[str, Any]]:
-        """Get tray items using data orchestrator."""
+        """Get tray items using data orchestrator and calculation services."""
         try:
-            # Get tray data using data orchestrator
+            # Get data from orchestrator
             tray_data = await self.data_orchestrator.get_tray_data(business_id)
+            
+            # Get runway context for impact calculations
+            runway_context = None
+            if self.runway_calculator:
+                runway_context = self.runway_calculator.calculate_current_runway(tray_data)
             
             tray_items = []
             
-            # Convert bills to tray items
+            # Convert bills to tray items with impact calculations
             if "bills" in tray_data:
                 for bill in tray_data["bills"]:
+                    bill_data = {
+                        "amount": bill.get("total_amount", 0),
+                        "due_date": bill.get("due_date"),
+                        "vendor_name": bill.get("vendor_name", ""),
+                        "qbo_id": str(bill.get("qbo_id", bill.get("id", "")))
+                    }
+                    
+                    # Calculate priority using centralized service
+                    priority_score = 50  # Default
+                    if self.priority_calculator:
+                        priority_score = self.priority_calculator.calculate_bill_priority_score(bill_data)
+                    
+                    # Calculate impact using stateless calculator
+                    impact_data = {}
+                    if runway_context:
+                        impact_data = self.bill_impact_calculator.calculate_bill_runway_impact(bill_data, runway_context)
+                    
                     tray_items.append({
                         "business_id": business_id,
                         "type": "bill",
                         "qbo_id": str(bill.get("qbo_id", bill.get("id", ""))),
                         "due_date": bill.get("due_date"),
                         "amount": bill.get("total_amount", 0),
-                        "priority": self._calculate_bill_priority(bill),
+                        "priority": self._score_to_priority_level(priority_score),
+                        "priority_score": priority_score,
+                        "impact_data": impact_data,
                         "status": "pending"
                     })
             
-            # Convert invoices to tray items
+            # Convert invoices to tray items with impact calculations
             if "invoices" in tray_data:
                 for invoice in tray_data["invoices"]:
+                    invoice_data = {
+                        "amount": invoice.get("total_amount", 0),
+                        "due_date": invoice.get("due_date"),
+                        "customer_name": invoice.get("customer_name", ""),
+                        "qbo_id": str(invoice.get("qbo_id", invoice.get("id", "")))
+                    }
+                    
+                    # Calculate priority using centralized service
+                    priority_score = 50  # Default
+                    if self.priority_calculator:
+                        priority_score = self.priority_calculator.calculate_invoice_priority_score(invoice_data)
+                    
+                    # Calculate impact using stateless calculator
+                    impact_data = {}
+                    if runway_context:
+                        item_data = {
+                            "amount": invoice.get("total_amount", 0),
+                            "type": "invoice",
+                            "issue_type": "incomplete_data"  # Could be enhanced with actual issue detection
+                        }
+                        impact_data = self.tray_item_impact_calculator.calculate_tray_item_runway_impact(item_data, runway_context)
+                    
                     tray_items.append({
                         "business_id": business_id,
                         "type": "invoice",
                         "qbo_id": str(invoice.get("qbo_id", invoice.get("id", ""))),
                         "due_date": invoice.get("due_date"),
                         "amount": invoice.get("total_amount", 0),
-                        "priority": self._calculate_invoice_priority(invoice),
+                        "priority": self._score_to_priority_level(priority_score),
+                        "priority_score": priority_score,
+                        "impact_data": impact_data,
                         "status": "pending"
                     })
             
@@ -101,31 +157,19 @@ class TrayService:
             logger.error(f"Failed to fetch QBO tray items for business {business_id}: {e}")
             return []
     
-    def _calculate_bill_priority(self, bill: Dict[str, Any]) -> str:
-        """Calculate priority for a bill based on amount and due date."""
-        amount = float(bill.get("total_amount", 0))
-        
-        if amount > 5000:
+    def _score_to_priority_level(self, score: float) -> str:
+        """Convert priority score to priority level."""
+        if score >= 80:
             return "high"
-        elif amount > 1000:
+        elif score >= 50:
             return "medium"
         else:
             return "low"
     
-    def _calculate_invoice_priority(self, invoice: Dict[str, Any]) -> str:
-        """Calculate priority for an invoice based on amount and age."""
-        amount = float(invoice.get("total_amount", 0))
-        
-        if amount > 10000:
-            return "high"
-        elif amount > 2000:
-            return "medium"
-        else:
-            return "low"
 
-    def get_tray_summary(self, business_id: int) -> Dict[str, Any]:
-        """Get tray summary with canonical priority calculations."""
-        items = self.get_tray_items(business_id)
+    async def get_tray_summary(self, business_id: str) -> Dict[str, Any]:
+        """Get tray summary using new calculation architecture."""
+        items = await self.get_tray_items(business_id)
         
         summary = {
             "total_items": len(items),
@@ -136,27 +180,15 @@ class TrayService:
         }
         
         for item in items:
-            # Use canonical priority calculation
-            if self.tray_priority_calculator:
-                item_data = {
-                    'type': item.get('type', ''),
-                    'amount': item.get('amount', 0),
-                    'due_date': item.get('due_date'),
-                    'metadata': item.get('metadata', {})
-                }
-                priority_analysis = self.tray_priority_calculator.calculate_tray_item_priority(item_data)
-                priority_score = priority_analysis.get('priority_score', 50)
-                runway_impact = priority_analysis.get('runway_impact', {})
-            else:
-                # Fallback to basic calculation
-                priority_score = 50
-                runway_impact = {"cash_impact": 0, "days_impact": 0}
+            # Use priority score from new architecture
+            priority_score = item.get('priority_score', 50)
+            impact_data = item.get('impact_data', {})
             
             # Priority distribution
-            if priority_score >= TrayPriorities.URGENT_SCORE:
+            if priority_score >= 80:
                 summary["by_priority"]["high"] += 1
                 summary["urgent_count"] += 1
-            elif priority_score >= TrayPriorities.MEDIUM_SCORE:
+            elif priority_score >= 50:
                 summary["by_priority"]["medium"] += 1
             else:
                 summary["by_priority"]["low"] += 1
@@ -166,43 +198,61 @@ class TrayService:
             summary["by_type"][item_type] = summary["by_type"].get(item_type, 0) + 1
             
             # Runway impact
-            summary["total_runway_impact"]["cash_impact"] += runway_impact.get("cash_impact", 0)
-            summary["total_runway_impact"]["days_impact"] += runway_impact.get("days_impact", 0)
+            summary["total_runway_impact"]["cash_impact"] += impact_data.get("cash_impact", 0)
+            summary["total_runway_impact"]["days_impact"] += impact_data.get("days_impact", 0)
         
         return summary
     
     def categorize_bill_urgency(self, bill_data: Dict[str, Any]) -> str:
-        """Categorize bill urgency using canonical PaymentPriorityCalculator."""
-        if not self.payment_priority_calculator:
-            raise RuntimeError("PaymentPriorityCalculator not available - this is a critical service that should always be initialized")
+        """Categorize bill urgency using centralized PriorityCalculationService."""
+        if not self.priority_calculator:
+            raise RuntimeError("PriorityCalculationService not available - this is a critical service that should always be initialized")
         
-        return self.payment_priority_calculator.categorize_bill_urgency(bill_data)
+        priority_score = self.priority_calculator.calculate_bill_priority_score(bill_data)
+        return self._score_to_priority_level(priority_score)
 
     def get_payment_decision_analysis(self, bill_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Get payment decision analysis using canonical PaymentPriorityCalculator."""
-        if not self.payment_priority_calculator:
-            raise RuntimeError("PaymentPriorityCalculator not available - this is a critical service that should always be initialized")
+        """Get payment decision analysis using new calculation architecture."""
+        if not self.priority_calculator or not self.runway_calculator:
+            raise RuntimeError("Required calculation services not available")
         
-        return self.payment_priority_calculator.get_payment_decision_analysis(bill_data)
+        # Get priority score
+        priority_score = self.priority_calculator.calculate_bill_priority_score(bill_data)
+        
+        # Get runway context for impact calculation
+        runway_context = self.runway_calculator.calculate_current_runway({})
+        
+        # Calculate impact using stateless calculator
+        impact_data = self.bill_impact_calculator.calculate_bill_runway_impact(bill_data, runway_context)
+        
+        return {
+            "priority_score": priority_score,
+            "priority_level": self._score_to_priority_level(priority_score),
+            "impact_data": impact_data
+        }
 
     def _calculate_runway_impact(self, item: TrayItem) -> Dict[str, Any]:
-        """Calculate runway impact using canonical TrayPriorityCalculator."""
-        if not self.tray_priority_calculator:
-            raise RuntimeError("TrayPriorityCalculator not available - this is a critical service that should always be initialized")
+        """Calculate runway impact using new calculation architecture."""
+        if not self.runway_calculator:
+            raise RuntimeError("RunwayCalculationService not available - this is a critical service that should always be initialized")
         
-        # Convert TrayItem to dict format for canonical service
+        # Convert TrayItem to dict format
         item_data = {
             'amount': getattr(item, 'amount', 0),
             'type': getattr(item, 'type', ''),
-            'due_date': getattr(item, 'due_date', None)
+            'due_date': getattr(item, 'due_date', None),
+            'issue_type': 'unknown'  # Could be enhanced with actual issue detection
         }
         
-        priority_analysis = self.tray_priority_calculator.calculate_tray_item_priority(item_data)
-        return priority_analysis.get('runway_impact', {})
+        # Get runway context
+        runway_context = self.runway_calculator.calculate_current_runway({})
+        
+        # Calculate impact using stateless calculator
+        return self.tray_item_impact_calculator.calculate_tray_item_runway_impact(item_data, runway_context)
 
-    async def get_enhanced_tray_items(self, business_id: int, include_runway_analysis: bool = True) -> List[Dict[str, Any]]:
+    async def get_enhanced_tray_items(self, business_id: str, include_runway_analysis: bool = True) -> List[Dict[str, Any]]:
         """
-        Get enhanced tray items with priority and runway analysis using canonical calculators.
+        Get enhanced tray items with priority and runway analysis using new calculation architecture.
         
         Args:
             business_id: ID of the business
@@ -212,26 +262,19 @@ class TrayService:
             List of enhanced tray items with categorization and runway impact
         """
         try:
-            # Get base tray items
-            base_items = await self.get_tray_items(business_id)
+            # Get base tray items (already includes priority and impact calculations)
+            enhanced_items = await self.get_tray_items(business_id)
             
             if not include_runway_analysis:
-                return base_items
-            
-            if not self.tray_priority_calculator:
-                raise RuntimeError("TrayPriorityCalculator not available - this is a critical service that should always be initialized")
-            
-            # Get QBO data for enhanced analysis using data orchestrator
-            tray_data = await self.data_orchestrator.get_tray_data(business_id) if business_id else {}
-            
-            # Use canonical TrayPriorityCalculator for comprehensive enhancement
-            enhanced_items = self.tray_priority_calculator.enhance_tray_items_with_priority(base_items, tray_data)
+                # Remove impact data if not needed
+                for item in enhanced_items:
+                    item.pop('impact_data', None)
             
             return enhanced_items
             
         except Exception as e:
             logger.error(f"Failed to get enhanced tray items: {e}")
-            return base_items  # Return base items if enhancement fails
+            return []  # Return empty list if enhancement fails
 
     def create_tray_item(self, business_id: str, item_type: str, title: str, amount: float, due_date: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Create a tray item for the prep tray."""

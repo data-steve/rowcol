@@ -9,7 +9,7 @@ data management and state handling.
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from runway.core.data_orchestrators.decision_console_data_orchestrator import DecisionConsoleDataOrchestrator
-from runway.core.runway_calculator import RunwayCalculator
+from runway.core.runway_calculation_service import RunwayCalculationService
 from common.exceptions import BusinessNotFoundError
 from datetime import datetime
 import logging
@@ -28,7 +28,7 @@ class DecisionConsoleService:
         self.data_orchestrator = DecisionConsoleDataOrchestrator(db)
         
         # Initialize runway calculator for context
-        self.runway_calculator = RunwayCalculator(db, business_id)
+        self.runway_calculator = RunwayCalculationService(db, business_id)
     
     async def get_console_data(self, business_id: str) -> Dict[str, Any]:
         """

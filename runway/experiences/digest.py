@@ -4,7 +4,7 @@ from domains.core.models.business import Business
 from domains.core.models.user import User
 # SmartSync removed - using RunwayCalculator directly
 # from runway.experiences.digest.email import EmailService  # TODO: Create email service
-from runway.core.runway_calculator import RunwayCalculator
+from runway.core.runway_calculation_service import RunwayCalculationService
 from common.exceptions import BusinessNotFoundError, EmailDeliveryError
 from infra.config import DigestSettings
 from datetime import datetime, timedelta
@@ -25,7 +25,7 @@ class DigestService:
             raise ValueError("Business not found")
         
         # Use centralized RunwayCalculator for all runway calculations
-        runway_calculator = RunwayCalculator(self.db, business_id)
+        runway_calculator = RunwayCalculationService(self.db, business_id)
         runway_data = runway_calculator.calculate_current_runway()
         
         # Return data in digest-specific format

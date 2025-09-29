@@ -20,7 +20,7 @@ from domains.core.models.business import Business
 from infra.qbo.smart_sync import SmartSyncService
 from typing import Dict, Any, Optional
 from runway.core.scenario_data import BusinessScenarioProvider, BusinessScenario
-from runway.core.runway_calculator import RunwayCalculator
+from runway.core.runway_calculation_service import RunwayCalculationService
 from runway.core.data_quality_analyzer import DataQualityAnalyzer
 from infra.config import RunwayAnalysisSettings, DataQualityThresholds, ProofOfValueThresholds
 from common.exceptions import BusinessNotFoundError
@@ -195,10 +195,10 @@ class DemoTestDriveService:
             use_sandbox=True
         )
     
-    def _get_runway_calculator(self, business_id: str) -> RunwayCalculator:
+    def _get_runway_calculator(self, business_id: str) -> RunwayCalculationService:
         """Get or create runway calculator for business."""
         if business_id not in self._runway_calculators:
-            self._runway_calculators[business_id] = RunwayCalculator(self.db, business_id)
+            self._runway_calculators[business_id] = RunwayCalculationService(self.db, business_id)
         return self._runway_calculators[business_id]
     
     def _get_data_quality_analyzer(self, business_id: str) -> DataQualityAnalyzer:
