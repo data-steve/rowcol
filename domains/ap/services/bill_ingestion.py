@@ -404,25 +404,21 @@ class BillService(TenantAwareService):
         bill.updated_at = datetime.utcnow()
         return True
     
-    async def schedule_bill_payment(self, bill: Bill, payment_date: datetime, 
+    def schedule_bill_payment(self, bill: Bill, payment_date: datetime, 
                              payment_method: str = None, payment_account: str = None) -> bool:
         """
-        Schedule the bill for payment using PaymentService.
+        Schedule the bill for payment - delegates to PaymentService.
         
-        NOTE: This method delegates to PaymentService for proper payment handling.
-        PaymentService handles:
-        - Payment record creation and management
-        - QBO payment integration
-        - Runway reserve integration via ScheduledPaymentService
-        - Multi-bill payment coordination
+        NOTE: This method is a convenience wrapper that delegates to PaymentService.
+        BillIngestionService focuses on bill ingestion and QBO sync, while
+        PaymentService handles all payment operations including scheduling.
         
-        This consolidates all payment logic in PaymentService while maintaining
-        the bill service interface for bill-specific operations.
+        This maintains clean separation: bills vs payments.
         """
         if bill.status != BillStatus.APPROVED:
             return False
         
-        # Delegate to PaymentService for proper payment handling
+        # Delegate to PaymentService for payment operations
         from domains.ap.services.payment import PaymentService
         
         payment_service = PaymentService(
@@ -431,21 +427,19 @@ class BillService(TenantAwareService):
             runway_reserve_service=self.runway_reserve_service
         )
         
-        # Create payment record and schedule it
-        payment = payment_service.create_payment(
-            bill_id=bill.bill_id,
-            payment_date=payment_date,
-            payment_method=payment_method or "ach",
-            payment_account=payment_account
-        )
-        
-        # Schedule the payment using PaymentService
-        result = await payment_service.schedule_payment(
-            business_id=self.business_id,
-            bill_ids=[bill.bill_id],
-            funding_account=payment_account or "1000-Cash"
-        )
-        return result is not None and result.get('scheduled_count', 0) > 0
+        # Use PaymentService for payment scheduling
+        # Note: This is a synchronous wrapper around async PaymentService
+        import asyncio
+        try:
+            result = asyncio.run(payment_service.schedule_payment(
+                business_id=self.business_id,
+                bill_ids=[bill.bill_id],
+                funding_account=payment_account or "1000-Cash"
+            ))
+            return result is not None and result.get('scheduled_count', 0) > 0
+        except Exception as e:
+            logger.error(f"Failed to schedule payment for bill {bill.bill_id}: {e}")
+            return False
     
     def _bill_to_dict(self, bill: Bill) -> Dict[str, Any]:
         """Convert bill to dictionary for API responses."""
