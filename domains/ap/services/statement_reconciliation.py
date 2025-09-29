@@ -39,21 +39,16 @@ class StatementReconciliationService(TenantAwareService):
         """
         Reconcile a vendor statement.
         
-        NOTE: This is a placeholder implementation for test compatibility.
-        Real Oodaloo reconciliation features should be designed based on actual
-        business owner needs, not complex CAS firm workflows.
+        STATUS: This feature is NOT implemented and not needed for Oodaloo MVP.
+        Statement reconciliation is a month-end close workflow for accrual accounting,
+        but Oodaloo focuses on cash accounting and runway management.
         """
-        # Simple mock object for test compatibility
-        class MockReconciliation:
-            def __init__(self, business_id: str, vendor_id: str, statement_file: str, statement_date: date):
-                self.business_id = business_id
-                self.vendor_id = vendor_id
-                self.statement_file = statement_file
-                self.statement_date = statement_date
-                self.status = "reconciled"
-                self.discrepancies = []  # No discrepancies in mock
-        
-        return MockReconciliation(business_id, vendor_id, statement_file, statement_date)
+        raise NotImplementedError(
+            "Statement reconciliation is not implemented for Oodaloo MVP. "
+            "This feature is designed for month-end close workflows (accrual accounting) "
+            "but Oodaloo focuses on cash accounting and runway management. "
+            "Consider implementing in RowCol Close phase if needed."
+        )
 
 # TODO: Phase 3-4 - Evaluate if Oodaloo needs reconciliation features
 # - Do business owners need automated statement reconciliation?

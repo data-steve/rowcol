@@ -150,19 +150,11 @@ class CollectionsService(TenantAwareService):
             # TODO: Implement actual reminder sending logic
             # This would integrate with email service, SMS service, etc.
             
-            reminder_result = {
-                "invoice_id": invoice_id,
-                "customer_name": target_invoice["customer"]["name"],
-                "reminder_type": reminder_type,
-                "amount": target_invoice["amount"],
-                "days_overdue": target_invoice["days_overdue"],
-                "sent_at": datetime.utcnow().isoformat(),
-                "status": "sent",  # TODO: Get actual status from communication service
-                "message": custom_message or self._generate_reminder_message(target_invoice, reminder_type)
-            }
-            
-            # TODO: Record reminder in database for tracking
-            self._record_reminder_sent(invoice_id, reminder_type, reminder_result)
+            raise NotImplementedError(
+                "Collections reminder sending is not yet implemented. "
+                "This feature requires integration with email service and QBO collections API. "
+                "See build_plan_v5.md Phase 2: Smart AR & Collections for implementation plan."
+            )
             
             # Record activity for smart sync
             if self.smart_sync:
