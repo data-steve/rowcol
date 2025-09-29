@@ -183,22 +183,7 @@ class BillService(TenantAwareService):
 
     # ==================== BILL INGESTION ====================
     
-    async def process_bill(self, file: UploadFile, vendor_id: int = None):
-        """Process uploaded bill document."""
-        if not file.filename.endswith(".pdf"):
-            raise HTTPException(status_code=400, detail="Only PDF files are supported")
-        
-        # Read file data
-        file_data = await file.read()
-        
-        # Use the document ingestion method
-        bill = self.ingest_document(
-            file_data=file_data,
-            filename=file.filename,
-            vendor_id=vendor_id
-        )
-        
-        return {"status": "success", "bill_id": bill.bill_id}
+    
     
     async def sync_bills_from_qbo(self, days_back: int = 90) -> List[Bill]:
         """Sync bills from QBO for the specified time period."""
@@ -223,6 +208,24 @@ class BillService(TenantAwareService):
             self.db.rollback()
             logger.error(f"QBO bill sync failed: {str(e)}")
             raise ValidationError(f"QBO sync failed: {str(e)}")
+        
+        
+    async def process_bill(self, file: UploadFile, vendor_id: int = None):
+        """Process uploaded bill document."""
+        if not file.filename.endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="Only PDF files are supported")
+        
+        # Read file data
+        file_data = await file.read()
+        
+        # Use the document ingestion method
+        bill = self.ingest_document(
+            file_data=file_data,
+            filename=file.filename,
+            vendor_id=vendor_id
+        )
+        
+        return {"status": "success", "bill_id": bill.bill_id}
     
     def ingest_document(self, file_data: bytes, filename: str, 
                        vendor_id: Optional[int] = None) -> Bill:
@@ -295,35 +298,7 @@ class BillService(TenantAwareService):
             logger.error(f"Failed to ingest bill from QBO: {e}")
             raise ValueError(f"Failed to ingest bill from QBO: {e}")
 
-    # ==================== BILL BUSINESS LOGIC ====================
     
-    def calculate_bill_priority(self, bill: Bill) -> str:
-        """Calculate bill priority using centralized PriorityCalculationService."""
-        from runway.core.priority_calculation_service import PriorityCalculationService
-        
-        # Convert bill to dictionary format for priority calculation
-        bill_data = {
-            'amount': float(bill.amount) if bill.amount else 0.0,
-            'due_date': bill.due_date.isoformat() if bill.due_date else None,
-            'is_overdue': self.is_bill_overdue(bill),
-            'days_until_due': self.get_days_until_due(bill),
-            'status': bill.status.value if hasattr(bill.status, 'value') else str(bill.status)
-        }
-        
-        # Use centralized priority calculation service
-        priority_service = PriorityCalculationService(self.db, self.business_id, validate_business=False)
-        score = priority_service.calculate_bill_priority_score(bill_data)
-        
-        # Convert score to priority enum
-        if score >= 80:
-            return BillPriority.URGENT
-        elif score >= 40:
-            return BillPriority.HIGH
-        elif score >= 15:
-            return BillPriority.MEDIUM
-        else:
-            return BillPriority.LOW
-
     def is_bill_overdue(self, bill: Bill) -> bool:
         """Check if bill is past due."""
         if not bill.due_date:
@@ -337,24 +312,6 @@ class BillService(TenantAwareService):
         delta = bill.due_date - datetime.utcnow()
         return delta.days
 
-    def calculate_latest_safe_pay_date(self, bill: Bill, grace_days: int = 5) -> Optional[datetime]:
-        """
-        Calculate the latest safe payment date for a bill.
-
-        This is a "smart" feature that considers:
-        - Bill due date
-        - Vendor-specific payment terms (future enhancement)
-        - A configurable grace period to avoid late fees
-        - Vendor relationship health (future enhancement)
-        """
-        if not bill.due_date:
-            return None
-
-        # Simple logic for now: due date + grace period
-        # Future: Enhance with vendor-specific terms from Vendor model
-        latest_safe_date = bill.due_date + timedelta(days=grace_days)
-        
-        return latest_safe_date
 
     # REMOVED: get_runway_impact_suggestion() - This belongs in runway/ services, not domains/
     # Runway impact calculations should be handled by RunwayCalculationService or BillImpactCalculator
@@ -404,47 +361,9 @@ class BillService(TenantAwareService):
         bill.updated_at = datetime.utcnow()
         return True
     
-    def schedule_bill_payment(self, bill: Bill, payment_date: datetime, 
-                             payment_method: str = None, payment_account: str = None) -> bool:
-        """
-        Schedule the bill for payment - delegates to PaymentService.
-        
-        NOTE: This method is a convenience wrapper that delegates to PaymentService.
-        BillIngestionService focuses on bill ingestion and QBO sync, while
-        PaymentService handles all payment operations including scheduling.
-        
-        This maintains clean separation: bills vs payments.
-        """
-        if bill.status != BillStatus.APPROVED:
-            return False
-        
-        # Delegate to PaymentService for payment operations
-        from domains.ap.services.payment import PaymentService
-        
-        payment_service = PaymentService(
-            db=self.db,
-            business_id=self.business_id,
-            runway_reserve_service=self.runway_reserve_service
-        )
-        
-        # Use PaymentService for payment scheduling
-        # Note: This is a synchronous wrapper around async PaymentService
-        import asyncio
-        try:
-            result = asyncio.run(payment_service.schedule_payment(
-                business_id=self.business_id,
-                bill_ids=[bill.bill_id],
-                funding_account=payment_account or "1000-Cash"
-            ))
-            return result is not None and result.get('scheduled_count', 0) > 0
-        except Exception as e:
-            logger.error(f"Failed to schedule payment for bill {bill.bill_id}: {e}")
-            return False
     
     def _bill_to_dict(self, bill: Bill) -> Dict[str, Any]:
         """Convert bill to dictionary for API responses."""
-        latest_safe_pay_date = self.calculate_latest_safe_pay_date(bill)
-        # runway_impact removed - belongs in runway/ services
         return {
             'bill_id': bill.bill_id,
             'business_id': bill.business_id,
@@ -455,7 +374,7 @@ class BillService(TenantAwareService):
             'due_date': bill.due_date.isoformat() if bill.due_date else None,
             'issue_date': bill.issue_date.isoformat() if bill.issue_date else None,
             'status': bill.status,
-            'priority': bill.priority or self.calculate_bill_priority(bill),
+            'priority': bill.priority,  # Priority calculated elsewhere
             'approval_status': bill.approval_status,
             'approved_by': bill.approved_by,
             'approved_at': bill.approved_at.isoformat() if bill.approved_at else None,
@@ -468,8 +387,6 @@ class BillService(TenantAwareService):
             'confidence': bill.confidence,
             'is_overdue': self.is_bill_overdue(bill),
             'days_until_due': self.get_days_until_due(bill),
-            'latest_safe_pay_date': latest_safe_pay_date.isoformat() if latest_safe_pay_date else None,
-            # 'runway_impact_suggestion' removed - belongs in runway/ services
             'requires_approval': bill.requires_approval,
             'description': bill.description,
             'tags': bill.tags,
