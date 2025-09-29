@@ -68,12 +68,29 @@ SmartSyncService (orchestration)
 - Replace hardcoded returns with orchestrator calls
 - Focus on getting code working, not systematic mock removal
 
-## **Key Decisions Pending**
+## **Key Decisions Made**
 
-1. **Orchestrator Granularity**: One orchestrator per experience, or shared orchestrators for similar patterns?
-2. **Implementation Order**: Start with Tray (simplest), then Console, then TestDrive, then Digest?
-3. **Orchestrator Pattern**: Services that return data, or classes that experiences instantiate?
-4. **Batch Processing**: Implement orchestrator pattern first, then add batch processing later?
+1. **Orchestrator Granularity**: ✅ **One orchestrator per experience** - Start simple, optimize later
+2. **Implementation Order**: ✅ **Tray → Console → TestDrive → Digest** - Start with simplest
+3. **Orchestrator Pattern**: ✅ **Service pattern with state management** - Unified approach for all experiences
+4. **State Management**: ✅ **Data Orchestrator manages state** - Single source of truth for data + state
+5. **Batch Processing**: ✅ **Defer to later** - Implement orchestrator pattern first
+
+## **Architecture Decisions Finalized**
+
+### **Data Orchestrator Pattern**
+- **Location**: `runway/core/data_orchestrators/`
+- **Pattern**: Service pattern with state management capabilities
+- **State Management**: Orchestrator manages state, not experience services
+- **Benefits**: Frontend consistency, state persistence, cleaner experience services, better scalability
+
+### **State Management Architecture**
+```
+Frontend ↔ Experience Service ↔ Data Orchestrator ↔ Domains/
+         (business logic)      (data + state)      (CRUD)
+```
+
+**Rationale**: Data orchestrator becomes single source of truth for both data and state, making it easier for frontend and experience services to work together.
 
 ## **Success Criteria**
 
@@ -111,6 +128,15 @@ SmartSyncService (orchestration)
 - `runway/experiences/console.py` - Use DecisionConsoleDataOrchestrator
 - `runway/experiences/test_drive.py` - Use TestDriveDataOrchestrator
 
-## **Status: Ready for Architecture Decisions**
+## **Status: ✅ READY FOR EXECUTION**
 
-This analysis is complete and ready for your architectural decisions on the pending questions. Once decisions are made, we can create executable tasks and move to implementation.
+All architectural decisions have been made. This solution is complete and ready to be converted to executable tasks.
+
+## **ADR Recommendation**
+
+This represents a significant architectural decision that should be documented as an ADR:
+
+**ADR-006: Data Orchestrator Pattern for Experience Services**
+- **Decision**: Use data orchestrators in `runway/core/` to manage both data pulling and state management
+- **Rationale**: Provides single source of truth, enables frontend consistency, and maintains clean separation of concerns
+- **Implications**: All experience services will use orchestrator pattern, state management centralized
