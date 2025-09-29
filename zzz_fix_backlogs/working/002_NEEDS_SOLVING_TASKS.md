@@ -289,16 +289,91 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
 
 ---
 
+#### **Task 4: Design Console Payment Decision Workflow - Bill Approval, Staging, and Batch Finalization**
+- **Status:** `[ ]` Not started
+- **Priority:** P1 High
+- **Justification:** Current console payment workflow is incomplete and architecturally confused. Need to design proper workflow for bill approval → staging → payment decisions → batch finalization. Current implementation has missing staging mechanism, unclear reserve allocation timing, and competing payment services. This affects core runway functionality and user experience.
+- **Code Pointers:**
+  - `runway/routes/bills.py` - Bill approval endpoint (approves but doesn't stage)
+  - `runway/experiences/console.py` - Console experience service (incomplete decision handling)
+  - `runway/core/data_orchestrators/decision_console_data_orchestrator.py` - Decision queue management
+  - `domains/ap/services/payment.py` - Payment execution service
+  - `runway/core/scheduled_payment_service.py` - Scheduled payment service
+  - `runway/core/reserve_runway.py` - Reserve allocation service
+- **Current Issues to Resolve:**
+  - Bill approval happens in routes, not console experience
+  - No staging mechanism for approved bills (no immediate reserve allocation)
+  - Decision queue just stores metadata, no real payment processing
+  - Unclear when reserves should be allocated (approval vs payment decision)
+  - Competing payment services (PaymentService vs ScheduledPaymentService)
+  - Missing batch finalization logic for "Pay Now" vs "Schedule" vs "Delay"
+  - ADR-001 violations (PaymentService depending on ScheduledPaymentService)
+- **Required Analysis:**
+  - Map current bill approval workflow and identify staging gaps
+  - Design proper decision queue with real payment processing
+  - Determine reserve allocation timing (approval vs decision vs execution)
+  - Design console experience for bill staging and decision-making
+  - Clarify service boundaries between PaymentService, ScheduledPaymentService, and RunwayReserveService
+  - Design batch finalization workflow for different decision types
+  - Determine how "Delay" decisions affect queue management vs reserve allocation
+- **Discovery Commands to Run:**
+  - `grep -r "approve.*bill" runway/` - Find all bill approval logic
+  - `grep -r "decision.*queue" runway/` - Find decision queue usage
+  - `grep -r "allocate.*reserve" runway/` - Find reserve allocation patterns
+  - `grep -r "schedule.*payment" runway/` - Find payment scheduling patterns
+  - `grep -r "PaymentService" runway/` - Find PaymentService usage in runway
+  - `grep -r "ScheduledPaymentService" domains/` - Find ADR-001 violations
+  - `grep -r "finalize.*decision" runway/` - Find batch finalization logic
+- **Files to Read First:**
+  - `runway/routes/bills.py` - Current bill approval workflow
+  - `runway/experiences/console.py` - Console experience service
+  - `runway/core/data_orchestrators/decision_console_data_orchestrator.py` - Decision queue
+  - `domains/ap/services/payment.py` - Payment execution service
+  - `runway/core/scheduled_payment_service.py` - Scheduled payment service
+  - `runway/core/reserve_runway.py` - Reserve allocation service
+- **Dependencies:** None
+- **Verification:** 
+  - Clear bill approval → staging → decision → finalization workflow designed
+  - Proper reserve allocation timing determined
+  - Service boundaries clarified and ADR-001 compliant
+  - Console experience properly designed for decision-making
+  - Batch finalization workflow designed for all decision types
+  - Decision queue management properly designed
+- **Definition of Done:**
+  - Complete workflow design from bill approval to payment execution
+  - Clear service boundaries and responsibilities
+  - Proper reserve allocation timing and management
+  - Console experience design for decision-making
+  - Batch finalization workflow for all decision types
+  - ADR-001 compliant architecture
+- **Solution Required:** Design comprehensive console payment decision workflow including bill approval, staging mechanism, decision queue management, reserve allocation timing, service boundaries, and batch finalization for "Pay Now", "Schedule", and "Delay" decisions
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting analysis
+  - Update status to `[💡]` when solution is identified
+  - Update status to `[✅]` when solution is documented
+  - Update status to `[❌]` if blocked or need help
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting analysis
+  - Update todo status as analysis progresses
+  - Mark todo complete when solution is documented
+  - Add discovery todos for found issues
+  - Remove obsolete todos when analysis is complete
+  - Ensure todo list reflects current analysis state
+
+---
+
 ## **Summary**
 
-- **Total Tasks:** 3
-- **P1 High:** 3 tasks (calculator data flow, digest bulk operations, testing strategy)
+- **Total Tasks:** 4
+- **P1 High:** 4 tasks (calculator data flow, digest bulk operations, testing strategy, console payment workflow)
 - **Completed:** 0 tasks
-- **Remaining:** 3 tasks
+- **Remaining:** 4 tasks
 
 **Key Solutioning Patterns:**
 - **Task 1**: Data flow analysis and design
 - **Task 2**: Comprehensive testing strategy design
+- **Task 4**: Console payment workflow design
 
 **Critical Success Factors:**
 - All tasks must align with post-nuclear architecture
