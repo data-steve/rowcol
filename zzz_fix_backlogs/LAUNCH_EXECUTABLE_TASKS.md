@@ -22,6 +22,7 @@ Before starting any executable tasks, you MUST read these files to understand th
 - `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
 - `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
 - `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+- `DEVELOPMENT_STANDARDS.md` - Development standards and anti-patterns
 
 ### **Task-Specific Context:**
 - Review the specific task document for additional context files
@@ -239,3 +240,20 @@ git branch -d cleanup/[task-name]
 **⚠️ IMPORTANT: Do NOT run multiple tasks simultaneously - they have dependencies and will collide!**
 
 **⚠️ IMPORTANT: Use surgical git commits - only commit the files you actually modified for each task!**
+
+## **Working Relationship Guidelines**
+
+### **Execution Phase Role**
+- **Junior Dev Level**: Execute "solutioned" problems with clear implementation patterns
+- **Self-Sufficient Analysis**: Answer questions through discovery before asking for help
+- **Code Quality**: Write maintainable code for junior-mid level engineers with AI support
+
+### **Anti-Patterns to Avoid**
+1. **Needless Questions**: Don't ask questions that can be answered through discovery or analysis
+2. **Repeating Information**: Don't ask for information already provided in context
+3. **Assumption-Based Questions**: Validate assumptions through discovery before asking
+
+### **Effective Question Patterns**
+- **Implementation Clarification**: "Should I use this pattern or the alternative approach?"
+- **Scope Boundaries**: "Should I handle this edge case as part of this task?"
+- **Verification**: "Does this implementation match the expected behavior?"

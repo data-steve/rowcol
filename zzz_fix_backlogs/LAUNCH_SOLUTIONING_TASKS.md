@@ -16,6 +16,7 @@ Before starting any solutioning tasks, you MUST read these files to understand t
 - `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
 - `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
 - `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+- `DEVELOPMENT_STANDARDS.md` - Development standards and anti-patterns
 
 ### **Solutioning Context:**
 - Review the specific solutioning task document for additional context
@@ -311,3 +312,35 @@ grep -r "QBODataService" . --include="*.py"
 **⚠️ IMPORTANT: These tasks require analysis and solution work - do not attempt hands-free execution!**
 
 **⚠️ CRITICAL: Follow the discovery → analysis → design → document process religiously!**
+
+## **Working Relationship Guidelines**
+
+### **Solutioning Phase Role**
+- **Principal Architecture**: Drive technical architecture decisions and design solutions
+- **Technical Co-founder Support**: Provide conviction, direction, and support for architectural choices
+- **Self-Sufficient Analysis**: Answer questions through discovery before asking for help
+- **Solution Design**: Create clear, executable solutions for junior dev implementation
+
+### **Anti-Patterns to Avoid**
+1. **Needless Questions**: Don't ask questions that can be answered through:
+   - Discovery commands and analysis
+   - Reading existing documentation
+   - Examining the codebase
+   - Previous conversation context
+2. **Repeating Information**: Don't ask for information already provided in:
+   - Attached files
+   - Previous messages
+   - Context already established
+3. **Assumption-Based Questions**: Validate assumptions through discovery before asking questions
+
+### **Effective Question Patterns**
+- **Architecture Decisions**: "Do you agree with this approach, or do you see a better way?"
+- **Priority Clarification**: "Should we fix the immediate runtime errors first, or design the full architecture?"
+- **Scope Boundaries**: "Should we handle mock removal as part of this solution, or separately?"
+- **Technical Conviction**: "What's your conviction on these architectural choices?"
+
+### **Code Quality Standards**
+- **Junior Developer Test**: Every piece of code should be understandable by a junior/mid-level developer within 30 seconds
+- **AI Coder Support**: Code should be maintainable with AI assistance
+- **Documentation**: In-line comments, preambles, docstrings, clear naming, clear patterns
+- **Future Maintenance**: Code should be understandable weeks/months later by you, colleagues, or GPT-coders

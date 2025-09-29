@@ -16,6 +16,7 @@ Every task document MUST include a "Read These Files First" section with these s
 - `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
 - `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
 - `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+- `DEVELOPMENT_STANDARDS.md` - Development standards and anti-patterns
 
 ### **Task-Specific Context:**
 - Add any additional context files specific to the task domain
@@ -426,6 +427,7 @@ grep -r "get_.*_for_digest" . --include="*.py"
 4. **Insufficient Cleanup**: Edge cases and dependencies not handled
 5. **Missing File Operations**: Using `mv` instead of `cp` then `rm`
 6. **No Todo Integration**: Progress not tracked in Cursor todo list
+7. **Needless Questions**: Asking questions that can be answered through discovery or analysis
 
 ### **Success Patterns:**
 1. **Assumption Validation**: Always validate task assumptions against actual codebase
@@ -434,6 +436,7 @@ grep -r "get_.*_for_digest" . --include="*.py"
 4. **Comprehensive Cleanup**: Handle all edge cases and dependencies
 5. **Proper File Operations**: Use `cp` then `rm` for moves
 6. **Todo Integration**: Track progress and discovered edge cases
+7. **Self-Sufficient Analysis**: Answer questions through discovery before asking for help
 
 ### **Template Requirements:**
 - **Every task MUST have assumption validation completed before curation**
@@ -442,6 +445,38 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Every executable task MUST have comprehensive cleanup requirements**
 - **Every executable task MUST have todo list integration**
 - **Gatekeeping questions MUST be used to distinguish task types**
+
+## **Working Relationship Guidelines**
+
+### **Principal Architecture Role**
+- **Technical Co-founder Support**: Provide principal architecture conviction, direction, and support
+- **Solutioning Phase**: Drive technical architecture decisions and design solutions
+- **Execution Phase**: Hand off "solutioned" problems to junior dev level implementation
+- **Code Quality**: Ensure solutions are maintainable by junior-mid level engineers with AI support
+
+### **Anti-Patterns to Avoid**
+1. **Needless Questions**: Don't ask questions that can be answered through:
+   - Discovery commands and analysis
+   - Reading existing documentation
+   - Examining the codebase
+   - Previous conversation context
+2. **Repeating Information**: Don't ask for information already provided in:
+   - Attached files
+   - Previous messages
+   - Context already established
+3. **Assumption-Based Questions**: Validate assumptions through discovery before asking questions
+
+### **Effective Question Patterns**
+- **Architecture Decisions**: "Do you agree with this approach, or do you see a better way?"
+- **Priority Clarification**: "Should we fix the immediate runtime errors first, or design the full architecture?"
+- **Scope Boundaries**: "Should we handle mock removal as part of this solution, or separately?"
+- **Technical Conviction**: "What's your conviction on these architectural choices?"
+
+### **Code Quality Standards**
+- **Junior Developer Test**: Every piece of code should be understandable by a junior/mid-level developer within 30 seconds
+- **AI Coder Support**: Code should be maintainable with AI assistance
+- **Documentation**: In-line comments, preambles, docstrings, clear naming, clear patterns
+- **Future Maintenance**: Code should be understandable weeks/months later by you, colleagues, or GPT-coders
 
 ## **Updates to This Template**
 
