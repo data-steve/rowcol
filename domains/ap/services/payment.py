@@ -13,7 +13,7 @@ Enhanced from basic APPaymentService to include comprehensive functionality.
 
 from typing import Dict, Optional, Any, List
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 import logging
 
@@ -211,9 +211,9 @@ class PaymentService(TenantAwareService):
     
     # ==================== PAYMENT ORCHESTRATION ====================
     
-    def schedule_payment(self, business_id: str, bill_ids: list, funding_account: str) -> Dict[str, Any]:
+    async def schedule_payment(self, business_id: str, bill_ids: list, funding_account: str) -> Dict[str, Any]:
         """
-        Schedule payment for multiple bills.
+        Schedule payment for multiple bills with runway reserve integration.
         
         Args:
             business_id: Business identifier (for consistency with tests)
@@ -226,18 +226,68 @@ class PaymentService(TenantAwareService):
         if business_id != self.business_id:
             raise ValidationError(f"Business ID mismatch: expected {self.business_id}, got {business_id}")
         
-        # For now, return a mock payment object that matches test expectations
-        # TODO: Implement actual multi-bill payment scheduling in Phase 1
-        payment_summary = {
-            'business_id': business_id,
-            'bill_ids': bill_ids,
-            'funding_account': funding_account,
-            'status': 'scheduled',
-            'payment_date': datetime.utcnow().isoformat()
-        }
-        
-        logger.info(f"Scheduled payment for {len(bill_ids)} bills from account {funding_account}")
-        return payment_summary
+        try:
+            # Get bills to schedule
+            from domains.ap.models.bill import Bill
+            bills = self.db.query(Bill).filter(
+                Bill.business_id == self.business_id,
+                Bill.bill_id.in_(bill_ids),
+                Bill.status == "approved"
+            ).all()
+            
+            if not bills:
+                raise ValidationError("No approved bills found to schedule")
+            
+            # Calculate total amount
+            total_amount = sum(bill.amount for bill in bills)
+            
+            # Use runway-aware scheduled payment service
+            from runway.core.scheduled_payment_service import ScheduledPaymentService
+            
+            scheduled_payment_service = ScheduledPaymentService(
+                db=self.db,
+                business_id=self.business_id,
+                runway_reserve_service=self.runway_reserve_service
+            )
+            
+            # Schedule each bill payment
+            scheduled_count = 0
+            for bill in bills:
+                try:
+                    # Schedule payment for next business day
+                    payment_date = datetime.utcnow() + timedelta(days=1)
+                    
+                    success = await scheduled_payment_service.schedule_payment_with_reserve(
+                        bill=bill,
+                        payment_date=payment_date,
+                        payment_method="ach",
+                        payment_account=funding_account
+                    )
+                    
+                    if success:
+                        scheduled_count += 1
+                        logger.info(f"Scheduled payment for bill {bill.bill_id}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to schedule payment for bill {bill.bill_id}: {e}")
+            
+            # Return payment summary
+            payment_summary = {
+                'business_id': business_id,
+                'bill_ids': [bill.bill_id for bill in bills],
+                'funding_account': funding_account,
+                'status': 'scheduled',
+                'scheduled_count': scheduled_count,
+                'total_amount': float(total_amount),
+                'payment_date': (datetime.utcnow() + timedelta(days=1)).isoformat()
+            }
+            
+            logger.info(f"Scheduled {scheduled_count}/{len(bills)} payments from account {funding_account}")
+            return payment_summary
+            
+        except Exception as e:
+            logger.error(f"Failed to schedule payments: {e}")
+            raise ValidationError(f"Failed to schedule payments: {str(e)}")
     
     def create_payment(self, bill_id: int, payment_date: datetime,
                       payment_method: str = "ach", payment_account: str = None,

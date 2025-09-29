@@ -407,36 +407,45 @@ class BillService(TenantAwareService):
     async def schedule_bill_payment(self, bill: Bill, payment_date: datetime, 
                              payment_method: str = None, payment_account: str = None) -> bool:
         """
-        Schedule the bill for payment with runway reserve integration.
+        Schedule the bill for payment using PaymentService.
         
-        NOTE: This method delegates to runway/core/scheduled_payment_service.py for 
-        proper runway reserve integration. The scheduled payment service:
-        - Allocates runway reserves to earmark money (prevents double-spending)
-        - Creates QBO scheduled payment with future TxnDate
-        - Integrates with runway calculations for optimal timing
-        - Manages reserve allocation and release lifecycle
+        NOTE: This method delegates to PaymentService for proper payment handling.
+        PaymentService handles:
+        - Payment record creation and management
+        - QBO payment integration
+        - Runway reserve integration via ScheduledPaymentService
+        - Multi-bill payment coordination
         
-        This follows ADR-001 by keeping runway logic in runway/ layer while
-        maintaining domain service interface for bill operations.
+        This consolidates all payment logic in PaymentService while maintaining
+        the bill service interface for bill-specific operations.
         """
         if bill.status != BillStatus.APPROVED:
             return False
         
-        # Delegate to runway layer for proper reserve integration
-        from runway.core.scheduled_payment_service import ScheduledPaymentService
+        # Delegate to PaymentService for proper payment handling
+        from domains.ap.services.payment import PaymentService
         
-        scheduled_payment_service = ScheduledPaymentService(
+        payment_service = PaymentService(
             db=self.db,
             business_id=self.business_id,
             runway_reserve_service=self.runway_reserve_service
         )
         
-        return await scheduled_payment_service.schedule_payment_with_reserve(
-            bill=bill,
+        # Create payment record and schedule it
+        payment = payment_service.create_payment(
+            bill_id=bill.bill_id,
             payment_date=payment_date,
-            payment_method=payment_method,
+            payment_method=payment_method or "ach",
             payment_account=payment_account
         )
+        
+        # Schedule the payment using PaymentService
+        result = await payment_service.schedule_payment(
+            business_id=self.business_id,
+            bill_ids=[bill.bill_id],
+            funding_account=payment_account or "1000-Cash"
+        )
+        return result is not None and result.get('scheduled_count', 0) > 0
     
     def _bill_to_dict(self, bill: Bill) -> Dict[str, Any]:
         """Convert bill to dictionary for API responses."""
