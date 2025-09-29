@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice
@@ -215,3 +215,19 @@ class InvoiceService(TenantAwareService):
             self.db.rollback()
             logger.error(f"Failed to ingest invoice from QBO: {e}")
             raise ValueError(f"Failed to ingest invoice from QBO: {e}")
+    
+    # ==================== UTILITY METHODS ====================
+    
+    def get_invoice_by_qbo_id(self, qbo_id: str) -> Optional[InvoiceModel]:
+        """Get invoice by QBO ID for this business."""
+        return self.db.query(InvoiceModel).filter(
+            InvoiceModel.business_id == self.business_id,
+            InvoiceModel.qbo_invoice_id == qbo_id
+        ).first()
+    
+    def get_invoice_by_id(self, invoice_id: int) -> Optional[InvoiceModel]:
+        """Get invoice by internal ID for this business."""
+        return self.db.query(InvoiceModel).filter(
+            InvoiceModel.business_id == self.business_id,
+            InvoiceModel.invoice_id == invoice_id
+        ).first()

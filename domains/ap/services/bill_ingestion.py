@@ -295,39 +295,28 @@ class BillService(TenantAwareService):
     # ==================== BILL BUSINESS LOGIC ====================
     
     def calculate_bill_priority(self, bill: Bill) -> str:
-        """Calculate bill priority based on due date and amount."""
-        if self.is_bill_overdue(bill):
-            return BillPriority.URGENT
+        """Calculate bill priority using centralized PriorityCalculationService."""
+        from runway.core.priority_calculation_service import PriorityCalculationService
         
-        days_until_due = self.get_days_until_due(bill)
-        if days_until_due is None:
-            return BillPriority.LOW
+        # Convert bill to dictionary format for priority calculation
+        bill_data = {
+            'amount': float(bill.amount) if bill.amount else 0.0,
+            'due_date': bill.due_date.isoformat() if bill.due_date else None,
+            'is_overdue': self.is_bill_overdue(bill),
+            'days_until_due': self.get_days_until_due(bill),
+            'status': bill.status.value if hasattr(bill.status, 'value') else str(bill.status)
+        }
         
-        # Business rule thresholds - TODO: Make configurable per business
-        URGENT_DAYS_THRESHOLD = 7
-        HIGH_AMOUNT_THRESHOLD = Decimal('5000.00')
+        # Use centralized priority calculation service
+        priority_service = PriorityCalculationService(self.db, self.business_id, validate_business=False)
+        score = priority_service.calculate_bill_priority_score(bill_data)
         
-        # New scoring system for more nuanced priority
-        score = 0
-        if self.is_bill_overdue(bill):
-            score += 80  # Overdue is high priority
-        
-        # Add points for due date proximity
-        if days_until_due is not None and days_until_due > 0:
-            if days_until_due <= URGENT_DAYS_THRESHOLD:
-                score += (URGENT_DAYS_THRESHOLD - days_until_due) * 10
-            score += max(0, 30 - days_until_due)
-
-        # Add points for high amount
-        if bill.amount >= HIGH_AMOUNT_THRESHOLD:
-            score += 40 # Give high-amount bills a significant boost
-
         # Convert score to priority enum
         if score >= 80:
             return BillPriority.URGENT
-        elif score >= 40:  # High amount alone should trigger HIGH
+        elif score >= 40:
             return BillPriority.HIGH
-        elif score >= 15:  # Due in 15 days should trigger MEDIUM
+        elif score >= 15:
             return BillPriority.MEDIUM
         else:
             return BillPriority.LOW
@@ -476,6 +465,20 @@ class BillService(TenantAwareService):
     def _get_bill_or_raise(self, bill_id: int) -> Bill:
         """Get bill by ID or raise ValidationError."""
         return self._get_by_id_or_raise(Bill, bill_id, f"Bill {bill_id} not found")
+    
+    def get_bill_by_qbo_id(self, qbo_id: str) -> Optional[Bill]:
+        """Get bill by QBO ID for this business."""
+        return self.db.query(Bill).filter(
+            Bill.business_id == self.business_id,
+            Bill.qbo_bill_id == qbo_id
+        ).first()
+    
+    def get_bill_by_id(self, bill_id: int) -> Optional[Bill]:
+        """Get bill by internal ID for this business."""
+        return self.db.query(Bill).filter(
+            Bill.business_id == self.business_id,
+            Bill.bill_id == bill_id
+        ).first()
     
     def _create_bill_from_document(self, extracted_data: Dict, 
                                   vendor_id: Optional[int] = None) -> Bill:

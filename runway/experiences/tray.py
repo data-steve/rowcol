@@ -29,8 +29,7 @@ from datetime import datetime
 import os
 import logging
 
-# Import domain models for real database operations
-from domains.ap.models.bill import Bill
+# Domain services handle all database operations - no direct model imports needed
 
 logger = logging.getLogger(__name__)
 
@@ -365,11 +364,8 @@ class TrayService:
             # Use real BillService for payment processing
             bill_service = BillService(self.db, self.business_id, validate_business=False)
             
-            # Get the actual bill from database
-            bill = self.db.query(Bill).filter(
-                Bill.business_id == self.business_id,
-                Bill.qbo_bill_id == item.qbo_id
-            ).first()
+            # Get the actual bill from database using BillService
+            bill = bill_service.get_bill_by_qbo_id(item.qbo_id)
             
             if not bill:
                 return {
@@ -423,11 +419,8 @@ class TrayService:
             # Use real BillService for payment scheduling
             bill_service = BillService(self.db, self.business_id, validate_business=False)
             
-            # Get the actual bill from database
-            bill = self.db.query(Bill).filter(
-                Bill.business_id == self.business_id,
-                Bill.qbo_bill_id == item.qbo_id
-            ).first()
+            # Get the actual bill from database using BillService
+            bill = bill_service.get_bill_by_qbo_id(item.qbo_id)
             
             if not bill:
                 return {
@@ -465,16 +458,14 @@ class TrayService:
         """Send invoice reminder using real ARPlanService."""
         try:
             from runway.core.ar_plan_service import ARPlanService
+            from domains.ar.services.invoice import InvoiceService
             
-            # Use real ARPlanService for reminder sending
+            # Use real services for reminder sending
             ar_plan_service = ARPlanService(self.db)
+            invoice_service = InvoiceService(self.db, self.business_id)
             
-            # Get the actual invoice from database
-            from domains.ar.models.invoice import Invoice as InvoiceModel
-            invoice = self.db.query(InvoiceModel).filter(
-                InvoiceModel.business_id == self.business_id,
-                InvoiceModel.qbo_invoice_id == item.qbo_id
-            ).first()
+            # Get the actual invoice from database using InvoiceService
+            invoice = invoice_service.get_invoice_by_qbo_id(item.qbo_id)
             
             if not invoice:
                 return {
