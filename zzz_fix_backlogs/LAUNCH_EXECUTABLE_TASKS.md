@@ -12,9 +12,21 @@
 6. **Update Status**: Change `[ ]` to `[✅]` when complete
 7. **Archive When Done**: Move completed task file to `archive/` when all tasks complete
 
-## Review these files first:
-- docs/build_plan_v5.md
-- docs/architecture/
+## **CRITICAL: Read These Files First**
+
+Before starting any executable tasks, you MUST read these files to understand the system:
+
+### **Architecture Context:**
+- `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Complete system architecture
+- `docs/build_plan_v5.md` - Current build plan and phase context
+- `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
+- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
+- `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+
+### **Task-Specific Context:**
+- Review the specific task document for additional context files
+- Understand the current phase and architectural constraints
+- Familiarize yourself with the codebase structure and patterns
 
 ## **Progress Tracking**
 
@@ -24,6 +36,21 @@
 - `[❌]` - Failed/Blocked
 
 **IMPORTANT**: Always update the task status in the document as you work through tasks. This allows tracking progress and identifying which tasks are complete.
+
+## **Todo List Management (MANDATORY)**
+
+### **For Each Task:**
+1. **Create Cursor Todo:** When starting a task, create a todo in Cursor
+2. **Update Todo Status:** As work progresses, update todo status
+3. **Add Cleanup Todos:** For discovered edge cases, add cleanup todos
+4. **Complete Todos:** Mark todos complete when work is done
+5. **Clean Up Todos:** Remove obsolete todos when files are deleted
+
+### **Todo Status Mapping:**
+- `[ ]` Not started → Todo: "Not Started"
+- `[🔄]` In progress → Todo: "In Progress"
+- `[✅]` Completed → Todo: "Complete"
+- `[❌]` Failed/Blocked → Todo: "Blocked"
 
 ## **Execution Pattern**
 
@@ -75,6 +102,29 @@ grep -r "get_.*_for_digest" . --include="*.py"
 # - Update related logic if needed
 
 # Step 4: Implement with full context understanding
+```
+
+## **Comprehensive Cleanup (MANDATORY)**
+
+### **After Each Task:**
+1. **Remove Obsolete Files:** Delete any files that are no longer needed
+2. **Clean Up Imports:** Remove unused imports, add missing imports
+3. **Update References:** Fix all broken references and method calls
+4. **Clean Up Tests:** Update test files that reference changed code
+5. **Verify Cleanup:** Run verification commands to ensure no broken references
+
+### **Cleanup Verification Commands:**
+```bash
+# Check for broken references
+grep -r "old_pattern" . --include="*.py"
+find . -name "*.py" -exec grep -l "obsolete_pattern" {} \;
+
+# Check for unused imports
+grep -r "import.*unused" . --include="*.py"
+
+# Verify no broken references
+pytest
+uvicorn main:app --reload
 ```
 
 ### **After All Tasks:**

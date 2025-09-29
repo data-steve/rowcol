@@ -14,6 +14,22 @@
 
 ---
 
+## **CRITICAL: Read These Files First**
+
+Before starting any solutioning tasks, you MUST read these files to understand the system:
+
+### **Architecture Context:**
+- `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Complete system architecture
+- `docs/build_plan_v5.md` - Current build plan and phase context
+- `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
+- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
+- `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+
+### **Solutioning Context:**
+- Review the specific solutioning task document for additional context
+- Understand the current phase and architectural constraints
+- Familiarize yourself with the codebase structure and patterns
+
 ## **Context for All Tasks**
 
 **IMPORTANT**: Before starting any solutioning work, read `LAUNCH_SOLUTIONING_TASKS.md` twice. It contains the complete solutioning framework and methodology you must follow.
@@ -84,6 +100,14 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
   - Update status to `[✅]` when solution is documented
   - Update status to `[❌]` if blocked or need help
 
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting analysis
+  - Update todo status as analysis progresses
+  - Mark todo complete when solution is documented
+  - Add discovery todos for found issues
+  - Remove obsolete todos when analysis is complete
+  - Ensure todo list reflects current analysis state
+
 ---
 
 #### **Task 2: Fix Digest Data Architecture - Replace Wrong `get_qbo_data_for_digest` Pattern**
@@ -128,6 +152,14 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
   - Update status to `[💡]` when solution is identified
   - Update status to `[✅]` when solution is documented
   - Update status to `[❌]` if blocked or need help
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting analysis
+  - Update todo status as analysis progresses
+  - Mark todo complete when solution is documented
+  - Add discovery todos for found issues
+  - Remove obsolete todos when analysis is complete
+  - Ensure todo list reflects current analysis state
 
 ---
 
@@ -183,6 +215,14 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
   - Update status to `[💡]` when solution is identified
   - Update status to `[✅]` when solution is documented
   - Update status to `[❌]` if blocked or need help
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting analysis
+  - Update todo status as analysis progresses
+  - Mark todo complete when solution is documented
+  - Add discovery todos for found issues
+  - Remove obsolete todos when analysis is complete
+  - Ensure todo list reflects current analysis state
 
 ---
 

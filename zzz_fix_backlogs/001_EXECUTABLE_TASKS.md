@@ -14,6 +14,17 @@
 
 ---
 
+## **CRITICAL: Read These Files First**
+
+Before starting any executable tasks, you MUST read these files to understand the system:
+
+### **Architecture Context:**
+- `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Complete system architecture
+- `docs/build_plan_v5.md` - Current build plan and phase context
+- `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
+- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
+- `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+
 ## **Context for All Tasks**
 
 **IMPORTANT**: These are critical development blockers that prevent real data implementation and core functionality. They should be completed before moving to new product features.
@@ -67,6 +78,22 @@
   - Experience services use real QBO data
   - Proper error handling for missing QBO data
   - No mock violations remain in experience services
+  - All obsolete files removed
+  - All imports cleaned up
+  - All references updated
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
+
+- **Comprehensive Cleanup Requirements:**
+  - Remove ALL obsolete files and folders
+  - Clean up ALL unused imports and references
+  - Update ALL dependent code and test files
+  - Verify no broken references anywhere
+  - Run cleanup verification commands
 
 ---
 
@@ -106,6 +133,22 @@
   - Digest experience returns real data from domain services
   - All experience services use SmartSyncService for QBO data
   - No empty list returns in experience services
+  - All obsolete files removed
+  - All imports cleaned up
+  - All references updated
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
+
+- **Comprehensive Cleanup Requirements:**
+  - Remove ALL obsolete files and folders
+  - Clean up ALL unused imports and references
+  - Update ALL dependent code and test files
+  - Verify no broken references anywhere
+  - Run cleanup verification commands
 
 ---
 
@@ -144,6 +187,22 @@
   - All tests use real QBO sandbox data
   - No mock violations in test files
   - Test data service integrates with SmartSyncService
+  - All obsolete files removed
+  - All imports cleaned up
+  - All references updated
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
+
+- **Comprehensive Cleanup Requirements:**
+  - Remove ALL obsolete files and folders
+  - Clean up ALL unused imports and references
+  - Update ALL dependent code and test files
+  - Verify no broken references anywhere
+  - Run cleanup verification commands
 
 ---
 
@@ -183,6 +242,22 @@
   - Digest experience returns real data from domain services
   - All experience services use SmartSyncService for QBO data
   - No empty list returns in experience services
+  - All obsolete files removed
+  - All imports cleaned up
+  - All references updated
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
+
+- **Comprehensive Cleanup Requirements:**
+  - Remove ALL obsolete files and folders
+  - Clean up ALL unused imports and references
+  - Update ALL dependent code and test files
+  - Verify no broken references anywhere
+  - Run cleanup verification commands
 
 ---
 
@@ -221,6 +296,22 @@
   - No over-engineered dependency injection containers
   - Clean, simple route patterns
   - All tests pass
+  - All obsolete files removed
+  - All imports cleaned up
+  - All references updated
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
+
+- **Comprehensive Cleanup Requirements:**
+  - Remove ALL obsolete files and folders
+  - Clean up ALL unused imports and references
+  - Update ALL dependent code and test files
+  - Verify no broken references anywhere
+  - Run cleanup verification commands
 
 ---
 

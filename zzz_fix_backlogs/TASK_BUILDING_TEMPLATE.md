@@ -6,6 +6,21 @@
 
 This template documents the process for taking raw task backlogs and curating them into three categories based on complexity and readiness for execution.
 
+## **Required Context Documentation**
+
+Every task document MUST include a "Read These Files First" section with these specific files:
+
+### **Architecture Context (Required for All Tasks):**
+- `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Complete system architecture
+- `docs/build_plan_v5.md` - Current build plan and phase context
+- `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
+- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
+- `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+
+### **Task-Specific Context:**
+- Add any additional context files specific to the task domain
+- Include relevant ADRs that apply to the specific task type
+
 ## **Task Categories**
 
 ### **0_EXECUTABLE_TASKS.md** - Ready for Hands-Free Execution
@@ -36,6 +51,7 @@ This template documents the process for taking raw task backlogs and curating th
 - **Progress Tracking Instructions** - Clear steps for updating task status as work progresses
 - **Git Workflow Instructions** - Surgical commit steps for each task
 - **Todo List Integration** - Cursor todo list management requirements
+- **Comprehensive Cleanup Requirements** - Explicit cleanup steps for files, code, and documentation
 
 ### **1_NEEDS_SOLVING_TASKS.md** - Needs Analysis and Solution Work
 **Characteristics:**
@@ -59,6 +75,7 @@ This template documents the process for taking raw task backlogs and curating th
   - Definition of Done
   - Solution Required (what needs to be figured out)
 - **Progress Tracking Instructions** - Clear steps for updating task status as analysis progresses
+- **Todo List Integration** - Cursor todo list management requirements
 
 ### **2_BLOCKED_TASKS.md** - Blocked by Solution Tasks
 **Characteristics:**
@@ -81,7 +98,13 @@ This template documents the process for taking raw task backlogs and curating th
 2. Understand the context and goals
 3. Identify all tasks and their current state
 
-### **Step 2: Categorize by Complexity**
+### **Step 2: Add Required Context Documentation**
+1. Add "Read These Files First" section to each task document
+2. Include the 5 required architecture context files
+3. Add task-specific context files as needed
+4. Ensure all context files are accessible and relevant
+
+### **Step 3: Categorize by Complexity**
 For each task, ask:
 
 #### **Executable Task Gatekeeping Questions:**
@@ -147,19 +170,19 @@ grep -r "get_.*_for_digest" . --include="*.py"
 # - What needs to be designed vs what can be fixed?
 ```
 
-### **Step 3: Preserve All Detail**
+### **Step 4: Preserve All Detail**
 - **Lift and shift** - don't edit or simplify
 - Preserve all critical warnings, search commands, verification steps
 - Keep all implementation patterns and code examples
 - Maintain all context and justification
 
-### **Step 4: Create Curated Files**
+### **Step 5: Create Curated Files**
 1. Create `0_EXECUTABLE_TASKS.md` with fully-solved tasks
 2. Create `1_NEEDS_SOLVING_TASKS.md` with analysis tasks
 3. Create `2_BLOCKED_TASKS.md` with blocked tasks
 4. Archive original files
 
-### **Step 5: Clean Up**
+### **Step 6: Clean Up**
 - Remove "spec" and "agent" references
 - Remove "Ready for Spec" status
 - Update "Next Action" to point to next task
@@ -175,6 +198,8 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - [ ] Ready for hands-free execution
 - [ ] **Progress tracking instructions included**
 - [ ] **Git workflow instructions included**
+- [ ] **Todo list integration included**
+- [ ] **Comprehensive cleanup requirements included**
 
 ### **Needs Solving Tasks**
 - [ ] Clear analysis requirements
@@ -182,6 +207,7 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - [ ] Dependencies clearly identified
 - [ ] Solution Required section explains what needs to be figured out
 - [ ] **Progress tracking instructions included**
+- [ ] **Todo list integration included**
 
 ### **Blocked Tasks**
 - [ ] Ready for execution once unblocked
@@ -273,6 +299,18 @@ grep -r "get_.*_for_digest" . --include="*.py"
   - Update todo status as work progresses
   - Mark todo complete when task is done
   - Add cleanup todos for discovered edge cases
+  - Remove obsolete todos when files are deleted
+  - Ensure todo list reflects current system state
+
+- **Comprehensive Cleanup Requirements:**
+  - **File Operations:** Use `cp` then `rm` for moves, never just `mv`
+  - **Remove Obsolete Files:** Delete any files that are no longer needed
+  - **Import Cleanup:** Remove ALL old imports, add ALL new imports
+  - **Reference Cleanup:** Update ALL references to renamed methods/classes
+  - **Dependency Cleanup:** Update ALL dependent code
+  - **Test Cleanup:** Update ALL test files that reference changed code
+  - **Documentation Cleanup:** Update ALL documentation references
+  - **Verification Cleanup:** Run cleanup verification commands
 ```
 
 ### **Needs Solving Task Pattern**
@@ -300,6 +338,14 @@ grep -r "get_.*_for_digest" . --include="*.py"
   - Update status to `[💡]` when solution is identified
   - Update status to `[✅]` when solution is documented
   - Update status to `[❌]` if blocked or need help
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting analysis
+  - Update todo status as analysis progresses
+  - Mark todo complete when solution is documented
+  - Add discovery todos for found issues
+  - Remove obsolete todos when analysis is complete
+  - Ensure todo list reflects current analysis state
 ```
 
 ## **File Naming Convention**

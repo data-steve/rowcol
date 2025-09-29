@@ -6,6 +6,22 @@
 
 This framework exists because solutioning is fundamentally different from execution. You will be given tasks that require discovery, analysis, and design work before they can be executed. **DO NOT RUSH TO SOLUTIONS.** Follow this process religiously to avoid the mistakes that have been made before.
 
+## **CRITICAL: Read These Files First**
+
+Before starting any solutioning tasks, you MUST read these files to understand the system:
+
+### **Architecture Context:**
+- `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Complete system architecture
+- `docs/build_plan_v5.md` - Current build plan and phase context
+- `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
+- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
+- `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+
+### **Solutioning Context:**
+- Review the specific solutioning task document for additional context
+- Understand the current phase and architectural constraints
+- Familiarize yourself with the codebase structure and patterns
+
 ## **Context for All Solutioning Tasks**
 
 ### **What is Solutioning?**
@@ -156,6 +172,23 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - `[❌]` - Blocked/Need help
 
 **IMPORTANT**: Always update the task status in the document as you work through tasks. This allows tracking progress and identifying which solutions are complete.
+
+## **Todo List Management (MANDATORY)**
+
+### **For Each Task:**
+1. **Create Cursor Todo:** When starting analysis, create a todo in Cursor
+2. **Update Todo Status:** As analysis progresses, update todo status
+3. **Add Discovery Todos:** For discovered issues, add discovery todos
+4. **Complete Todos:** Mark todos complete when analysis is done
+5. **Clean Up Todos:** Remove obsolete todos when analysis is complete
+
+### **Todo Status Mapping:**
+- `[ ]` Not started → Todo: "Not Started"
+- `[🔄]` In progress → Todo: "In Progress"
+- `[🔍]` Analysis phase → Todo: "Analysis"
+- `[💡]` Solution identified → Todo: "Solution Ready"
+- `[✅]` Solution documented → Todo: "Complete"
+- `[❌]` Blocked/Need help → Todo: "Blocked"
 
 ## **Solutioning Checklist**
 
