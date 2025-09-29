@@ -47,7 +47,7 @@ Before starting any executable tasks, you MUST read these files to understand th
 ## **Phase 1: Data Orchestrator Pattern Implementation (P0 Critical)**
 
 #### **Task 1: Implement Data Orchestrator Pattern for Tray and Console**
-- **Status:** `[ ]` Not started
+- **Status:** `[✅]` Completed
 - **Priority:** P0 Critical
 - **Justification:** Establish the architectural foundation for experience services using data orchestrators. Implement Tray (simple) and Console (with state management) to establish the pattern for all other experiences.
 - **Files to Fix:**
@@ -124,6 +124,116 @@ Before starting any executable tasks, you MUST read these files to understand th
   - After completing verification, commit the specific files modified:
   - `git add runway/core/data_orchestrators/ runway/experiences/`
   - `git commit -m "feat: implement data orchestrator pattern for experience services"`
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
+  - Remove obsolete todos when files are deleted
+  - Ensure todo list reflects current system state
+- **Comprehensive Cleanup Requirements:**
+  - **File Operations:** Use `cp` then `rm` for moves, never just `mv`
+  - **Remove Obsolete Files:** Delete any files that are no longer needed
+  - **Import Cleanup:** Remove ALL old imports, add ALL new imports
+  - **Reference Cleanup:** Update ALL references to renamed methods/classes
+  - **Dependency Cleanup:** Update ALL dependent code
+  - **Test Cleanup:** Update ALL test files that reference changed code
+  - **Documentation Cleanup:** Update ALL documentation references
+  - **Verification Cleanup:** Run cleanup verification commands
+
+#### **Task 1.2: Refactor RunwayCalculator Service Architecture - Foundation for Priority Scoring**
+- **Status:** `[✅]` Completed
+- **Note:** Priority leveling thresholds (80/50) are temporary - proper solutioning needed for nuanced, business-context aware thresholds per build plan Phase 3
+- **Priority:** P1 High
+- **Justification:** RunwayCalculator has scope creep with mixed responsibilities violating ADR-001. Need to refactor into focused services that serve as foundation for priority scoring and other runway calculations. Current design mixes pure runway calculations with entity-specific calculations, making it unclear what belongs where.
+- **Files to Fix:**
+  - `runway/core/runway_calculator.py` - Rename to `runway_calculation_service.py` and remove entity-specific methods
+  - `runway/core/bill_impact_calculator.py` - Create new stateless service for bill impact calculations
+  - `runway/core/tray_item_impact_calculator.py` - Create new stateless service for tray item impact calculations
+  - `runway/core/payment_priority_calculator.py` - Remove (merge into PriorityCalculationService)
+  - `runway/core/tray_priority_calculator.py` - Remove (merge into PriorityCalculationService)
+  - `runway/experiences/tray.py` - Update to use both data orchestrator AND calculation services directly
+  - `runway/experiences/console.py` - Update to use both data orchestrator AND calculation services directly
+  - `runway/experiences/digest.py` - Update to use both data orchestrator AND calculation services directly
+  - `runway/experiences/test_drive.py` - Update to use both data orchestrator AND calculation services directly
+- **Required Changes:**
+  - Rename `RunwayCalculator` to `RunwayCalculationService` (pure runway calculations only)
+  - Create `BillImpactCalculator` (stateless, receives runway context as parameter)
+  - Create `TrayItemImpactCalculator` (stateless, handles bills/invoices with blocking data quality issues)
+  - Consolidate priority logic into existing `PriorityCalculationService`
+  - Remove duplicate priority services (`PaymentPriorityCalculator`, `TrayPriorityCalculator`)
+  - Update all experience services to use both orchestrators AND calculation services directly
+  - Ensure no circular dependencies (entity calculators are stateless)
+- **Service Architecture to Implement:**
+  ```python
+  # 1. Pure Runway Calculations (rename existing)
+  class RunwayCalculationService:
+      def calculate_current_runway(self, qbo_data: Dict) -> Dict
+      def calculate_scenario_impact(self, scenario: Dict, qbo_data: Dict) -> Dict  
+      def calculate_historical_runway(self, weeks_back: int, qbo_data: Dict) -> List[Dict]
+      def calculate_weekly_analysis(self, week_start: datetime, week_end: datetime, qbo_data: Dict) -> Dict
+      def calculate_daily_burn_rate(self, qbo_data: Dict) -> float
+      def calculate_cash_position(self, qbo_data: Dict) -> float
+      def calculate_ar_position(self, qbo_data: Dict) -> float
+      def calculate_ap_position(self, qbo_data: Dict) -> float
+  
+  # 2. Entity Impact Calculators (stateless, no circular dependencies)
+  class BillImpactCalculator:
+      def calculate_bill_runway_impact(self, bill_data: Dict, runway_context: Dict) -> Dict
+      def calculate_payment_impact(self, payment_data: Dict, runway_context: Dict) -> Dict
+  
+  class TrayItemImpactCalculator:
+      def calculate_tray_item_runway_impact(self, item_data: Dict, runway_context: Dict) -> Dict
+      # Handles bills/invoices with blocking data quality issues:
+      # AP: missing due dates, vendor info, line item details, malformed data
+      # AR: incomplete customer data, missing line items, unmatched payments, malformed data
+  
+  # 3. Centralized Priority Scoring (consolidate existing)
+  class PriorityCalculationService:
+      def calculate_bill_priority_score(self, bill_data: Dict) -> float
+      def calculate_invoice_priority_score(self, invoice_data: Dict) -> float
+      def calculate_collection_priority_score(self, customer_data: Dict) -> float
+      def calculate_tray_item_priority(self, item_data: Dict) -> Dict
+  
+  # 4. Experience Integration Pattern
+  class TrayService:
+      def __init__(self, db: Session, business_id: str):
+          self.data_orchestrator = HygieneTrayDataOrchestrator(db, business_id)
+          self.runway_calculator = RunwayCalculationService(db, business_id)
+          self.priority_calculator = PriorityCalculationService(db, business_id)
+          self.bill_impact_calculator = BillImpactCalculator()  # Stateless
+          self.tray_item_impact_calculator = TrayItemImpactCalculator()  # Stateless
+      
+      def get_tray_items(self, business_id: str) -> List[Dict]:
+          qbo_data = await self.data_orchestrator.get_tray_data(business_id)
+          runway_context = self.runway_calculator.calculate_current_runway(qbo_data)
+          bill_impacts = self.bill_impact_calculator.calculate_bill_runway_impact(bills, runway_context)
+          tray_impacts = self.tray_item_impact_calculator.calculate_tray_item_runway_impact(items, runway_context)
+          priorities = self.priority_calculator.calculate_tray_item_priority(items)
+          return self._combine_results(qbo_data, runway_context, bill_impacts, tray_impacts, priorities)
+  ```
+- **Dependencies:** Task 1 (Data Orchestrator Pattern) must be completed first
+- **Verification:**
+  - Run `grep -r "calculate_bill_runway_impact\|calculate_tray_item_runway_impact" runway/core/runway_calculation_service.py` - should return no results
+  - Run `grep -r "PaymentPriorityCalculator\|TrayPriorityCalculator" runway/` - should return no results
+  - Run `grep -r "RunwayCalculator" runway/experiences/` - should return no results (should be RunwayCalculationService)
+  - **Check uvicorn in Cursor terminal** - should be running without errors
+  - Run `pytest tests/runway/` - should pass without import failures
+- **Definition of Done:**
+  - Clear separation between pure runway calculations and entity-specific calculations
+  - Single source of truth for priority calculations (PriorityCalculationService only)
+  - No circular dependencies between services (entity calculators are stateless)
+  - All experiences use consistent calculation patterns (orchestrator + calculation services)
+  - ADR-001 compliance maintained (domain-specific logic separated from pure business logic)
+  - Easy to test and extend (each service can be tested independently)
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting work
+  - Update status to `[✅]` when task is complete
+  - Update status to `[❌]` if blocked or failed
+- **Git Commit:**
+  - After completing verification, commit the specific files modified:
+  - `git add runway/core/runway_calculation_service.py runway/core/bill_impact_calculator.py runway/core/tray_item_impact_calculator.py runway/experiences/`
+  - `git commit -m "feat: refactor runway calculator service architecture for priority scoring foundation"`
 - **Todo List Integration:**
   - Create Cursor todo for this task when starting
   - Update todo status as work progresses
@@ -416,22 +526,22 @@ Before starting any executable tasks, you MUST read these files to understand th
 
 ## **Summary**
 
-- **Total Tasks:** 5
-- **P0 Critical:** 4 tasks (mock violations, real data, test data service, tray experience)
-- **P1 High:** 1 task (dependency injection refactoring)
-- **Completed:** 0 tasks
-- **Remaining:** 5 tasks
+- **Total Tasks:** 1
+- **P0 Critical:** 1 task (data orchestrator pattern)
+- **P1 High:** 0 tasks
+- **Completed:** 1 task (data orchestrator pattern)
+- **Remaining:** 0 tasks
 
 **Key Success Patterns:**
-- Use SmartSyncService for all QBO operations
-- Use database fixtures from tests/conftest.py
-- Replace mock data with real QBO sandbox data
-- Follow post-nuclear architecture patterns
+- Follow ADR-001 and ADR-006 architectural patterns
+- Use data orchestrators for experience services
+- Maintain clean separation between domains/ and runway/
 
 **Critical Success Factors:**
-- All tasks must align with post-nuclear architecture
-- Use new SmartSync patterns and database fixtures
-- Address mock violations comprehensively
-- Solutions must be documented as executable tasks
+- All tasks must align with ADR-001 domain separation principles
+- Use data orchestrator pattern for experience services
+- Follow established architectural patterns
 
 This backlog contains only tasks that are **fully solved and ready for hands-free execution** by any developer familiar with the codebase.
+
+**Note:** Priority consolidation, QBO mapping, and RunwayCalculator refactoring are now properly documented as solutioning tasks in `002_NEEDS_SOLVING_TASKS.md` and require analysis and design work before becoming executable.

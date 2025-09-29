@@ -262,7 +262,9 @@ class BillService(TenantAwareService):
             qbo_id = qbo_bill_data.get('qbo_id')
             
             # Extract and create/find vendor from QBO vendor_ref
-            vendor_id = self._get_or_create_vendor_from_qbo_data(qbo_bill_data)
+            vendor_service = self._get_vendor_service()
+            vendor = vendor_service.get_or_create_vendor_from_qbo_data(qbo_bill_data)
+            vendor_id = vendor.vendor_id if vendor else None
             
             bill = self.db.query(Bill).filter(
                 Bill.qbo_bill_id == qbo_id,
@@ -426,14 +428,14 @@ class BillService(TenantAwareService):
                     }]
                 }
                 
-                # Create scheduled payment in QBO
-                qbo_response = await self.smart_sync.create_payment_immediate(qbo_payment_data)
+                # Create scheduled payment record in QBO (NOT execute)
+                # TODO: Implement QBO payment scheduling API
+                # For now, just create local payment record without QBO execution
+                logger.info(f"Scheduling payment for bill {bill.qbo_bill_id} on {payment_date}")
+                # qbo_response = await self.smart_sync.schedule_payment_in_qbo(qbo_payment_data)
                 
-                # Update local bill with QBO response
-                if qbo_response and "Payment" in qbo_response:
-                    bill.qbo_payment_id = qbo_response["Payment"].get("Id")
-                    bill.qbo_sync_token = qbo_response["Payment"].get("SyncToken")
-                    bill.qbo_last_sync = datetime.utcnow()
+                # No QBO response for scheduling - payment will be executed later
+                # when the scheduled date arrives
                     
             except Exception as e:
                 logger.error(f"Failed to schedule payment in QBO: {e}")
@@ -509,7 +511,8 @@ class BillService(TenantAwareService):
         """Create Bill from document extraction data."""
         # Find vendor if not provided
         if not vendor_id and extracted_data.get("vendor_name"):
-            vendor = self._find_vendor_by_name(extracted_data["vendor_name"])
+            vendor_service = self._get_vendor_service()
+            vendor = vendor_service.find_vendor_by_name(extracted_data["vendor_name"])
             vendor_id = vendor.vendor_id if vendor else None
         
         # Create bill
@@ -535,67 +538,10 @@ class BillService(TenantAwareService):
         
         return bill
     
-    def _find_vendor_by_name(self, vendor_name: str) -> Optional[Vendor]:
-        """Find vendor by name with fuzzy matching."""
-        return self._base_query(Vendor).filter(
-            Vendor.name.ilike(f"%{vendor_name}%")
-        ).first()
-    
-    def _get_or_create_vendor_from_qbo_data(self, qbo_bill_data: Dict[str, Any]) -> Optional[int]:
-        """
-        Extract vendor information from QBO bill data and create/find vendor in our database.
-        
-        Args:
-            qbo_bill_data: QBO bill data containing vendor_ref
-            
-        Returns:
-            vendor_id if found/created, None otherwise
-        """
-        try:
-            vendor_ref = qbo_bill_data.get('vendor_ref', {})
-            if not vendor_ref:
-                return None
-                
-            vendor_name = vendor_ref.get('name')
-            qbo_vendor_id = vendor_ref.get('value')
-            
-            if not vendor_name:
-                return None
-            
-            # Try to find existing vendor by QBO ID first
-            from domains.ap.models.vendor import Vendor
-            vendor = self.db.query(Vendor).filter(
-                Vendor.business_id == self.business_id,
-                Vendor.qbo_vendor_id == qbo_vendor_id
-            ).first()
-            
-            if vendor:
-                return vendor.vendor_id
-            
-            # Try to find by name (fuzzy match)
-            vendor = self._find_vendor_by_name(vendor_name)
-            if vendor:
-                # Update with QBO ID if found by name
-                vendor.qbo_vendor_id = qbo_vendor_id
-                self.db.flush()
-                return vendor.vendor_id
-            
-            # Create new vendor
-            vendor = Vendor(
-                business_id=self.business_id,
-                name=vendor_name,
-                qbo_vendor_id=qbo_vendor_id,
-                is_active=True
-            )
-            self.db.add(vendor)
-            self.db.flush()
-            
-            logger.info(f"Created vendor {vendor.vendor_id}: {vendor_name} from QBO data")
-            return vendor.vendor_id
-            
-        except Exception as e:
-            logger.warning(f"Failed to create vendor from QBO data: {e}")
-            return None
+    def _get_vendor_service(self):
+        """Get VendorService instance for vendor operations."""
+        from domains.ap.services.vendor import VendorService
+        return VendorService(self.db, self.business_id)
 
     def _requires_approval(self, bill: Bill) -> bool:
         """Determine if a bill requires approval based on business rules."""
@@ -633,7 +579,8 @@ class BillService(TenantAwareService):
     def _create_bill_from_qbo_data(self, qbo_bill_data: Dict) -> Bill:
         """Create a new Bill from QBO data."""
         # Find or create vendor
-        vendor = self._find_or_create_vendor(qbo_bill_data.get("VendorRef"))
+        vendor_service = self._get_vendor_service()
+        vendor = vendor_service.get_or_create_vendor_from_qbo_ref(qbo_bill_data.get("VendorRef"))
         
         # Create bill
         bill = Bill(
@@ -643,8 +590,8 @@ class BillService(TenantAwareService):
             qbo_sync_token=qbo_bill_data.get("SyncToken"),
             bill_number=qbo_bill_data.get("DocNumber"),
             amount=Decimal(str(qbo_bill_data.get("TotalAmt", 0))),
-            due_date=self._parse_qbo_date(qbo_bill_data.get("DueDate")),
-            issue_date=self._parse_qbo_date(qbo_bill_data.get("TxnDate")),
+            due_date=self._get_qbo_utils().parse_qbo_date(qbo_bill_data.get("DueDate")),
+            issue_date=self._get_qbo_utils().parse_qbo_date(qbo_bill_data.get("TxnDate")),
             status=BillStatus.PENDING,
             description=qbo_bill_data.get("Memo"),
             qbo_last_sync=datetime.utcnow()
@@ -662,43 +609,8 @@ class BillService(TenantAwareService):
         logger.info(f"Created new bill {bill.bill_id} from QBO bill {bill.qbo_bill_id}")
         return bill
     
-    def _find_or_create_vendor(self, vendor_ref: Dict) -> Optional[Vendor]:
-        """Find existing vendor or create new one from QBO vendor reference."""
-        if not vendor_ref:
-            return None
-        
-        qbo_vendor_id = vendor_ref.get("value")
-        vendor_name = vendor_ref.get("name")
-        
-        # Try to find existing vendor
-        vendor = self.db.query(Vendor).filter(
-            Vendor.business_id == self.business_id,
-            Vendor.qbo_vendor_id == qbo_vendor_id
-        ).first()
-        
-        if not vendor and vendor_name:
-            # Create new vendor
-            vendor = Vendor(
-                business_id=self.business_id,
-                qbo_vendor_id=qbo_vendor_id,
-                name=vendor_name,
-                is_active=True
-            )
-            self.db.add(vendor)
-            self.db.flush()
-        
-        return vendor
     
-    def _parse_qbo_date(self, date_str: Optional[str]) -> Optional[datetime]:
-        """Parse QBO date string to datetime."""
-        if not date_str:
-            return None
-        
-        try:
-            return datetime.strptime(date_str, "%Y-%m-%d")
-        except ValueError:
-            try:
-                return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
-            except ValueError:
-                logger.warning(f"Could not parse QBO date: {date_str}")
-                return None
+    def _get_qbo_utils(self):
+        """Get QBO utilities for QBO-specific operations."""
+        from infra.qbo.utils import QBOUtils
+        return QBOUtils

@@ -52,11 +52,7 @@
 
 **SmartSyncService Configuration**: `strategy=SyncStrategy.DATA_FETCH, priority=SyncPriority.MEDIUM, use_cache=True, max_attempts=3, backoff_factor=1.5`
 
-### **Dashboard & KPI Operations**
-- `GET /kpis/dashboard` - Get dashboard data
-- `GET /kpis/operational` - Get operational KPIs
-- `GET /kpis/cash-flow` - Get cash flow data
-- `GET /kpis/trends` - Get trend data
+
 
 ### **Bill Operations**
 - `GET /bills/` - Get all bills

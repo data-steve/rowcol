@@ -1,8 +1,9 @@
 """
-Balance Service - Core service for managing financial account balances.
+Balance Service - Bank service for managing financial account balances.
 
 Handles account balance data retrieval and formatting for digest generation
-and financial reporting.
+and financial reporting. Moved from domains/core/ to domains/bank/ as balances
+are bank account data, not core business data.
 """
 
 from typing import List, Dict, Any

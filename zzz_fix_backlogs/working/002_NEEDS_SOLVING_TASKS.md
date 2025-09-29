@@ -110,6 +110,69 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
 
 ---
 
+#### **Task 1.2: Design RunwayCalculator Service Architecture - Foundation for Priority Scoring**
+- **Status:** `[✅]` Solution complete - Ready for execution
+- **Priority:** P1 High
+- **Justification:** RunwayCalculator has scope creep with mixed responsibilities violating ADR-001. Need to design proper service architecture that serves as foundation for priority scoring and other runway calculations. Current design mixes pure runway calculations with entity-specific calculations, making it unclear what belongs where.
+- **Code Pointers:**
+  - `runway/core/runway_calculator.py` - Current monolithic service with mixed responsibilities
+  - `runway/core/priority_calculation_service.py` - Existing priority service that needs integration
+  - `runway/experiences/` - Experience services that need different calculation types
+  - `domains/` - Domain services that might need calculation integration
+- **Current Issues to Resolve:**
+  - RunwayCalculator mixes pure runway calculations with entity-specific calculations
+  - Unclear boundaries between "scenario impact" vs "historical runway" vs "current runway"
+  - Priority scoring scattered across multiple services instead of integrated
+  - Entity-specific calculations (bills, invoices, collections) not properly organized
+  - No clear foundation for how different calculation types should work together
+- **Required Analysis:**
+  - Map all current calculation methods and their actual purposes
+  - Design service boundaries that make architectural sense
+  - Determine how priority scoring integrates with runway calculations
+  - Design consistent patterns for different calculation types
+  - Plan how collections, bills, invoices, and other entities fit together
+- **Discovery Commands to Run:**
+  - `grep -r "def calculate_" runway/core/runway_calculator.py` - Find all calculation methods
+  - `grep -r "calculate_.*runway" runway/` - Find runway calculation usage patterns
+  - `grep -r "calculate_.*impact" runway/` - Find impact calculation patterns
+  - `grep -r "calculate_.*priority" runway/` - Find priority calculation patterns
+  - `grep -r "scenario\|historical\|current" runway/core/runway_calculator.py` - Find method naming patterns
+- **Files to Read First:**
+  - `runway/core/runway_calculator.py` - Current implementation to understand scope
+  - `runway/core/priority_calculation_service.py` - Existing priority service
+  - `runway/experiences/tray.py` - How tray uses calculations
+  - `runway/experiences/digest.py` - How digest uses calculations
+  - `runway/experiences/test_drive.py` - How test drive uses calculations
+- **Dependencies:** None
+- **Verification:** 
+  - Clear service architecture designed with proper boundaries
+  - Priority scoring properly integrated with runway calculations
+  - Entity-specific calculations properly organized
+  - Consistent naming and patterns across all calculation types
+  - Foundation established for all runway calculation needs
+- **Definition of Done:**
+  - Service architecture designed with clear boundaries
+  - All calculation types properly categorized and organized
+  - Priority scoring integration plan created
+  - Entity-specific calculations properly planned
+  - Consistent patterns established for all calculation types
+- **Solution Required:** Design comprehensive service architecture that serves as foundation for all runway calculations, including priority scoring, entity-specific calculations, and different calculation types (scenario, historical, current)
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting analysis
+  - Update status to `[💡]` when solution is identified
+  - Update status to `[✅]` when solution is documented
+  - Update status to `[❌]` if blocked or need help
+
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting analysis
+  - Update todo status as analysis progresses
+  - Mark todo complete when solution is documented
+  - Add discovery todos for found issues
+  - Remove obsolete todos when analysis is complete
+  - Ensure todo list reflects current analysis state
+
+---
+
 #### **Task 2: Fix Digest Data Architecture - Replace Wrong `get_qbo_data_for_digest` Pattern**
 - **Status:** `[ ]` Not started
 - **Priority:** P1 High

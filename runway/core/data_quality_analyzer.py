@@ -549,11 +549,8 @@ class DataQualityAnalyzer(TenantAwareService):
             datetime.fromisoformat(date_str.replace('Z', '+00:00'))
             return True
         except (ValueError, TypeError):
-            try:
-                datetime.strptime(date_str[:10], "%Y-%m-%d")
-                return True
-            except (ValueError, TypeError):
-                return False
+            from infra.qbo.utils import QBOUtils
+            return QBOUtils.validate_qbo_date_string(date_str)
     
     def _is_overdue(self, item: Dict[str, Any]) -> bool:
         """Check if an invoice/bill is overdue."""
@@ -578,8 +575,11 @@ class DataQualityAnalyzer(TenantAwareService):
             try:
                 due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
             except (ValueError, TypeError):
-                # Fallback for simple date format
-                due_date = datetime.strptime(due_date_str[:10], "%Y-%m-%d")
+                # Fallback for simple date format using QBO utilities
+                from infra.qbo.utils import QBOUtils
+                due_date = QBOUtils.parse_qbo_date(due_date_str)
+                if not due_date:
+                    return False
             
             # Check if bill is overdue by the week_end date and has a balance
             return due_date < week_end and float(bill.get("amount", 0)) > 0
@@ -597,8 +597,11 @@ class DataQualityAnalyzer(TenantAwareService):
             try:
                 due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
             except (ValueError, TypeError):
-                # Fallback for simple date format
-                due_date = datetime.strptime(due_date_str[:10], "%Y-%m-%d")
+                # Fallback for simple date format using QBO utilities
+                from infra.qbo.utils import QBOUtils
+                due_date = QBOUtils.parse_qbo_date(due_date_str)
+                if not due_date:
+                    return False
             
             # Check if invoice is overdue by the week_end date and has a balance
             return due_date < week_end and float(invoice.get("amount", 0)) > 0

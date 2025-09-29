@@ -244,6 +244,7 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - [ ] Solution Required section explains what needs to be figured out
 - [ ] **Progress tracking instructions included**
 - [ ] **Todo list integration included**
+- [ ] **Scratch notes document requirement included**
 
 ### **Blocked Tasks**
 - [ ] Ready for execution once unblocked

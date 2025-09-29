@@ -362,10 +362,10 @@ class RunwayReserveService:
     # NOTE: These methods contain hardcoded values and need real QBO integration
     
     def _get_business_cash_balance(self, business_id: str) -> Decimal:
-        """Get current cash balance from QBO via RunwayCalculator."""
+        """Get current cash balance from QBO via RunwayCalculationService."""
         try:
-            from runway.core.runway_calculator import RunwayCalculator
-            runway_calculator = RunwayCalculator(self.db, business_id, validate_business=False)
+            from runway.core.runway_calculation_service import RunwayCalculationService
+            runway_calculator = RunwayCalculationService(self.db, business_id, validate_business=False)
             runway_data = runway_calculator.calculate_current_runway({})
             cash_position = runway_data.get('cash_position', 0)
             return Decimal(str(cash_position))
@@ -375,10 +375,10 @@ class RunwayReserveService:
             return Decimal(str(RunwayAnalysisSettings.DEFAULT_CASH_BALANCE))
     
     def _calculate_monthly_burn_rate(self, business_id: str) -> Decimal:
-        """Calculate monthly burn rate from QBO expense data via RunwayCalculator."""
+        """Calculate monthly burn rate from QBO expense data via RunwayCalculationService."""
         try:
-            from runway.core.runway_calculator import RunwayCalculator
-            runway_calculator = RunwayCalculator(self.db, business_id, validate_business=False)
+            from runway.core.runway_calculation_service import RunwayCalculationService
+            runway_calculator = RunwayCalculationService(self.db, business_id, validate_business=False)
             runway_data = runway_calculator.calculate_current_runway({})
             burn_rate_data = runway_data.get('burn_rate', {})
             daily_burn = burn_rate_data.get('daily_burn', 0) if isinstance(burn_rate_data, dict) else 0
@@ -412,7 +412,7 @@ class RunwayReserveService:
         
         NOTE: This is intentionally using fallback values for now.
         Reserve management is a Phase 5+ feature. For current runway calculations,
-        use RunwayCalculator which has real QBO integration for burn rate.
+        use RunwayCalculationService which has real QBO integration for burn rate.
         
         When we implement advanced reserve features, this should query
         QBO Expense accounts for the last 3-6 months and calculate average.

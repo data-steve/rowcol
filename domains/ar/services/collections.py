@@ -149,6 +149,18 @@ class CollectionsService(TenantAwareService):
             
             # TODO: Implement actual reminder sending logic
             # This would integrate with email service, SMS service, etc.
+            # reminder_result = {
+            #     "invoice_id": invoice_id,
+            #     "customer_name": target_invoice["customer"]["name"],
+            #     "reminder_type": reminder_type,
+            #     "amount": target_invoice["amount"],
+            #     "days_overdue": target_invoice["days_overdue"],
+            #     "sent_at": datetime.utcnow().isoformat(),
+            #     "status": "sent",  # TODO: Get actual status from communication 
+            #     service
+            #     "message": custom_message or self._generate_reminder_message
+            #     (target_invoice, reminder_type)
+            # }
             
             raise NotImplementedError(
                 "Collections reminder sending is not yet implemented. "

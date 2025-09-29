@@ -53,6 +53,34 @@ Complex software problems have dependencies, assumptions, and unknowns that must
 
 **BEFORE doing any analysis or design work, you MUST complete discovery:**
 
+#### **CRITICAL: Create Scratch Notes Document**
+**Solutioning tasks traverse extensive history, context, and dialog before reaching clarity. You MUST create a scratch notes document to track progress and prevent drift.**
+
+**Required Pattern:**
+1. **Create `SOLUTIONING_PROGRESS_[TASKNAME].md`** at the start of each solutioning task
+2. **Document every discovery finding** as you work through the problem
+3. **Capture architectural decisions** as they emerge
+4. **Track implications** for other tasks
+5. **Maintain context** through the extensive dialog process
+6. **Produce clarity** that becomes execution task info or README documentation
+
+**Example Structure:**
+```markdown
+# Solutioning Progress - [Task Name]
+*Status: [Discovery/Analysis/Design/Complete]*
+
+## Problem Statement (Clarified)
+## Architecture Decisions Made
+## Proposed Architecture
+## Implementation Plan
+## Key Decisions Pending
+## Success Criteria
+## Next Steps
+## Implications for Other Tasks
+## Files to Update
+## Status: [Current State]
+```
+
 1. **Read the task completely** - understand what it's trying to solve
 2. **Run ALL discovery commands** - don't skip any, even if they seem obvious
 3. **Read ALL files listed in "Files to Read First"** - don't assume you know what's in them

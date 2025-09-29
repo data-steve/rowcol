@@ -697,8 +697,11 @@ class DemoDataService:
         """Calculate due date based on invoice date and payment terms."""
         from datetime import datetime
         
-        # Parse invoice date
-        inv_date = datetime.strptime(invoice_date, "%Y-%m-%d")
+        # Parse invoice date using QBO utilities
+        from infra.qbo.utils import QBOUtils
+        inv_date = QBOUtils.parse_qbo_date(invoice_date)
+        if not inv_date:
+            raise ValueError(f"Invalid invoice date format: {invoice_date}")
         
         # Parse terms
         if "NET 15" in terms:

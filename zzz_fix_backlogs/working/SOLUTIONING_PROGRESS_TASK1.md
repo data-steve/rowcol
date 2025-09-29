@@ -128,9 +128,49 @@ Frontend ↔ Experience Service ↔ Data Orchestrator ↔ Domains/
 - `runway/experiences/console.py` - Use DecisionConsoleDataOrchestrator
 - `runway/experiences/test_drive.py` - Use TestDriveDataOrchestrator
 
-## **Status: ✅ READY FOR EXECUTION**
+## **Status: ⚠️ ARCHITECTURAL AUDIT REQUIRED**
 
-All architectural decisions have been made. This solution is complete and ready to be converted to executable tasks.
+**CRITICAL DISCOVERY**: Implementation of ADR-006 revealed massive architectural inconsistencies that must be addressed before Task 1 can be considered truly executable.
+
+## **Major Issues Discovered**
+
+### **1. Priority Calculation Logic Duplication (Rabbit Droppings)**
+- **5+ different implementations** of priority calculation logic scattered across services
+- **Bill priority**: 3 different implementations with different business rules
+- **AR priority**: 2 different implementations with different scoring systems
+- **No single source of truth** for priority calculations
+
+### **2. RunwayCalculator Scope Creep**
+- **Monolithic service** doing too much (entity-specific calculations, console logic, tray logic)
+- **Violates ADR-001** by doing domain-specific work instead of pure runway calculations
+- **Missing separation** between generic domain logic and product-specific runway logic
+
+### **3. Domain Service Organization Confusion**
+- **AP Services**: `ap_ingestion.py` vs `bill_ingestion.py` duplication
+- **AR Services**: `ar_plan.py` vs `collections.py` vs `invoice.py` overlap
+- **Payment Services**: `payment_application.py` vs `payment_matching.py` confusion
+- **Balance Service**: Should be in `domains/bank` not `domains/core`
+
+### **4. Missing Integration**
+- **Tray experience** still has its own calculator priority functions
+- **Experiences not dependent** on `runway/core` services
+- **No clear separation** between domain services and runway services
+
+## **Task 1.5 Required**
+
+**Title**: Consolidate Priority Logic and Clarify Domain Service Boundaries
+
+**Scope**: 
+- Audit and consolidate all priority calculation logic
+- Resolve domain service duplication and overlap  
+- Refactor RunwayCalculator to pure calculation service
+- Ensure proper ADR-001 and ADR-006 compliance
+
+**Dependencies**: Must be completed before Task 1 can be considered truly executable
+
+## **Status: ⚠️ REQUIRES TASK 1.5 COMPLETION**
+
+Task 1 solutioning is complete, but execution requires Task 1.5 to address foundational architectural issues discovered during implementation.
 
 ## **ADR Recommendation**
 
