@@ -174,7 +174,7 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
 ---
 
 #### **Task 2: Fix Digest Data Architecture - Replace Wrong `get_qbo_data_for_digest` Pattern**
-- **Status:** `[ ]` Not started
+- **Status:** Done
 - **Priority:** P1 High
 - **Justification:** Digest is using the wrong data pattern (`get_qbo_data_for_digest`) instead of proper bulk operations. Digest needs to pull across lots of entities and run calculators for all customers on Friday morning jobs - this requires bulk operations on 2 dimensions, not generic data fetching.
 - **Code Pointers:**
@@ -293,11 +293,39 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
 - **Status:** `[ ]` Not started
 - **Priority:** P1 High
 - **Justification:** Current console payment workflow is incomplete and architecturally confused. Need to design proper workflow for bill approval → staging → payment decisions → batch finalization. Current implementation has missing staging mechanism, unclear reserve allocation timing, and competing payment services. This affects core runway functionality and user experience.
+
+## **Current Payment Workflow Analysis**
+
+### **What We Have (Execution Layer):**
+- ✅ **`domains/ap/services/payment.py:execute_payment_workflow()`** - Payment execution service
+  - Validates payment can be executed
+  - Executes payment using QBO bill pay rails
+  - Syncs with QBO
+  - Updates bill status to "paid"
+  - Commits transaction
+- ✅ **`runway/core/scheduled_payment_service.py`** - Scheduled payment service
+- ✅ **`runway/core/reserve_runway.py`** - Reserve allocation service
+
+### **What We're Missing (Decision Layer):**
+- ❌ **Bill Approval & Staging** - Currently in routes, not console experience
+- ❌ **Decision Making** - Console experience for "Pay Now" vs "Schedule" vs "Delay" decisions
+- ❌ **Batch Finalization** - Missing logic for processing multiple decisions together
+- ❌ **Decision Queue Management** - Just stores metadata, no real payment processing
+- ❌ **Reserve Allocation Timing** - Unclear when reserves should be allocated (approval vs decision vs execution)
+
+### **Complete Workflow Design Needed:**
+```
+1. Bill Approval → 2. Staging → 3. Decision Making → 4. Batch Finalization → 5. Payment Execution
+   [MISSING]      [MISSING]    [MISSING]         [MISSING]            [EXISTS]
+```
+
+**Key Insight**: `execute_payment_workflow` is the **execution engine** that the console payment decision workflow needs to **orchestrate**. The solutioning work needs to design the decision-making and orchestration layer that uses this existing execution service.
+
 - **Code Pointers:**
   - `runway/routes/bills.py` - Bill approval endpoint (approves but doesn't stage)
   - `runway/experiences/console.py` - Console experience service (incomplete decision handling)
   - `runway/core/data_orchestrators/decision_console_data_orchestrator.py` - Decision queue management
-  - `domains/ap/services/payment.py` - Payment execution service
+  - `domains/ap/services/payment.py` - Payment execution service (EXISTS - `execute_payment_workflow`)
   - `runway/core/scheduled_payment_service.py` - Scheduled payment service
   - `runway/core/reserve_runway.py` - Reserve allocation service
 - **Current Issues to Resolve:**
@@ -308,6 +336,7 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
   - Competing payment services (PaymentService vs ScheduledPaymentService)
   - Missing batch finalization logic for "Pay Now" vs "Schedule" vs "Delay"
   - ADR-001 violations (PaymentService depending on ScheduledPaymentService)
+  - **Missing orchestration layer** between decision-making and payment execution
 - **Required Analysis:**
   - Map current bill approval workflow and identify staging gaps
   - Design proper decision queue with real payment processing
@@ -316,6 +345,46 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
   - Clarify service boundaries between PaymentService, ScheduledPaymentService, and RunwayReserveService
   - Design batch finalization workflow for different decision types
   - Determine how "Delay" decisions affect queue management vs reserve allocation
+  - **Design orchestration layer** that connects decision-making to existing payment execution services
+  - **Determine when to call** `execute_payment_workflow()` vs `schedule_payment()` vs delay logic
+  - **Design batch processing** for multiple payment decisions
+  - **Design reserve allocation strategy** for different decision types
+
+## **Architecture Design Requirements**
+
+### **Service Orchestration Pattern:**
+```python
+# Console Payment Decision Workflow (NEEDS SOLUTIONING)
+├── Bill Approval & Staging
+├── Decision Making (Pay Now/Schedule/Delay)
+├── Batch Finalization
+└── Payment Orchestration
+    ├── execute_payment_workflow() ← EXISTS in domains/ap/services/payment.py
+    ├── schedule_payment() ← EXISTS in runway/core/scheduled_payment_service.py
+    └── delay_payment() ← NEEDS TO BE DESIGNED
+```
+
+### **Key Design Questions:**
+1. **Reserve Allocation Timing**: When should reserves be allocated?
+   - At bill approval (immediate staging)?
+   - At decision making (Pay Now/Schedule/Delay)?
+   - At payment execution (just before payment)?
+
+2. **Decision Queue Management**: How should decisions be processed?
+   - Individual processing as decisions are made?
+   - Batch processing for multiple decisions?
+   - Queue management for delayed decisions?
+
+3. **Service Boundaries**: How should services interact?
+   - Console experience → Decision queue → Payment orchestration → Payment execution
+   - Reserve allocation → Decision making → Payment execution
+   - Batch finalization → Multiple payment executions
+
+4. **Error Handling**: How should failures be handled?
+   - Payment execution failures
+   - Reserve allocation failures
+   - QBO sync failures
+   - Batch processing failures
 - **Discovery Commands to Run:**
   - `grep -r "approve.*bill" runway/` - Find all bill approval logic
   - `grep -r "decision.*queue" runway/` - Find decision queue usage
@@ -325,6 +394,7 @@ Domain services handle their own business logic and CRUD operations. SmartSyncSe
   - `grep -r "ScheduledPaymentService" domains/` - Find ADR-001 violations
   - `grep -r "finalize.*decision" runway/` - Find batch finalization logic
 - **Files to Read First:**
+  - `zzz_fix_backlog/working/ARCHITECTURAL_DECISIONS_BILL_PAYMENT_RESERVES.md` - context
   - `runway/routes/bills.py` - Current bill approval workflow
   - `runway/experiences/console.py` - Console experience service
   - `runway/core/data_orchestrators/decision_console_data_orchestrator.py` - Decision queue

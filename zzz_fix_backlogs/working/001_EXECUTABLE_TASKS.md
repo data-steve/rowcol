@@ -258,7 +258,7 @@ Before starting any executable tasks, you MUST read these files to understand th
 - **Files to Create:**
   - `runway/core/data_orchestrators/test_drive_data_orchestrator.py` - TestDrive data orchestrator
 - **Files to Fix:**
-  - `runway/experiences/test_drive.py` - Use TestDriveDataOrchestrator instead of direct RunwayCalculator calls
+  - `runway/experiences/test_drive.py` - Use TestDriveDataOrchestrator AND calculation services (following Task 1.2 pattern)
 - **Required Implementation:**
   ```python
   # runway/core/data_orchestrators/test_drive_data_orchestrator.py
@@ -292,20 +292,46 @@ Before starting any executable tasks, you MUST read these files to understand th
       async def _get_sandbox_data(self) -> Dict[str, Any]:
           """Use existing sandbox data generation for demos."""
           return await self._generate_sandbox_data()
+
+  # runway/experiences/test_drive.py - Updated to follow Task 1.2 pattern
+  class TestDriveService:
+      def __init__(self, db: Session, business_id: str):
+          # Data orchestrator for data pulling + state management
+          self.data_orchestrator = TestDriveDataOrchestrator(db, business_id)
+          
+          # Calculation services for business logic
+          self.runway_calculator = RunwayCalculationService(db, business_id)
+          self.priority_calculator = PriorityCalculationService(db, business_id)
+      
+      async def get_test_drive_analysis(self, business_id: str, use_sandbox: bool = False):
+          # Get data from orchestrator
+          qbo_data = await self.data_orchestrator.get_test_drive_data(business_id, use_sandbox)
+          
+          # Get runway context using calculation services
+          runway_context = self.runway_calculator.calculate_historical_runway(4, qbo_data)
+          
+          # Calculate priorities and impacts
+          priorities = self.priority_calculator.calculate_tray_item_priority(qbo_data.get('bills', []))
+          
+          return self._combine_results(qbo_data, runway_context, priorities)
   ```
 - **Pattern to Replace:**
   ```python
   # Instead of: runway_calculator = self._get_runway_calculator(business_id)
-  # Use: data = await self.data_orchestrator.get_test_drive_data(business_id)
+  # Use: 
+  # 1. data = await self.data_orchestrator.get_test_drive_data(business_id)
+  # 2. runway_context = self.runway_calculator.calculate_historical_runway(4, data)
+  # 3. priorities = self.priority_calculator.calculate_tray_item_priority(data.get('bills', []))
   ```
 - **Dependencies:** Task 1 (Data Orchestrator Pattern) must be completed first
 - **Verification:**
   - Run `grep -r "RunwayCalculator" runway/experiences/test_drive.py` - should return no results
   - Run `grep -r "TestDriveDataOrchestrator" runway/experiences/test_drive.py` - should show usage
+  - Run `grep -r "RunwayCalculationService\|PriorityCalculationService" runway/experiences/test_drive.py` - should show usage
   - **Check uvicorn in Cursor terminal** - should be running without errors
 - **Definition of Done:**
   - TestDriveDataOrchestrator created with real historical data and sandbox demo data support
-  - TestDrive experience uses orchestrator instead of direct RunwayCalculator calls
+  - TestDrive experience uses BOTH orchestrator AND calculation services (following Task 1.2 pattern)
   - Proper separation between real business data and demo data
   - 4-week historical analysis working with real data
   - PLG demo experience working with sandbox data
@@ -325,7 +351,7 @@ Before starting any executable tasks, you MUST read these files to understand th
 - **Files to Create:**
   - `runway/core/data_orchestrators/digest_data_orchestrator.py` - Digest data orchestrator
 - **Files to Fix:**
-  - `runway/experiences/digest.py` - Use DigestDataOrchestrator instead of direct RunwayCalculator calls
+  - `runway/experiences/digest.py` - Use DigestDataOrchestrator AND calculation services (following Task 1.2 pattern)
   - `infra/scheduler/digest_jobs.py` - Update to use orchestrator for bulk processing
 - **Required Implementation:**
   ```python
@@ -361,21 +387,48 @@ Before starting any executable tasks, you MUST read these files to understand th
                   results["errors"].append({"business_id": business_id, "error": str(e)})
           
           return results
+
+  # runway/experiences/digest.py - Updated to follow Task 1.2 pattern
+  class DigestService:
+      def __init__(self, db: Session, business_id: str):
+          # Data orchestrator for data pulling + state management
+          self.data_orchestrator = DigestDataOrchestrator(db, business_id)
+          
+          # Calculation services for business logic
+          self.runway_calculator = RunwayCalculationService(db, business_id)
+          self.priority_calculator = PriorityCalculationService(db, business_id)
+      
+      async def get_digest_analysis(self, business_id: str):
+          # Get data from orchestrator
+          qbo_data = await self.data_orchestrator.get_digest_data(business_id)
+          
+          # Get runway context using calculation services
+          runway_context = self.runway_calculator.calculate_current_runway(qbo_data)
+          
+          # Calculate priorities and impacts
+          bill_priorities = self.priority_calculator.calculate_bill_priority_score(qbo_data.get('bills', []))
+          invoice_priorities = self.priority_calculator.calculate_invoice_priority_score(qbo_data.get('invoices', []))
+          
+          return self._combine_results(qbo_data, runway_context, bill_priorities, invoice_priorities)
   ```
 - **Pattern to Replace:**
   ```python
   # Instead of: runway_calculator = RunwayCalculationService(self.db, business_id)
-  # Use: data = await self.data_orchestrator.get_digest_data(business_id)
+  # Use: 
+  # 1. data = await self.data_orchestrator.get_digest_data(business_id)
+  # 2. runway_context = self.runway_calculator.calculate_current_runway(data)
+  # 3. priorities = self.priority_calculator.calculate_bill_priority_score(data.get('bills', []))
   ```
 - **Dependencies:** Task 1 (Data Orchestrator Pattern) must be completed first
 - **Verification:**
   - Run `grep -r "RunwayCalculator" runway/experiences/digest.py` - should return no results
   - Run `grep -r "DigestDataOrchestrator" runway/experiences/digest.py` - should show usage
+  - Run `grep -r "RunwayCalculationService\|PriorityCalculationService" runway/experiences/digest.py` - should show usage
   - Run `grep -r "DigestDataOrchestrator" infra/scheduler/digest_jobs.py` - should show usage
   - **Check uvicorn in Cursor terminal** - should be running without errors
 - **Definition of Done:**
   - DigestDataOrchestrator created with single business and bulk processing support
-  - Digest experience uses orchestrator instead of direct RunwayCalculator calls
+  - Digest experience uses BOTH orchestrator AND calculation services (following Task 1.2 pattern)
   - Friday morning jobs use orchestrator for bulk processing
   - Proper error handling for individual business failures
   - Integration with existing job scheduler infrastructure
@@ -788,19 +841,38 @@ Before starting any executable tasks, you MUST read these files to understand th
 - **Total Tasks:** 4
 - **P0 Critical:** 1 task (data orchestrator pattern)
 - **P1 High:** 3 tasks (QBO mapping, TestDrive orchestrator, Digest orchestrator)
-- **Completed:** 1 task (data orchestrator pattern)
-- **Remaining:** 3 tasks
+- **Completed:** 2 tasks (data orchestrator pattern, runway calculator refactoring)
+- **Ready for Execution:** 3 tasks (TestDrive orchestrator, Digest orchestrator, QBO mapping)
 
 **Key Success Patterns:**
 - Follow ADR-001 and ADR-006 architectural patterns
 - Use data orchestrators for experience services
+- Use calculation services for business logic
+- **CRITICAL**: Experiences use BOTH orchestrators AND calculation services directly
 - Maintain clean separation between domains/ and runway/
 
 **Critical Success Factors:**
 - All tasks must align with ADR-001 domain separation principles
 - Use data orchestrator pattern for experience services
 - Follow established architectural patterns
+- **Follow Task 1.2 pattern**: Experience → DataOrchestrator + CalculationServices
+
+**Architecture Foundation:**
+- ✅ Data Orchestrator Pattern implemented
+- ✅ RunwayCalculator service architecture refactored
+- ✅ Domain service consolidation complete
+- ✅ Service boundaries clarified (ADR-001 compliance)
+
+**Ready for Next Phase:**
+- Task 1.3: TestDrive Data Orchestrator (updated to follow Task 1.2 pattern)
+- Task 1.4: Digest Data Orchestrator (updated to follow Task 1.2 pattern)
+- Task 2: QBOMapper Implementation
+
+**Remaining Solutioning Work:**
+- Mock violations & real data implementation
+- Comprehensive testing strategy
+- Console payment decision workflow
 
 This backlog contains only tasks that are **fully solved and ready for hands-free execution** by any developer familiar with the codebase.
 
-**Note:** Priority consolidation, QBO mapping, and RunwayCalculator refactoring are now properly documented as solutioning tasks in `002_NEEDS_SOLVING_TASKS.md` and require analysis and design work before becoming executable.
+**Note:** See `ARCHITECTURAL_FOUNDATION_SUMMARY.md` for complete architectural context and patterns.
