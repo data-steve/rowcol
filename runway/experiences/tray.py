@@ -457,11 +457,11 @@ class TrayService:
     def _send_invoice_reminder(self, item: TrayItem, confirmation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Send invoice reminder using real ARPlanService."""
         try:
-            from runway.core.ar_plan_service import ARPlanService
+            from runway.core.ar_collections_service import ARCollectionsService
             from domains.ar.services.invoice import InvoiceService
             
             # Use real services for reminder sending
-            ar_plan_service = ARPlanService(self.db)
+            ar_collections_service = ARCollectionsService(self.db)
             invoice_service = InvoiceService(self.db, self.business_id)
             
             # Get the actual invoice from database using InvoiceService
@@ -474,8 +474,8 @@ class TrayService:
                     "error": "invoice_not_found"
                 }
             
-            # Use real AR plan service to send reminder
-            updated_invoice = ar_plan_service.send_reminder(self.business_id, invoice.invoice_id)
+            # Use real AR collections service to send reminder
+            updated_invoice = ar_collections_service.send_reminder(self.business_id, invoice.invoice_id)
             
             return {
                 "success": True,

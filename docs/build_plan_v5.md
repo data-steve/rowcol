@@ -344,6 +344,24 @@ This plan provides the architectural rigor and detailed task breakdown needed fo
       - Add a status field to a `CollectionSequence` model to track its state (e.g., active, paused, completed).
       - Use the `SmartSyncService` to poll for new payments from QBO before sending a scheduled reminder.
 
+### **🚨 CRITICAL: Replace Mocked AR Collections Service** *Effort: 6h* - **P0 CRITICAL FIX**
+- **Problem**: `runway/core/ar_collections_service.py` contains mocked reminder functionality that just changes invoice status to "review" without actually sending emails or managing collection sequences.
+- **Impact**: Tray service invoice reminder functionality is non-functional and misleading to users.
+- **Solution**: Implement proper collections functionality as part of Smart Collections add-on module.
+- **Tasks**:
+  - **[ ] Implement real email sending** in `ARCollectionsService.send_reminder()` *Effort: 3h*
+    - Replace mock status change with actual email delivery via `EmailService`
+    - Create collection email templates (gentle, urgent, final notice)
+    - Add collection activity tracking to database
+  - **[ ] Add collection sequence management** *Effort: 2h*
+    - Track which stage of collection sequence each invoice is in
+    - Implement auto-pause when payment is detected
+    - Add collection history and customer communication tracking
+  - **[ ] Update tray service integration** *Effort: 1h*
+    - Ensure tray service properly handles real collections responses
+    - Add proper error handling for failed email delivery
+    - Update success/failure messaging to reflect actual functionality
+
 ### Stage 2.3: AR API & Integration (30h)
 - **[✅] AR API Endpoints**: `/runway/ar/invoices/` and basic `/runway/ar/collections/` are complete.
 - **[ ] `/runway/ar/collections/` - Manage reminder sequences**. *Effort: 5h*.
