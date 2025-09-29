@@ -18,7 +18,6 @@ Key Calculations:
 
 from sqlalchemy.orm import Session
 from domains.core.services.base_service import TenantAwareService
-from infra.qbo.smart_sync import SmartSyncService
 from infra.config import RunwayAnalysisSettings, RunwayThresholds
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
@@ -32,21 +31,19 @@ class RunwayCalculator(TenantAwareService):
     
     def __init__(self, db: Session, business_id: str, validate_business: bool = True):
         super().__init__(db, business_id, validate_business)
-        self.smart_sync = SmartSyncService(business_id, "", self.db)
     
-    async def calculate_current_runway(self, qbo_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def calculate_current_runway(self, qbo_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate current runway based on latest financial data.
+        Calculate current runway based on provided financial data.
         
+        Args:
+            qbo_data: Dictionary containing bills, invoices, and balances data
+            
         Returns:
             Dict containing current runway days, burn rate, cash position, etc.
         """
         try:
-            # Get QBO data if not provided
-            if qbo_data is None:
-                qbo_data = await self._get_qbo_data_for_digest()
-            
-            # Extract financial components
+            # Extract financial components from provided data
             cash_position = self._calculate_cash_position(qbo_data)
             burn_rate = self._calculate_burn_rate(qbo_data)
             ar_position = self._calculate_ar_position(qbo_data)
@@ -90,13 +87,13 @@ class RunwayCalculator(TenantAwareService):
             }
     
     def calculate_scenario_impact(self, scenario: Dict[str, Any], 
-                                qbo_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                                qbo_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Calculate runway impact of a specific scenario.
         
         Args:
             scenario: Dict describing the scenario (e.g., delay payment, accelerate collection)
-            qbo_data: Optional QBO data, will fetch if not provided
+            qbo_data: QBO data containing bills, invoices, and balances
             
         Returns:
             Dict containing scenario impact analysis
@@ -172,9 +169,9 @@ class RunwayCalculator(TenantAwareService):
             historical_data = []
             current_date = datetime.now()
             
-            # Get QBO data as baseline (use provided data or fetch from smart_sync)
+            # QBO data must be provided - RunwayCalculator is now a pure calculation service
             if qbo_data is None:
-                qbo_data = await self.smart_sync.get_qbo_data_for_digest()
+                raise ValueError("qbo_data is required - RunwayCalculator is now a pure calculation service")
             
             for week_offset in range(weeks_back, 0, -1):
                 week_start = current_date - timedelta(weeks=week_offset)
@@ -500,52 +497,13 @@ class RunwayCalculator(TenantAwareService):
                 'impact_type': 'unknown'
             }
 
-    async def _calculate_daily_burn_rate(self) -> float:
-        """Calculate daily burn rate for the business."""
+    def calculate_daily_burn_rate(self, qbo_data: Dict[str, Any]) -> float:
+        """Calculate daily burn rate from provided QBO data."""
         try:
-            qbo_data = await self._get_qbo_data_for_digest()
             burn_rate_data = self._calculate_burn_rate(qbo_data)
             return burn_rate_data.get('daily_burn', RunwayAnalysisSettings.DEFAULT_DAILY_BURN_RATE)
         except Exception as e:
             logger.error(f"Failed to calculate daily burn rate: {e}")
             return RunwayAnalysisSettings.DEFAULT_DAILY_BURN_RATE
-    
-    async def _get_qbo_data_for_digest(self) -> Dict[str, Any]:
-        """Get QBO data specifically for digest generation."""
-        # Check cache first
-        cached_data = self.cache.get("qbo", "digest")
-        if cached_data:
-            logger.debug("Returning cached digest data")
-            return cached_data
-        
-        # Check if we should sync
-        if not self.timing_manager.should_sync("qbo", SyncStrategy.ON_DEMAND, SyncPriority.HIGH):
-            # Return empty data if sync not needed
-            return {"bills": [], "invoices": [], "balances": []}
-        
-        try:
-            # Get QBO data using SmartSyncService
-            bills = await self.smart_sync.get_bills_for_digest()
-            invoices = await self.smart_sync.get_invoices_for_digest()
-            company_info = await self.smart_sync.get_company_info_for_digest()
-            
-            # Format for digest
-            digest_data = {
-                "bills": bills,
-                "invoices": invoices,
-                "balances": company_info,  # Use company info as balance proxy
-                "synced_at": datetime.utcnow().isoformat()
-            }
-            
-            # Cache the result
-            self.cache.set("qbo", digest_data, ttl_minutes=30)
-            self.timing_manager.record_sync("qbo", SyncStrategy.ON_DEMAND, success=True)
-            
-            return digest_data
-            
-        except Exception as e:
-            logger.error(f"Failed to get QBO data for digest: {e}")
-            self.timing_manager.record_sync("qbo", SyncStrategy.ON_DEMAND, success=False)
-            return {"bills": [], "invoices": [], "balances": []}
 
   

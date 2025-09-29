@@ -15,7 +15,7 @@ Key Changes:
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from runway.models.tray_item import TrayItem
-from infra.qbo.smart_sync import SmartSyncService
+from runway.core.data_orchestrators.hygiene_tray_data_orchestrator import HygieneTrayDataOrchestrator
 from runway.core.reserve_runway import RunwayReserveService
 from runway.core.payment_priority_calculator import PaymentPriorityCalculator
 from runway.core.tray_priority_calculator import TrayPriorityCalculator
@@ -32,8 +32,8 @@ class TrayService:
         self.db = db
         self.business_id = business_id
         
-        # Initialize sync utilities
-        self.smart_sync = SmartSyncService(business_id)
+        # Initialize data orchestrator
+        self.data_orchestrator = HygieneTrayDataOrchestrator(db)
         self.reserve_service = RunwayReserveService(db, business_id)
         
         # Canonical calculation services
@@ -61,17 +61,17 @@ class TrayService:
         priority_analysis = self.tray_priority_calculator.calculate_tray_item_priority(item_data)
         return int(priority_analysis.get('priority_score', 50))
 
-    def get_tray_items(self, business_id: int) -> List[Dict[str, Any]]:
-        """Get tray items from QBO data."""
+    async def get_tray_items(self, business_id: str) -> List[Dict[str, Any]]:
+        """Get tray items using data orchestrator."""
         try:
-            # Get QBO data using SmartSyncService
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
+            # Get tray data using data orchestrator
+            tray_data = await self.data_orchestrator.get_tray_data(business_id)
             
             tray_items = []
             
-            # Convert QBO bills to tray items
-            if "bills" in qbo_data:
-                for bill in qbo_data["bills"]:
+            # Convert bills to tray items
+            if "bills" in tray_data:
+                for bill in tray_data["bills"]:
                     tray_items.append({
                         "business_id": business_id,
                         "type": "bill",
@@ -82,9 +82,9 @@ class TrayService:
                         "status": "pending"
                     })
             
-            # Convert QBO invoices to tray items
-            if "invoices" in qbo_data:
-                for invoice in qbo_data["invoices"]:
+            # Convert invoices to tray items
+            if "invoices" in tray_data:
+                for invoice in tray_data["invoices"]:
                     tray_items.append({
                         "business_id": business_id,
                         "type": "invoice",
@@ -200,7 +200,7 @@ class TrayService:
         priority_analysis = self.tray_priority_calculator.calculate_tray_item_priority(item_data)
         return priority_analysis.get('runway_impact', {})
 
-    def get_enhanced_tray_items(self, business_id: int, include_runway_analysis: bool = True) -> List[Dict[str, Any]]:
+    async def get_enhanced_tray_items(self, business_id: int, include_runway_analysis: bool = True) -> List[Dict[str, Any]]:
         """
         Get enhanced tray items with priority and runway analysis using canonical calculators.
         
@@ -213,7 +213,7 @@ class TrayService:
         """
         try:
             # Get base tray items
-            base_items = self.get_tray_items(business_id)
+            base_items = await self.get_tray_items(business_id)
             
             if not include_runway_analysis:
                 return base_items
@@ -221,11 +221,11 @@ class TrayService:
             if not self.tray_priority_calculator:
                 raise RuntimeError("TrayPriorityCalculator not available - this is a critical service that should always be initialized")
             
-            # Get QBO data for enhanced analysis
-            qbo_data = self.smart_sync.get_qbo_data_for_digest() if self.smart_sync else {}
+            # Get QBO data for enhanced analysis using data orchestrator
+            tray_data = await self.data_orchestrator.get_tray_data(business_id) if business_id else {}
             
             # Use canonical TrayPriorityCalculator for comprehensive enhancement
-            enhanced_items = self.tray_priority_calculator.enhance_tray_items_with_priority(base_items, qbo_data)
+            enhanced_items = self.tray_priority_calculator.enhance_tray_items_with_priority(base_items, tray_data)
             
             return enhanced_items
             
