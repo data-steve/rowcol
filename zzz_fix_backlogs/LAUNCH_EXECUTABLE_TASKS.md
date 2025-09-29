@@ -56,19 +56,53 @@ Before starting any executable tasks, you MUST read these files to understand th
 
 ### **For Each Task:**
 1. **Read the task completely** - understand files to fix, patterns to implement
-2. **CRITICAL: Use Recursive Discovery/Triage Pattern** - understand what actually needs to be done : 
-- from a basic grep, search recursively outward in that file until you understand what that code was intended to help with
-- then you will understand what the fix actually needs to be beyond simplistic search and replace
-- with that understanding you could even compare it to your understanding off broader task and ADRs, biulding plan etc
-3. **Follow the implementation pattern** - use the provided code examples
-4. **Run verification commands** - ensure changes work correctly
-5. **Test with pytest** - run the specified test commands
-6. **Update status in document** - change `[ ]` to `[✅]` in the task list
-7. **Surgical git commit** - commit only the files modified for this task:
+2. **CRITICAL: Validate Assumptions Against Reality** - don't assume task descriptions are accurate
+3. **CRITICAL: Use Recursive Discovery/Triage Pattern** - understand what actually needs to be done
+4. **Follow the implementation pattern** - use the provided code examples
+5. **Run verification commands** - ensure changes work correctly
+6. **Test with pytest** - run the specified test commands
+7. **Update status in document** - change `[ ]` to `[✅]` in the task list
+8. **Surgical git commit** - commit only the files modified for this task:
    ```bash
    git add [specific-files-modified]
    git commit -m "feat: [task-description] - [brief-summary]"
    ```
+
+### **CRITICAL: Assumption Validation Before Execution**
+
+**NEVER execute tasks without validating assumptions against reality.**
+
+#### **Required Validation Steps:**
+1. **Run Discovery Commands** - Find all occurrences of patterns mentioned in tasks
+2. **Read Actual Code** - Don't assume task descriptions are accurate
+3. **Compare Assumptions vs Reality** - Document mismatches
+4. **Identify Architecture Gaps** - Understand current vs intended state
+5. **Question Task Scope** - Are tasks solving the right problems?
+
+#### **Discovery Documentation Template:**
+```
+### What Actually Exists:
+- [List what you found that exists]
+
+### What the Task Assumed:
+- [List what the task assumed exists]
+
+### Assumptions That Were Wrong:
+- [List assumptions that don't match reality]
+
+### Architecture Mismatches:
+- [List where current implementation differs from intended architecture]
+
+### Task Scope Issues:
+- [List where tasks may be solving wrong problems or have unclear scope]
+```
+
+#### **Validation Process:**
+1. **From a basic grep, search recursively outward** in that file until you understand what that code was intended to help with
+2. **Then you will understand what the fix actually needs to be** beyond simplistic search and replace
+3. **With that understanding you can compare it** to your understanding of broader task and ADRs, building plan etc
+4. **Document mismatches** between task assumptions and code reality
+5. **Plan fixes based on reality** not assumptions
 
 ### **CRITICAL: Recursive Discovery/Triage Pattern**
 

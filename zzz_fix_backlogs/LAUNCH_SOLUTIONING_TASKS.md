@@ -59,6 +59,42 @@ Complex software problems have dependencies, assumptions, and unknowns that must
 5. **Document what actually exists** - write down what you find vs what the task assumes
 6. **Validate every assumption** - test if things actually exist before proceeding
 
+#### **CRITICAL: Assumption Validation Framework**
+
+**NEVER start solutioning without validating assumptions against reality.**
+
+**Required Validation Steps:**
+1. **Run Discovery Commands** - Find all occurrences of patterns mentioned in tasks
+2. **Read Actual Code** - Don't assume task descriptions are accurate
+3. **Compare Assumptions vs Reality** - Document mismatches
+4. **Identify Architecture Gaps** - Understand current vs intended state
+5. **Question Task Scope** - Are tasks solving the right problems?
+
+**Discovery Documentation Template:**
+```
+### What Actually Exists:
+- [List what you found that exists]
+
+### What the Task Assumed:
+- [List what the task assumed exists]
+
+### Assumptions That Were Wrong:
+- [List assumptions that don't match reality]
+
+### Architecture Mismatches:
+- [List where current implementation differs from intended architecture]
+
+### Task Scope Issues:
+- [List where tasks may be solving wrong problems or have unclear scope]
+```
+
+**Validation Process:**
+1. **From a basic grep, search recursively outward** in that file until you understand what that code was intended to help with
+2. **Then you will understand what the fix actually needs to be** beyond simplistic search and replace
+3. **With that understanding you can compare it** to your understanding of broader task and ADRs, building plan etc
+4. **Document mismatches** between task assumptions and code reality
+5. **Plan solutions based on reality** not assumptions
+
 **Discovery Commands (Run ALL of them):**
 ```bash
 # Find all references to understand usage

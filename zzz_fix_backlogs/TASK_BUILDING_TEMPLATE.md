@@ -133,6 +133,35 @@ For each task, ask:
 
 **If ALL answers are YES → Blocked**
 
+### **CRITICAL: Assumption Validation Before Task Curation**
+
+**NEVER curate tasks without validating assumptions against reality.**
+
+#### **Required Validation Steps:**
+1. **Run Discovery Commands** - Find all occurrences of patterns mentioned in tasks
+2. **Read Actual Code** - Don't assume task descriptions are accurate
+3. **Compare Assumptions vs Reality** - Document mismatches
+4. **Identify Architecture Gaps** - Understand current vs intended state
+5. **Question Task Scope** - Are tasks solving the right problems?
+
+#### **Discovery Documentation Template:**
+```
+### What Actually Exists:
+- [List what you found that exists]
+
+### What the Task Assumed:
+- [List what the task assumed exists]
+
+### Assumptions That Were Wrong:
+- [List assumptions that don't match reality]
+
+### Architecture Mismatches:
+- [List where current implementation differs from intended architecture]
+
+### Task Scope Issues:
+- [List where tasks may be solving wrong problems or have unclear scope]
+```
+
 ### **CRITICAL: Recursive Discovery/Triage Pattern**
 
 **NEVER do blind search-and-replace!** This pattern prevents costly mistakes during task curation:
@@ -189,6 +218,12 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - Ensure consistent formatting
 
 ## **Quality Checklist**
+
+### **All Task Types (MANDATORY)**
+- [ ] **Assumption validation completed** - Task assumptions validated against actual codebase
+- [ ] **Discovery documentation included** - What actually exists vs what task assumed documented
+- [ ] **Architecture mismatches identified** - Current vs intended state gaps documented
+- [ ] **Task scope validated** - Tasks solving the right problems, not wrong ones
 
 ### **Executable Tasks**
 - [ ] Clear implementation patterns with code examples
@@ -385,20 +420,23 @@ grep -r "get_.*_for_digest" . --include="*.py"
 ## **Critical Lessons Learned**
 
 ### **Why Tasks Fail:**
-1. **Incomplete Discovery**: Tasks list specific files but miss others found during execution
-2. **Blind Search-and-Replace**: Changes made without understanding context
-3. **Insufficient Cleanup**: Edge cases and dependencies not handled
-4. **Missing File Operations**: Using `mv` instead of `cp` then `rm`
-5. **No Todo Integration**: Progress not tracked in Cursor todo list
+1. **Assumption-Based Planning**: Tasks planned based on assumptions, not reality
+2. **Incomplete Discovery**: Tasks list specific files but miss others found during execution
+3. **Blind Search-and-Replace**: Changes made without understanding context
+4. **Insufficient Cleanup**: Edge cases and dependencies not handled
+5. **Missing File Operations**: Using `mv` instead of `cp` then `rm`
+6. **No Todo Integration**: Progress not tracked in Cursor todo list
 
 ### **Success Patterns:**
-1. **Comprehensive Discovery**: Find ALL occurrences, not just initial files
-2. **Recursive Triage**: Understand context before making changes
-3. **Comprehensive Cleanup**: Handle all edge cases and dependencies
-4. **Proper File Operations**: Use `cp` then `rm` for moves
-5. **Todo Integration**: Track progress and discovered edge cases
+1. **Assumption Validation**: Always validate task assumptions against actual codebase
+2. **Comprehensive Discovery**: Find ALL occurrences, not just initial files
+3. **Recursive Triage**: Understand context before making changes
+4. **Comprehensive Cleanup**: Handle all edge cases and dependencies
+5. **Proper File Operations**: Use `cp` then `rm` for moves
+6. **Todo Integration**: Track progress and discovered edge cases
 
 ### **Template Requirements:**
+- **Every task MUST have assumption validation completed before curation**
 - **Every executable task MUST have comprehensive discovery commands**
 - **Every executable task MUST have recursive triage process**
 - **Every executable task MUST have comprehensive cleanup requirements**
