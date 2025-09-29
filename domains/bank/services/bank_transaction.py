@@ -35,8 +35,8 @@ class BankTransactionService(TenantAwareService):
         """
         Import bank transactions from QBO bank feeds.
         
-        Phase 3: Replace with real QBO API integration
-        Phase 1-2: Mock data for development
+        TODO: RowCol Phase - Real QBO bank feed integration
+        Oodaloo Phase: Basic transaction import only
         """
         imported_transactions = []
         

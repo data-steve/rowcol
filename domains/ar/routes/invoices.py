@@ -29,8 +29,12 @@ def get_invoices(business_id: int, db: Session = Depends(get_db)):
 
 @router.post("/collections/remind")
 def send_collection_reminder(business_id: str, invoice_id: str, db: Session = Depends(get_db)):
-    raise NotImplementedError(
-        "Collections reminder API is not yet implemented. "
-        "This feature requires integration with CollectionsService and email service. "
-        "See build_plan_v5.md Phase 2: Smart AR & Collections for implementation plan."
-    )
+    """Send collection reminder using CollectionsService."""
+    from domains.ar.services.collections import CollectionsService
+    
+    try:
+        collections_service = CollectionsService(db, business_id)
+        result = collections_service.send_reminder(invoice_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send reminder: {str(e)}")

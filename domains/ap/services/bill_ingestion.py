@@ -60,7 +60,8 @@ class BillService(TenantAwareService):
         
         # Use SmartSyncService for QBO operations
         self.smart_sync = SmartSyncService(business_id, "", self.db)
-        self.document_processor = document_processor  # TODO: Implement when provider strategy decided
+        # self.document_processor = document_processor  # TODO: Implement when provider strategy decided
+        self.document_processor = None  # Document processing not yet implemented
         self.runway_reserve_service = runway_reserve_service
         
         logger.info(f"Initialized BillService for business {business_id}")
@@ -353,46 +354,8 @@ class BillService(TenantAwareService):
         
         return latest_safe_date
 
-    def get_runway_impact_suggestion(self, bill: Bill, runway_days: int) -> Dict[str, Any]:
-        """
-        Generates a 'smart' suggestion about the runway impact of paying a bill.
-
-        This is a "Connective Intelligence" feature that links AP decisions
-        to the cash runway.
-        """
-        if not bill.due_date or not bill.amount:
-            return {
-                "recommendation": "Pay when convenient.",
-                "impact_days": 0,
-                "confidence": 0.5,
-                "reasoning": "Bill details are incomplete."
-            }
-
-        days_to_delay = (self.calculate_latest_safe_pay_date(bill) - datetime.utcnow()).days
-        
-        # Simplified runway impact calculation
-        # Future: Use a more sophisticated calculation from a dedicated runway service
-        daily_burn_rate = 1000  # Placeholder
-        impact_days = int(bill.amount / daily_burn_rate)
-
-        if days_to_delay > 0:
-            recommendation = (
-                f"Delaying this ${bill.amount:,.2f} payment by {days_to_delay} days "
-                f"could protect {impact_days} days of runway."
-            )
-            confidence = 0.9
-            reasoning = "Based on your current runway and the bill's flexibility."
-        else:
-            recommendation = f"Paying this overdue bill will cost {impact_days} days of runway."
-            confidence = 0.95
-            reasoning = "This bill is past its due date and should be paid promptly."
-
-        return {
-            "recommendation": recommendation,
-            "impact_days": impact_days,
-            "confidence": confidence,
-            "reasoning": reasoning
-        }
+    # REMOVED: get_runway_impact_suggestion() - This belongs in runway/ services, not domains/
+    # Runway impact calculations should be handled by RunwayCalculationService or BillImpactCalculator
 
     def can_bill_be_approved(self, bill: Bill) -> bool:
         """Check if bill can be approved."""
@@ -427,7 +390,7 @@ class BillService(TenantAwareService):
     def _bill_to_dict(self, bill: Bill) -> Dict[str, Any]:
         """Convert bill to dictionary for API responses."""
         latest_safe_pay_date = self.calculate_latest_safe_pay_date(bill)
-        runway_impact = self.get_runway_impact_suggestion(bill, runway_days=90) # Placeholder runway
+        # runway_impact removed - belongs in runway/ services
         return {
             'bill_id': bill.bill_id,
             'business_id': bill.business_id,
@@ -452,7 +415,7 @@ class BillService(TenantAwareService):
             'is_overdue': self.is_bill_overdue(bill),
             'days_until_due': self.get_days_until_due(bill),
             'latest_safe_pay_date': latest_safe_pay_date.isoformat() if latest_safe_pay_date else None,
-            'runway_impact_suggestion': runway_impact,
+            # 'runway_impact_suggestion' removed - belongs in runway/ services
             'requires_approval': bill.requires_approval,
             'description': bill.description,
             'tags': bill.tags,
