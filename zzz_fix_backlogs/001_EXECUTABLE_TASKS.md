@@ -5,7 +5,7 @@
 
 ## **Task Complexity Curation**
 
-**✅ FULLY SOLVED (3 tasks)** - These tasks have:
+**✅ FULLY SOLVED (6 tasks)** - These tasks have:
 - Clear implementation patterns with code examples
 - Specific files to fix with exact changes needed
 - Complete verification steps with pytest commands
@@ -44,9 +44,85 @@ Before starting any executable tasks, you MUST read these files to understand th
 
 ---
 
-## **Phase 1: Mock Violations & Real Data Implementation (P0 Critical)**
+## **Phase 1: Data Orchestrator Pattern Implementation (P0 Critical)**
 
-#### **Task 1: Eliminate Mock Violations in Experience Services**
+#### **Task 1: Implement Data Orchestrator Pattern for Experience Services**
+- **Status:** `[ ]` Not started
+- **Priority:** P0 Critical
+- **Justification:** Establish the architectural foundation for experience services using data orchestrators. This provides the proper pattern for all other tasks and eliminates the broken RunwayCalculator approach.
+- **Files to Fix:**
+  - `runway/core/runway_calculator.py` - Refactor to pure calculation service
+  - `runway/experiences/digest.py` - Use DigestDataOrchestrator
+  - `runway/experiences/tray.py` - Use HygieneTrayDataOrchestrator
+  - `runway/experiences/console.py` - Use DecisionConsoleDataOrchestrator
+  - `runway/experiences/test_drive.py` - Use TestDriveDataOrchestrator
+- **Required Changes:**
+  - Create `runway/core/data_orchestrators/` directory
+  - Implement orchestrators for each experience (Tray first, then others)
+  - Refactor RunwayCalculator to pure calculation service
+  - Update experience services to use orchestrators
+  - Remove direct SmartSyncService calls from experiences
+- **Pattern to Implement:**
+  ```python
+  # Create orchestrator
+  class HygieneTrayDataOrchestrator:
+      async def get_tray_data(self, business_id: str) -> Dict[str, Any]:
+          bills = await self.ap_service.get_bills_with_issues(business_id)
+          invoices = await self.ar_service.get_invoices_with_issues(business_id)
+          return {"bills": bills, "invoices": invoices}
+  
+  # Update experience service
+  class HygieneTrayService:
+      def __init__(self, db: Session):
+          self.db = db
+          self.orchestrator = HygieneTrayDataOrchestrator()
+      
+      async def get_tray_items(self, business_id: str) -> List[Dict]:
+          data = await self.orchestrator.get_tray_data(business_id)
+          return data["bills"] + data["invoices"]
+  ```
+- **Dependencies:** None
+- **Verification:**
+  - Run `grep -r "SmartSyncService" runway/experiences/` - should return no results
+  - Run `grep -r "get_.*_for_digest" runway/core/` - should return no results
+  - **Check uvicorn in Cursor terminal** - should be running without errors
+  - Run `pytest tests/runway/` - should pass without import failures
+- **Definition of Done:**
+  - All experiences use their specific data orchestrator
+  - No direct SmartSyncService calls from experiences
+  - RunwayCalculator is pure calculation service
+  - No runtime errors from broken method calls
+  - Domain separation maintained (ADR-001 compliance)
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting work
+  - Update status to `[✅]` when task is complete
+  - Update status to `[❌]` if blocked or failed
+- **Git Commit:**
+  - After completing verification, commit the specific files modified:
+  - `git add runway/core/data_orchestrators/ runway/experiences/`
+  - `git commit -m "feat: implement data orchestrator pattern for experience services"`
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
+  - Remove obsolete todos when files are deleted
+  - Ensure todo list reflects current system state
+- **Comprehensive Cleanup Requirements:**
+  - **File Operations:** Use `cp` then `rm` for moves, never just `mv`
+  - **Remove Obsolete Files:** Delete any files that are no longer needed
+  - **Import Cleanup:** Remove ALL old imports, add ALL new imports
+  - **Reference Cleanup:** Update ALL references to renamed methods/classes
+  - **Dependency Cleanup:** Update ALL dependent code
+  - **Test Cleanup:** Update ALL test files that reference changed code
+  - **Documentation Cleanup:** Update ALL documentation references
+  - **Verification Cleanup:** Run cleanup verification commands
+
+---
+
+## **Phase 2: Mock Violations & Real Data Implementation (P0 Critical)**
+
+#### **Task 2: Eliminate Mock Violations in Experience Services**
 - **Status:** `[ ]` Not started
 - **Priority:** P0 Critical
 - **Justification:** Experience services still have hardcoded mock data that violates our "no more mocks" commitment. This prevents real data implementation and testing.
