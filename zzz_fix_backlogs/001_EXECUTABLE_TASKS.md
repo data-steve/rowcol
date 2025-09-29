@@ -46,32 +46,44 @@ Before starting any executable tasks, you MUST read these files to understand th
 
 ## **Phase 1: Data Orchestrator Pattern Implementation (P0 Critical)**
 
-#### **Task 1: Implement Data Orchestrator Pattern for Experience Services**
+#### **Task 1: Implement Data Orchestrator Pattern for Tray and Console**
 - **Status:** `[ ]` Not started
 - **Priority:** P0 Critical
-- **Justification:** Establish the architectural foundation for experience services using data orchestrators. This provides the proper pattern for all other tasks and eliminates the broken RunwayCalculator approach.
+- **Justification:** Establish the architectural foundation for experience services using data orchestrators. Implement Tray (simple) and Console (with state management) to establish the pattern for all other experiences.
 - **Files to Fix:**
   - `runway/core/runway_calculator.py` - Refactor to pure calculation service
-  - `runway/experiences/digest.py` - Use DigestDataOrchestrator
   - `runway/experiences/tray.py` - Use HygieneTrayDataOrchestrator
   - `runway/experiences/console.py` - Use DecisionConsoleDataOrchestrator
-  - `runway/experiences/test_drive.py` - Use TestDriveDataOrchestrator
 - **Required Changes:**
   - Create `runway/core/data_orchestrators/` directory
-  - Implement orchestrators for each experience (Tray first, then others)
+  - Implement `HygieneTrayDataOrchestrator` (simple data pulling)
+  - Implement `DecisionConsoleDataOrchestrator` (data + state management)
   - Refactor RunwayCalculator to pure calculation service
-  - Update experience services to use orchestrators
-  - Remove direct SmartSyncService calls from experiences
+  - Update Tray and Console services to use orchestrators
+  - Remove direct SmartSyncService calls from Tray and Console
 - **Pattern to Implement:**
   ```python
-  # Create orchestrator
+  # Tray Orchestrator (Simple)
   class HygieneTrayDataOrchestrator:
       async def get_tray_data(self, business_id: str) -> Dict[str, Any]:
           bills = await self.ap_service.get_bills_with_issues(business_id)
           invoices = await self.ar_service.get_invoices_with_issues(business_id)
           return {"bills": bills, "invoices": invoices}
   
-  # Update experience service
+  # Console Orchestrator (With State Management)
+  class DecisionConsoleDataOrchestrator:
+      async def get_console_data(self, business_id: str) -> Dict[str, Any]:
+          bills = await self.ap_service.get_bills_ready_for_decision(business_id)
+          invoices = await self.ar_service.get_invoices_ready_for_decision(business_id)
+          balances = await self.bank_service.get_balances(business_id)
+          decision_queue = await self._get_decision_queue(business_id)
+          return {"bills": bills, "invoices": invoices, "balances": balances, "decision_queue": decision_queue}
+      
+      async def add_decision(self, business_id: str, decision: Dict) -> Dict:
+          await self._store_decision(business_id, decision)
+          return await self.get_console_data(business_id)
+  
+  # Update experience services
   class HygieneTrayService:
       def __init__(self, db: Session):
           self.db = db
@@ -80,6 +92,17 @@ Before starting any executable tasks, you MUST read these files to understand th
       async def get_tray_items(self, business_id: str) -> List[Dict]:
           data = await self.orchestrator.get_tray_data(business_id)
           return data["bills"] + data["invoices"]
+  
+  class DecisionConsoleService:
+      def __init__(self, db: Session):
+          self.db = db
+          self.orchestrator = DecisionConsoleDataOrchestrator()
+      
+      async def get_console_data(self, business_id: str) -> Dict[str, Any]:
+          return await self.orchestrator.get_console_data(business_id)
+      
+      async def add_decision(self, business_id: str, decision: Dict) -> Dict[str, Any]:
+          return await self.orchestrator.add_decision(business_id, decision)
   ```
 - **Dependencies:** None
 - **Verification:**
