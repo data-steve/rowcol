@@ -251,9 +251,268 @@ Before starting any executable tasks, you MUST read these files to understand th
   - **Documentation Cleanup:** Update ALL documentation references
   - **Verification Cleanup:** Run cleanup verification commands
 
+#### **Task 1.3: Implement TestDrive Data Orchestrator - PLG Experience Data Management**
+- **Status:** `[ ]` Not started
+- **Priority:** P1 High
+- **Justification:** TestDrive needs data orchestrator following ADR-006 pattern for PLG experience. Currently uses `RunwayCalculator` directly and mixes real data with demo data. Need proper orchestrator for 4-week historical analysis and sandbox demo data.
+- **Files to Create:**
+  - `runway/core/data_orchestrators/test_drive_data_orchestrator.py` - TestDrive data orchestrator
+- **Files to Fix:**
+  - `runway/experiences/test_drive.py` - Use TestDriveDataOrchestrator instead of direct RunwayCalculator calls
+- **Required Implementation:**
+  ```python
+  # runway/core/data_orchestrators/test_drive_data_orchestrator.py
+  class TestDriveDataOrchestrator:
+      """Data orchestrator for TestDrive PLG experience - handles both real and demo data."""
+      
+      async def get_test_drive_data(self, business_id: str = None, use_sandbox: bool = False) -> Dict[str, Any]:
+          """Get test drive data - real historical data or sandbox demo data."""
+          if use_sandbox or business_id is None:
+              return await self._get_sandbox_data()
+          else:
+              return await self._get_historical_data(business_id)
+      
+      async def _get_historical_data(self, business_id: str) -> Dict[str, Any]:
+          """Pull 4 weeks of historical data for real business analysis."""
+          end_date = datetime.now()
+          start_date = end_date - timedelta(weeks=4)
+          
+          bills = await self.ap_service.get_bills_for_period(business_id, start_date, end_date)
+          invoices = await self.ar_service.get_invoices_for_period(business_id, start_date, end_date)
+          balances = await self.bank_service.get_balances_for_period(business_id, start_date, end_date)
+          
+          return {
+              "bills": bills,
+              "invoices": invoices,
+              "balances": balances,
+              "period": {"start": start_date, "end": end_date},
+              "demo_mode": False
+          }
+      
+      async def _get_sandbox_data(self) -> Dict[str, Any]:
+          """Use existing sandbox data generation for demos."""
+          return await self._generate_sandbox_data()
+  ```
+- **Pattern to Replace:**
+  ```python
+  # Instead of: runway_calculator = self._get_runway_calculator(business_id)
+  # Use: data = await self.data_orchestrator.get_test_drive_data(business_id)
+  ```
+- **Dependencies:** Task 1 (Data Orchestrator Pattern) must be completed first
+- **Verification:**
+  - Run `grep -r "RunwayCalculator" runway/experiences/test_drive.py` - should return no results
+  - Run `grep -r "TestDriveDataOrchestrator" runway/experiences/test_drive.py` - should show usage
+  - **Check uvicorn in Cursor terminal** - should be running without errors
+- **Definition of Done:**
+  - TestDriveDataOrchestrator created with real historical data and sandbox demo data support
+  - TestDrive experience uses orchestrator instead of direct RunwayCalculator calls
+  - Proper separation between real business data and demo data
+  - 4-week historical analysis working with real data
+  - PLG demo experience working with sandbox data
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting work
+  - Update status to `[✅]` when task is complete
+  - Update status to `[❌]` if blocked or failed
+- **Git Commit:**
+  - After completing verification, commit the specific files modified:
+  - `git add runway/core/data_orchestrators/test_drive_data_orchestrator.py runway/experiences/test_drive.py`
+  - `git commit -m "feat: implement TestDrive data orchestrator for PLG experience"`
+
+#### **Task 1.4: Implement Digest Data Orchestrator - Bulk Processing for Weekly Analysis**
+- **Status:** `[ ]` Not started
+- **Priority:** P1 High
+- **Justification:** Digest needs data orchestrator following ADR-006 pattern for bulk processing across multiple businesses. Currently uses `RunwayCalculator` directly and has sequential processing. Need proper orchestrator for Friday morning jobs with bulk operations.
+- **Files to Create:**
+  - `runway/core/data_orchestrators/digest_data_orchestrator.py` - Digest data orchestrator
+- **Files to Fix:**
+  - `runway/experiences/digest.py` - Use DigestDataOrchestrator instead of direct RunwayCalculator calls
+  - `infra/scheduler/digest_jobs.py` - Update to use orchestrator for bulk processing
+- **Required Implementation:**
+  ```python
+  # runway/core/data_orchestrators/digest_data_orchestrator.py
+  class DigestDataOrchestrator:
+      """Data orchestrator for Digest weekly analysis - handles bulk processing across businesses."""
+      
+      async def get_digest_data(self, business_id: str) -> Dict[str, Any]:
+          """Get digest data for single business."""
+          bills = await self.ap_service.get_bills_for_digest(business_id)
+          invoices = await self.ar_service.get_invoices_for_digest(business_id)
+          balances = await self.bank_service.get_balances_for_digest(business_id)
+          
+          return {
+              "bills": bills,
+              "invoices": invoices,
+              "balances": balances,
+              "business_id": business_id,
+              "synced_at": datetime.utcnow().isoformat()
+          }
+      
+      async def process_bulk_digest(self, business_ids: List[str]) -> Dict[str, Any]:
+          """Process multiple businesses for Friday morning jobs."""
+          results = {"successful": 0, "failed": 0, "errors": []}
+          
+          for business_id in business_ids:
+              try:
+                  data = await self.get_digest_data(business_id)
+                  # Process digest for this business
+                  results["successful"] += 1
+              except Exception as e:
+                  results["failed"] += 1
+                  results["errors"].append({"business_id": business_id, "error": str(e)})
+          
+          return results
+  ```
+- **Pattern to Replace:**
+  ```python
+  # Instead of: runway_calculator = RunwayCalculationService(self.db, business_id)
+  # Use: data = await self.data_orchestrator.get_digest_data(business_id)
+  ```
+- **Dependencies:** Task 1 (Data Orchestrator Pattern) must be completed first
+- **Verification:**
+  - Run `grep -r "RunwayCalculator" runway/experiences/digest.py` - should return no results
+  - Run `grep -r "DigestDataOrchestrator" runway/experiences/digest.py` - should show usage
+  - Run `grep -r "DigestDataOrchestrator" infra/scheduler/digest_jobs.py` - should show usage
+  - **Check uvicorn in Cursor terminal** - should be running without errors
+- **Definition of Done:**
+  - DigestDataOrchestrator created with single business and bulk processing support
+  - Digest experience uses orchestrator instead of direct RunwayCalculator calls
+  - Friday morning jobs use orchestrator for bulk processing
+  - Proper error handling for individual business failures
+  - Integration with existing job scheduler infrastructure
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting work
+  - Update status to `[✅]` when task is complete
+  - Update status to `[❌]` if blocked or failed
+- **Git Commit:**
+  - After completing verification, commit the specific files modified:
+  - `git add runway/core/data_orchestrators/digest_data_orchestrator.py runway/experiences/digest.py infra/scheduler/digest_jobs.py`
+  - `git commit -m "feat: implement Digest data orchestrator for bulk weekly analysis"`
+
 ---
 
-## **Phase 2: Mock Violations & Real Data Implementation (P0 Critical)**
+## **Phase 2: QBO Data Mapping Implementation (P1 High)**
+
+#### **Task 2: Implement QBOMapper for Consistent Field Mapping**
+- **Status:** `[ ]` Not started
+- **Priority:** P1 High
+- **Justification:** QBO field names (`TotalAmt`, `DueDate`, `VendorRef`) are scattered throughout the codebase with inconsistent access patterns. Need centralized mapping layer for consistent field access and easier maintenance when QBO API changes.
+- **Files to Create:**
+  - `runway/core/data_mappers/` - Directory for data mappers
+  - `runway/core/data_mappers/qbo_mapper.py` - QBO field mapping service
+- **Files to Fix:**
+  - `runway/routes/collections.py` - Replace direct QBO field access with mapper
+  - `runway/routes/invoices.py` - Replace direct QBO field access with mapper
+  - `runway/experiences/test_drive.py` - Replace direct QBO field access with mapper
+  - `runway/core/scheduled_payment_service.py` - Replace direct QBO field access with mapper
+  - `domains/ap/services/payment.py` - Replace direct QBO field access with mapper
+  - `domains/ap/services/bill_ingestion.py` - Replace direct QBO field access with mapper
+  - `domains/ar/services/collections.py` - Replace direct QBO field access with mapper
+  - `domains/ar/services/invoice.py` - Replace direct QBO field access with mapper
+- **Required Implementation:**
+  ```python
+  # runway/core/data_mappers/qbo_mapper.py
+  class QBOMapper:
+      """Centralized QBO field mapping for consistent data access."""
+      
+      @staticmethod
+      def map_bill_data(qbo_bill: Dict) -> Dict:
+          """Map QBO bill data to runway field names."""
+          return {
+              'qbo_id': qbo_bill.get('Id'),
+              'doc_number': qbo_bill.get('DocNumber'),
+              'amount': float(qbo_bill.get('TotalAmt', 0)),
+              'balance': float(qbo_bill.get('Balance', 0)),
+              'due_date': qbo_bill.get('DueDate'),
+              'txn_date': qbo_bill.get('TxnDate'),
+              'vendor': {
+                  'id': qbo_bill.get('VendorRef', {}).get('value'),
+                  'name': qbo_bill.get('VendorRef', {}).get('name', 'Unknown')
+              },
+              'private_note': qbo_bill.get('PrivateNote'),
+              'sync_token': qbo_bill.get('SyncToken')
+          }
+      
+      @staticmethod
+      def map_invoice_data(qbo_invoice: Dict) -> Dict:
+          """Map QBO invoice data to runway field names."""
+          return {
+              'qbo_id': qbo_invoice.get('Id'),
+              'doc_number': qbo_invoice.get('DocNumber'),
+              'amount': float(qbo_invoice.get('TotalAmt', 0)),
+              'balance': float(qbo_invoice.get('Balance', 0)),
+              'due_date': qbo_invoice.get('DueDate'),
+              'txn_date': qbo_invoice.get('TxnDate'),
+              'customer': {
+                  'id': qbo_invoice.get('CustomerRef', {}).get('value'),
+                  'name': qbo_invoice.get('CustomerRef', {}).get('name', 'Unknown')
+              },
+              'private_note': qbo_invoice.get('PrivateNote'),
+              'sync_token': qbo_invoice.get('SyncToken')
+          }
+      
+      @staticmethod
+      def map_payment_data(qbo_payment: Dict) -> Dict:
+          """Map QBO payment data to runway field names."""
+          return {
+              'qbo_id': qbo_payment.get('Id'),
+              'amount': float(qbo_payment.get('TotalAmt', 0)),
+              'txn_date': qbo_payment.get('TxnDate'),
+              'payment_ref_num': qbo_payment.get('PaymentRefNum'),
+              'private_note': qbo_payment.get('PrivateNote'),
+              'sync_token': qbo_payment.get('SyncToken')
+          }
+  ```
+- **Pattern to Replace:**
+  ```python
+  # Instead of: invoice_data.get("CustomerRef", {}).get("name", "Unknown")
+  # Use: QBOMapper.map_invoice_data(invoice_data)['customer']['name']
+  
+  # Instead of: float(invoice_data.get("TotalAmt", 0))
+  # Use: QBOMapper.map_invoice_data(invoice_data)['amount']
+  ```
+- **Dependencies:** None
+- **Verification:**
+  - Run `grep -r "TotalAmt\|DueDate\|VendorRef\|CustomerRef" runway/` - should return no results
+  - Run `grep -r "TotalAmt\|DueDate\|VendorRef\|CustomerRef" domains/` - should return no results
+  - Run `grep -r "QBOMapper" runway/` - should show usage
+  - Run `grep -r "QBOMapper" domains/` - should show usage
+  - **Check uvicorn in Cursor terminal** - should be running without errors
+- **Definition of Done:**
+  - Centralized QBOMapper service created with all QBO field mappings
+  - All QBO field access replaced with mapper calls
+  - Consistent field naming across runway and domain services
+  - Easy to maintain when QBO API changes
+  - All obsolete files removed
+  - All imports cleaned up
+  - All references updated
+- **Progress Tracking:**
+  - Update status to `[🔄]` when starting work
+  - Update status to `[✅]` when task is complete
+  - Update status to `[❌]` if blocked or failed
+- **Git Commit:**
+  - After completing verification, commit the specific files modified:
+  - `git add runway/core/data_mappers/ runway/routes/ runway/experiences/ domains/`
+  - `git commit -m "feat: implement QBOMapper for consistent QBO field mapping"`
+- **Todo List Integration:**
+  - Create Cursor todo for this task when starting
+  - Update todo status as work progresses
+  - Mark todo complete when task is done
+  - Add cleanup todos for discovered edge cases
+  - Remove obsolete todos when files are deleted
+  - Ensure todo list reflects current system state
+- **Comprehensive Cleanup Requirements:**
+  - **File Operations:** Use `cp` then `rm` for moves, never just `mv`
+  - **Remove Obsolete Files:** Delete any files that are no longer needed
+  - **Import Cleanup:** Remove ALL old imports, add ALL new imports
+  - **Reference Cleanup:** Update ALL references to renamed methods/classes
+  - **Dependency Cleanup:** Update ALL dependent code
+  - **Test Cleanup:** Update ALL test files that reference changed code
+  - **Documentation Cleanup:** Update ALL documentation references
+  - **Verification Cleanup:** Run cleanup verification commands
+
+---
+
+## **Phase 3: Mock Violations & Real Data Implementation (P0 Critical)**
 
 #### **Task 2: Eliminate Mock Violations in Experience Services**
 - **Status:** `[ ]` Not started
@@ -526,11 +785,11 @@ Before starting any executable tasks, you MUST read these files to understand th
 
 ## **Summary**
 
-- **Total Tasks:** 1
+- **Total Tasks:** 4
 - **P0 Critical:** 1 task (data orchestrator pattern)
-- **P1 High:** 0 tasks
+- **P1 High:** 3 tasks (QBO mapping, TestDrive orchestrator, Digest orchestrator)
 - **Completed:** 1 task (data orchestrator pattern)
-- **Remaining:** 0 tasks
+- **Remaining:** 3 tasks
 
 **Key Success Patterns:**
 - Follow ADR-001 and ADR-006 architectural patterns
