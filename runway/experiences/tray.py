@@ -325,7 +325,7 @@ class TrayService:
             {"action": "mark_resolved", "label": "Mark Resolved", "requires_confirmation": True}
         ])
 
-    def confirm_action(self, business_id: int, tray_item_id: int, action: str, 
+    async def confirm_action(self, business_id: int, tray_item_id: int, action: str, 
                     confirmation_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Confirm action on tray item with enhanced validation and QBO integration."""
         item = self.db.query(TrayItem).filter(
@@ -338,7 +338,7 @@ class TrayService:
         
         # Process action based on type
         if action == "pay_bill":
-            return self._process_bill_payment(item, confirmation_data)
+            return await self._process_bill_payment(item, confirmation_data)
         elif action == "schedule_payment":
             return self._schedule_payment(item, confirmation_data)
         elif action == "send_reminder":
@@ -356,7 +356,7 @@ class TrayService:
                 "action": action
             }
 
-    def _process_bill_payment(self, item: TrayItem, confirmation_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process_bill_payment(self, item: TrayItem, confirmation_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process bill payment with real QBO integration."""
         try:
             from domains.ap.services.bill_ingestion import BillService
@@ -374,15 +374,15 @@ class TrayService:
                     "error": "bill_not_found"
                 }
             
-            # Use real bill approval and scheduling
-            if bill_service.approve_bill_entity(bill, "api_user", "Approved via tray"):
-                if bill_service.schedule_bill_payment(bill, datetime.utcnow()):
-                    return {
-                        "success": True,
-                        "message": f"Bill payment processed for {item.title}",
-                        "qbo_bill_id": bill.qbo_bill_id,
-                        "amount": float(bill.amount)
-                    }
+                # Use real bill approval and scheduling
+                if await bill_service.approve_bill_entity(bill, "api_user", "Approved via tray"):
+                    if await bill_service.schedule_bill_payment(bill, datetime.utcnow()):
+                        return {
+                            "success": True,
+                            "message": f"Bill payment processed for {item.title}",
+                            "qbo_bill_id": bill.qbo_bill_id,
+                            "amount": float(bill.amount)
+                        }
             
             return {
                 "success": False,
@@ -455,13 +455,13 @@ class TrayService:
             }
 
     def _send_invoice_reminder(self, item: TrayItem, confirmation_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Send invoice reminder using real ARPlanService."""
+        """Send invoice reminder using proper CollectionsService from domains/ar."""
         try:
-            from runway.core.ar_collections_service import ARCollectionsService
+            from domains.ar.services.collections import CollectionsService
             from domains.ar.services.invoice import InvoiceService
             
-            # Use real services for reminder sending
-            ar_collections_service = ARCollectionsService(self.db)
+            # Use proper domain services for reminder sending
+            collections_service = CollectionsService(self.db, self.business_id)
             invoice_service = InvoiceService(self.db, self.business_id)
             
             # Get the actual invoice from database using InvoiceService
@@ -474,15 +474,21 @@ class TrayService:
                     "error": "invoice_not_found"
                 }
             
-            # Use real AR collections service to send reminder
-            updated_invoice = ar_collections_service.send_reminder(self.business_id, invoice.invoice_id)
+            # Use proper collections service to send reminder
+            reminder_result = collections_service.send_reminder(
+                invoice_id=item.qbo_id,
+                reminder_type=confirmation_data.get("reminder_type", "email"),
+                custom_message=confirmation_data.get("custom_message")
+            )
             
             return {
                 "success": True,
                 "message": f"Reminder sent for invoice {item.title}",
-                "reminder_type": confirmation_data.get("reminder_type", "email"),
-                "qbo_invoice_id": invoice.qbo_invoice_id,
-                "invoice_status": updated_invoice.status
+                "reminder_type": reminder_result.get("reminder_type", "email"),
+                "qbo_invoice_id": item.qbo_id,
+                "customer_name": reminder_result.get("customer_name"),
+                "amount": reminder_result.get("amount"),
+                "days_overdue": reminder_result.get("days_overdue")
             }
             
         except Exception as e:
