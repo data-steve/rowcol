@@ -24,6 +24,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 
 from infra.qbo.smart_sync import SmartSyncService
+from runway.services.utils.qbo_mapper import QBOMapper
 from domains.core.services.base_service import TenantAwareService
 from common.exceptions import ValidationError
 import logging
@@ -62,11 +63,14 @@ class CollectionsService(TenantAwareService):
             overdue_invoices = []
             
             for invoice_data in invoices:
-                balance = float(invoice_data.get("Balance", 0))
+                # Map QBO data to standardized format
+                mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+                
+                balance = mapped_invoice.get("balance", 0)
                 if balance <= 0:
                     continue  # Skip paid invoices
                 
-                due_date_str = invoice_data.get("DueDate")
+                due_date_str = mapped_invoice.get("due_date")
                 if not due_date_str:
                     continue
                 
@@ -85,14 +89,13 @@ class CollectionsService(TenantAwareService):
                         continue
                     
                     # Get customer information
-                    customer_ref = invoice_data.get("CustomerRef", {})
-                    customer_id = customer_ref.get("value")
-                    customer_name = customer_ref.get("name", "Unknown")
+                    customer_id = mapped_invoice.get("customer", {}).get("id")
+                    customer_name = mapped_invoice.get("customer", {}).get("name", "Unknown")
                     
                     # Build overdue invoice record
                     overdue_invoice = {
-                        "invoice_id": invoice_data.get("Id"),
-                        "invoice_number": invoice_data.get("DocNumber"),
+                        "invoice_id": mapped_invoice.get("qbo_id"),
+                        "invoice_number": mapped_invoice.get("doc_number"),
                         "customer": {
                             "id": customer_id,
                             "name": customer_name,
@@ -100,8 +103,8 @@ class CollectionsService(TenantAwareService):
                             "phone": self._get_customer_phone(customer_id)
                         },
                         "amount": balance,
-                        "original_amount": float(invoice_data.get("TotalAmt", balance)),
-                        "issue_date": invoice_data.get("TxnDate"),
+                        "original_amount": mapped_invoice.get("amount", balance),
+                        "issue_date": mapped_invoice.get("txn_date"),
                         "due_date": due_date_str,
                         "days_overdue": days_overdue,
                         "priority": invoice_priority,
@@ -207,11 +210,14 @@ class CollectionsService(TenantAwareService):
             total_outstanding = 0
             
             for invoice_data in invoices:
-                balance = float(invoice_data.get("Balance", 0))
+                # Map QBO data to standardized format
+                mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+                
+                balance = mapped_invoice.get("balance", 0)
                 if balance <= 0:
                     continue  # Skip paid invoices
                 
-                due_date_str = invoice_data.get("DueDate")
+                due_date_str = mapped_invoice.get("due_date")
                 if not due_date_str:
                     continue
                 
@@ -220,8 +226,8 @@ class CollectionsService(TenantAwareService):
                     days_overdue = (today - due_date).days
                     
                     invoice_summary = {
-                        "invoice_id": invoice_data.get("Id"),
-                        "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
+                        "invoice_id": mapped_invoice.get("qbo_id"),
+                        "customer": mapped_invoice.get("customer", {}).get("name", "Unknown"),
                         "amount": balance,
                         "days_overdue": days_overdue
                     }
@@ -290,20 +296,23 @@ class CollectionsService(TenantAwareService):
             payment_days = []
             
             for invoice_data in invoices:
-                if invoice_data.get("CustomerRef", {}).get("value") != customer_id:
+                # Map QBO data to standardized format
+                mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+                
+                if mapped_invoice.get("customer", {}).get("id") != customer_id:
                     continue
                 
-                invoice_amount = float(invoice_data.get("TotalAmt", 0))
-                balance = float(invoice_data.get("Balance", 0))
+                invoice_amount = mapped_invoice.get("amount", 0)
+                balance = mapped_invoice.get("balance", 0)
                 paid_amount = invoice_amount - balance
                 
                 invoice_record = {
-                    "invoice_id": invoice_data.get("Id"),
+                    "invoice_id": mapped_invoice.get("qbo_id"),
                     "amount": invoice_amount,
                     "balance": balance,
                     "paid_amount": paid_amount,
-                    "issue_date": invoice_data.get("TxnDate"),
-                    "due_date": invoice_data.get("DueDate"),
+                    "issue_date": mapped_invoice.get("txn_date"),
+                    "due_date": mapped_invoice.get("due_date"),
                     "is_paid": balance <= 0
                 }
                 
@@ -312,7 +321,7 @@ class CollectionsService(TenantAwareService):
                 total_paid += paid_amount
                 
                 # Calculate payment days for paid invoices
-                if balance <= 0 and invoice_data.get("DueDate"):
+                if balance <= 0 and mapped_invoice.get("due_date"):
                     # TODO: Get actual payment date from QBO payment records
                     # For now, estimate based on current data
                     pass

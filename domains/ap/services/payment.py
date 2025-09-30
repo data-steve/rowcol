@@ -20,6 +20,7 @@ import logging
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.payment import Payment, PaymentStatus, PaymentType
 from domains.ap.models.bill import Bill as BillModel
+from runway.services.utils.qbo_mapper import QBOMapper
 # NOTE: Providers parked for future strategy - using QBOAPIClient directly
 from common.exceptions import ValidationError, BusinessRuleViolationError
 

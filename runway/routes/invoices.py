@@ -15,6 +15,7 @@ from infra.auth.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
 from domains.ar.services.collections import CollectionsService
 from runway.services.1_calculators.reserve_runway import RunwayReserveService
+from runway.services.utils.qbo_mapper import QBOMapper
 from common.exceptions import ValidationError
 
 router = APIRouter(tags=["AR Invoices"])
@@ -61,15 +62,18 @@ async def list_invoices(
         count = 0
         
         for invoice_data in overdue_invoices:
+            # Map QBO data to standardized format
+            mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+            
             # Apply filters
             if status_filter:
-                balance = float(invoice_data.get("Balance", 0))
+                balance = mapped_invoice.get("balance", 0)
                 if status_filter == "paid" and balance > 0:
                     continue
                 elif status_filter == "unpaid" and balance <= 0:
                     continue
                 elif status_filter == "overdue":
-                    due_date_str = invoice_data.get("DueDate")
+                    due_date_str = mapped_invoice.get("due_date")
                     if due_date_str:
                         try:
                             due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
@@ -80,7 +84,7 @@ async def list_invoices(
                     else:
                         continue
             
-            if customer_id and invoice_data.get("CustomerRef", {}).get("value") != customer_id:
+            if customer_id and mapped_invoice.get("customer", {}).get("id") != customer_id:
                 continue
             
             # Apply pagination
@@ -91,13 +95,13 @@ async def list_invoices(
                 break
             
             # Calculate runway impact
-            balance = float(invoice_data.get("Balance", 0))
+            balance = mapped_invoice.get("balance", 0)
             runway_impact_days = balance / daily_burn if daily_burn > 0 else 0
             
             # Determine status
             invoice_status = "paid" if balance <= 0 else "unpaid"
             if balance > 0:
-                due_date_str = invoice_data.get("DueDate")
+                due_date_str = mapped_invoice.get("due_date")
                 if due_date_str:
                     try:
                         due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
@@ -107,17 +111,14 @@ async def list_invoices(
                         pass
             
             enhanced_invoice = {
-                "invoice_id": invoice_data.get("Id"),
-                "invoice_number": invoice_data.get("DocNumber"),
-                "customer": {
-                    "id": invoice_data.get("CustomerRef", {}).get("value"),
-                    "name": invoice_data.get("CustomerRef", {}).get("name", "Unknown")
-                },
-                "amount": float(invoice_data.get("TotalAmt", 0)),
+                "invoice_id": mapped_invoice.get("qbo_id"),
+                "invoice_number": mapped_invoice.get("doc_number"),
+                "customer": mapped_invoice.get("customer", {"id": None, "name": "Unknown"}),
+                "amount": mapped_invoice.get("amount", 0),
                 "balance": balance,
-                "paid_amount": float(invoice_data.get("TotalAmt", 0)) - balance,
-                "issue_date": invoice_data.get("TxnDate"),
-                "due_date": invoice_data.get("DueDate"),
+                "paid_amount": mapped_invoice.get("amount", 0) - balance,
+                "issue_date": mapped_invoice.get("txn_date"),
+                "due_date": mapped_invoice.get("due_date"),
                 "status": invoice_status,
                 "runway_impact": {
                     "collection_value_days": runway_impact_days,
@@ -161,8 +162,11 @@ async def get_invoice(
                 detail=f"Invoice {invoice_id} not found"
             )
         
+        # Map QBO data to standardized format
+        mapped_invoice = QBOMapper.map_invoice_data(target_invoice)
+        
         # Get customer payment history
-        customer_id = target_invoice.get("CustomerRef", {}).get("value")
+        customer_id = mapped_invoice.get("customer", {}).get("id")
         payment_history = None
         if customer_id:
             try:
@@ -171,7 +175,7 @@ async def get_invoice(
                 payment_history = None
         
         # Calculate runway impact
-        balance = float(target_invoice.get("Balance", 0))
+        balance = mapped_invoice.get("balance", 0)
         runway_calc = reserve_service.calculate_runway_with_reserves()
         daily_burn = runway_calc.get("daily_burn", 1)
         runway_impact_days = balance / daily_burn if daily_burn > 0 else 0
@@ -179,7 +183,7 @@ async def get_invoice(
         # Check if overdue
         is_overdue = False
         days_overdue = 0
-        due_date_str = target_invoice.get("DueDate")
+        due_date_str = mapped_invoice.get("due_date")
         if due_date_str and balance > 0:
             try:
                 due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
@@ -191,19 +195,19 @@ async def get_invoice(
         
         return {
             "invoice_id": invoice_id,
-            "invoice_number": target_invoice.get("DocNumber"),
+            "invoice_number": mapped_invoice.get("doc_number"),
             "customer": {
                 "id": customer_id,
-                "name": target_invoice.get("CustomerRef", {}).get("name", "Unknown"),
+                "name": mapped_invoice.get("customer", {}).get("name", "Unknown"),
                 "payment_history": payment_history["summary"] if payment_history else None
             },
             "amounts": {
-                "total": float(target_invoice.get("TotalAmt", 0)),
+                "total": mapped_invoice.get("amount", 0),
                 "balance": balance,
-                "paid": float(target_invoice.get("TotalAmt", 0)) - balance
+                "paid": mapped_invoice.get("amount", 0) - balance
             },
             "dates": {
-                "issue_date": target_invoice.get("TxnDate"),
+                "issue_date": mapped_invoice.get("txn_date"),
                 "due_date": due_date_str,
                 "days_overdue": days_overdue if is_overdue else 0
             },
@@ -400,7 +404,8 @@ async def get_invoices_runway_impact(
             invoice_count += 1
             
             # Check if overdue
-            due_date_str = invoice_data.get("DueDate")
+            mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+            due_date_str = mapped_invoice.get("due_date")
             if due_date_str:
                 try:
                     due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))

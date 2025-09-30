@@ -22,6 +22,7 @@ from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.bill import Bill, BillStatus, BillPriority
 from domains.ap.models.vendor import Vendor
 from infra.qbo.smart_sync import SmartSyncService
+from runway.services.utils.qbo_mapper import QBOMapper
 from common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -486,6 +487,9 @@ class BillService(TenantAwareService):
     
     def _create_bill_from_qbo_data(self, qbo_bill_data: Dict) -> Bill:
         """Create a new Bill from QBO data."""
+        # Map QBO data to standardized format
+        mapped_bill = QBOMapper.map_bill_data(qbo_bill_data)
+        
         # Find or create vendor
         vendor_service = self._get_vendor_service()
         vendor = vendor_service.get_or_create_vendor_from_qbo_ref(qbo_bill_data.get("VendorRef"))
@@ -494,12 +498,12 @@ class BillService(TenantAwareService):
         bill = Bill(
             business_id=self.business_id,
             vendor_id=vendor.vendor_id if vendor else None,
-            qbo_bill_id=qbo_bill_data.get("Id"),
-            qbo_sync_token=qbo_bill_data.get("SyncToken"),
-            bill_number=qbo_bill_data.get("DocNumber"),
-            amount=Decimal(str(qbo_bill_data.get("TotalAmt", 0))),
-            due_date=self._get_qbo_utils().parse_qbo_date(qbo_bill_data.get("DueDate")),
-            issue_date=self._get_qbo_utils().parse_qbo_date(qbo_bill_data.get("TxnDate")),
+            qbo_bill_id=mapped_bill.get("qbo_id"),
+            qbo_sync_token=mapped_bill.get("sync_token"),
+            bill_number=mapped_bill.get("doc_number"),
+            amount=Decimal(str(mapped_bill.get("amount", 0))),
+            due_date=self._get_qbo_utils().parse_qbo_date(mapped_bill.get("due_date")),
+            issue_date=self._get_qbo_utils().parse_qbo_date(mapped_bill.get("txn_date")),
             status=BillStatus.PENDING,
             description=qbo_bill_data.get("Memo"),
             qbo_last_sync=datetime.utcnow()

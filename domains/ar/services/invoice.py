@@ -4,6 +4,7 @@ from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice
 from domains.policy.services.policy_engine import PolicyEngineService
 from infra.qbo.smart_sync import SmartSyncService
+from runway.services.utils.qbo_mapper import QBOMapper
 from datetime import datetime, timedelta
 from domains.core.services.base_service import TenantAwareService
 import logging
@@ -147,13 +148,16 @@ class InvoiceService(TenantAwareService):
                     InvoiceModel.qbo_id == qbo_invoice_data.get("Id")
                 ).first()
                 if not invoice:
+                    # Map QBO data to standardized format
+                    mapped_invoice = QBOMapper.map_invoice_data(qbo_invoice_data)
+                    
                     invoice = InvoiceModel(
                         business_id=business_id,
-                        customer_id=int(qbo_invoice_data.get("CustomerRef", {}).get("value", 0)),
-                        qbo_id=qbo_invoice_data.get("Id"),
-                        issue_date=qbo_invoice_data.get("TxnDate"),
-                        due_date=qbo_invoice_data.get("DueDate"),
-                        total=float(qbo_invoice_data.get("TotalAmt", 0)),
+                        customer_id=int(mapped_invoice.get("customer", {}).get("id", 0)),
+                        qbo_id=mapped_invoice.get("qbo_id"),
+                        issue_date=mapped_invoice.get("txn_date"),
+                        due_date=mapped_invoice.get("due_date"),
+                        total=mapped_invoice.get("amount", 0),
                         lines=[{"amount": line.get("Amount", 0)} for line in qbo_invoice_data.get("Line", [])],
                         status="draft",
                         attachment_refs=[],

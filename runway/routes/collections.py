@@ -14,6 +14,7 @@ from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
 from runway.services.1_calculators.reserve_runway import RunwayReserveService
+from runway.services.utils.qbo_mapper import QBOMapper
 
 router = APIRouter(tags=["AR Collections"])
 
@@ -63,11 +64,14 @@ async def get_collections_dashboard(
         overdue_invoices_list = []
         
         for invoice_data in overdue_invoices:
-            if invoice_data.get("Balance", 0) <= 0:
+            # Map QBO data to standardized format
+            mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+            
+            if mapped_invoice.get("balance", 0) <= 0:
                 continue  # Skip paid invoices
                 
-            amount = float(invoice_data.get("Balance", 0))
-            due_date_str = invoice_data.get("DueDate")
+            amount = mapped_invoice.get("balance", 0)
+            due_date_str = mapped_invoice.get("due_date")
             
             if due_date_str:
                 try:
@@ -81,8 +85,8 @@ async def get_collections_dashboard(
                         aging_buckets["1_30_days"]["count"] += 1
                         aging_buckets["1_30_days"]["amount"] += amount
                         overdue_invoices_list.append({
-                            "invoice_id": invoice_data.get("Id"),
-                            "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
+                            "invoice_id": mapped_invoice.get("qbo_id"),
+                            "customer": mapped_invoice.get("customer", {}).get("name", "Unknown"),
                             "amount": amount,
                             "days_overdue": days_overdue,
                             "priority": "medium"
@@ -91,8 +95,8 @@ async def get_collections_dashboard(
                         aging_buckets["31_60_days"]["count"] += 1
                         aging_buckets["31_60_days"]["amount"] += amount
                         overdue_invoices_list.append({
-                            "invoice_id": invoice_data.get("Id"),
-                            "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
+                            "invoice_id": mapped_invoice.get("qbo_id"),
+                            "customer": mapped_invoice.get("customer", {}).get("name", "Unknown"),
                             "amount": amount,
                             "days_overdue": days_overdue,
                             "priority": "high"
@@ -101,8 +105,8 @@ async def get_collections_dashboard(
                         aging_buckets["61_90_days"]["count"] += 1
                         aging_buckets["61_90_days"]["amount"] += amount
                         overdue_invoices_list.append({
-                            "invoice_id": invoice_data.get("Id"),
-                            "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
+                            "invoice_id": mapped_invoice.get("qbo_id"),
+                            "customer": mapped_invoice.get("customer", {}).get("name", "Unknown"),
                             "amount": amount,
                             "days_overdue": days_overdue,
                             "priority": "high"
@@ -111,8 +115,8 @@ async def get_collections_dashboard(
                         aging_buckets["over_90_days"]["count"] += 1
                         aging_buckets["over_90_days"]["amount"] += amount
                         overdue_invoices_list.append({
-                            "invoice_id": invoice_data.get("Id"),
-                            "customer": invoice_data.get("CustomerRef", {}).get("name", "Unknown"),
+                            "invoice_id": mapped_invoice.get("qbo_id"),
+                            "customer": mapped_invoice.get("customer", {}).get("name", "Unknown"),
                             "amount": amount,
                             "days_overdue": days_overdue,
                             "priority": "critical"
@@ -186,10 +190,13 @@ async def get_overdue_invoices(
         overdue_invoices = []
         
         for invoice_data in overdue_invoices_data:
-            if invoice_data.get("Balance", 0) <= 0:
+            # Map QBO data to standardized format
+            mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+            
+            if mapped_invoice.get("balance", 0) <= 0:
                 continue  # Skip paid invoices
                 
-            due_date_str = invoice_data.get("DueDate")
+            due_date_str = mapped_invoice.get("due_date")
             if not due_date_str:
                 continue
                 
@@ -215,15 +222,15 @@ async def get_overdue_invoices(
                     continue
                 
                 overdue_invoices.append({
-                    "invoice_id": invoice_data.get("Id"),
-                    "invoice_number": invoice_data.get("DocNumber"),
+                    "invoice_id": mapped_invoice.get("qbo_id"),
+                    "invoice_number": mapped_invoice.get("doc_number"),
                     "customer": {
-                        "id": invoice_data.get("CustomerRef", {}).get("value"),
-                        "name": invoice_data.get("CustomerRef", {}).get("name", "Unknown")
+                        "id": mapped_invoice.get("customer", {}).get("id"),
+                        "name": mapped_invoice.get("customer", {}).get("name", "Unknown")
                     },
                     "amount": amount,
-                    "original_amount": float(invoice_data.get("TotalAmt", amount)),
-                    "issue_date": invoice_data.get("TxnDate"),
+                    "original_amount": mapped_invoice.get("amount", amount),
+                    "issue_date": mapped_invoice.get("txn_date"),
                     "due_date": due_date_str,
                     "days_overdue": days_overdue,
                     "priority": invoice_priority,
@@ -282,20 +289,23 @@ async def get_customer_aging(
         total_outstanding = 0
         
         for invoice_data in overdue_invoices:
-            if invoice_data.get("CustomerRef", {}).get("value") != customer_id:
+            # Map QBO data to standardized format
+            mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+            
+            if mapped_invoice.get("customer", {}).get("id") != customer_id:
                 continue
                 
-            balance = float(invoice_data.get("Balance", 0))
+            balance = mapped_invoice.get("balance", 0)
             if balance <= 0:
                 continue  # Skip paid invoices
                 
             customer_invoices.append({
-                "invoice_id": invoice_data.get("Id"),
-                "invoice_number": invoice_data.get("DocNumber"),
+                "invoice_id": mapped_invoice.get("qbo_id"),
+                "invoice_number": mapped_invoice.get("doc_number"),
                 "amount": balance,
-                "original_amount": float(invoice_data.get("TotalAmt", balance)),
-                "issue_date": invoice_data.get("TxnDate"),
-                "due_date": invoice_data.get("DueDate")
+                "original_amount": mapped_invoice.get("amount", balance),
+                "issue_date": mapped_invoice.get("txn_date"),
+                "due_date": mapped_invoice.get("due_date")
             })
             
             total_outstanding += balance
@@ -304,8 +314,9 @@ async def get_customer_aging(
         if customer_invoices:
             # Get customer name from first invoice
             for invoice_data in overdue_invoices:
-                if invoice_data.get("CustomerRef", {}).get("value") == customer_id:
-                    customer_name = invoice_data.get("CustomerRef", {}).get("name", "Unknown")
+                mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+                if mapped_invoice.get("customer", {}).get("id") == customer_id:
+                    customer_name = mapped_invoice.get("customer", {}).get("name", "Unknown")
                     break
         
         return {
@@ -417,11 +428,14 @@ async def get_collections_runway_impact(
         critical_amount = 0
         
         for invoice_data in overdue_invoices:
-            balance = float(invoice_data.get("Balance", 0))
+            # Map QBO data to standardized format
+            mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
+            
+            balance = mapped_invoice.get("balance", 0)
             if balance <= 0:
                 continue
                 
-            due_date_str = invoice_data.get("DueDate")
+            due_date_str = mapped_invoice.get("due_date")
             if due_date_str:
                 try:
                     due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
