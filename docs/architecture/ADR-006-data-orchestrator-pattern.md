@@ -1,31 +1,23 @@
-# ADR-006: Data Orchestrator Pattern for Experience Services
+# ADR-006: Data Orchestrator Pattern
 
 **Date**: 2025-01-27  
 **Status**: Accepted  
-**Decision**: Use data orchestrators in `runway/core/` to manage both data pulling and state management for experience services
+**Decision**: Use data orchestrators in `runway/core/` to manage data pulling and state management for experience services
 
-## **Context**
+## Context
 
-The runway experience services (Hygiene Tray, Decision Console, Digest, Test Drive) need different combinations of data entities and time windows, but domains/ services are generic CRUD primitives. We need a waypoint layer that's runway-aware but still uses domains/ primitives.
+Runway experience services need different entity combinations and time windows, but domains/ services are generic CRUD primitives. Need waypoint layer that's runway-aware but uses domains/ primitives.
 
-**Problem**: Each experience needs:
-- Different entity combinations (bills + invoices + balances)
-- Different time windows (Digest=all data, TestDrive=4 weeks, Tray=immediate)
-- Different runtime patterns (async batch vs on-demand)
-- State management (Console decision queue, Digest batch processing)
+**Problem**: Each experience needs different entity combinations, time windows, runtime patterns, and state management.
 
-**Previous Attempts**: `RunwayCalculator` tried to solve this but violated ADR-001 by doing data pulling instead of calculating.
+## Decision
 
-## **Decision**
-
-**Use Data Orchestrator Pattern**:
+**Data Orchestrator Pattern**:
 - **Location**: `runway/core/data_orchestrators/`
 - **Pattern**: Service pattern with state management capabilities
-- **State Management**: Orchestrator manages state, not experience services
 - **Architecture**: `Frontend ↔ Experience Service ↔ Data Orchestrator ↔ Domains/`
 
-## **Architecture Pattern**
-
+## Architecture Pattern
 ```
 runway/experiences/ (functionality + UX)
     ↓
@@ -38,9 +30,9 @@ domains/ (CRUD primitives)
 SmartSyncService (orchestration)
 ```
 
-## **Implementation Pattern**
+## Implementation Pattern
 
-### **Data Orchestrator Structure**
+### Data Orchestrator Structure
 ```python
 # runway/core/data_orchestrators/[experience]_data_orchestrator.py
 class [Experience]DataOrchestrator:
@@ -53,7 +45,7 @@ class [Experience]DataOrchestrator:
         # Experience-specific functionality
 ```
 
-### **Experience Service Usage**
+### Experience Service Usage
 ```python
 # runway/experiences/[experience].py
 class [Experience]Service:
@@ -65,8 +57,7 @@ class [Experience]Service:
         return await self.orchestrator.get_[experience]_data(business_id)
 ```
 
-## **Benefits**
-
+## Benefits
 1. **Single Source of Truth**: Data orchestrator manages both data and state
 2. **Frontend Consistency**: Frontend can always get current state from orchestrator
 3. **State Persistence**: State survives service restarts and multiple frontend instances

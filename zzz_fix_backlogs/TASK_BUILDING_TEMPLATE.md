@@ -2,10 +2,6 @@
 
 *Template for curating tasks by complexity into Executable, Needs Solving, and Blocked categories*
 
-## **Overview**
-
-This template documents the process for taking raw task backlogs and curating them into three categories based on complexity and readiness for execution.
-
 ## **Required Context Documentation**
 
 Every task document MUST include a "Read These Files First" section with these specific files:
@@ -18,11 +14,285 @@ Every task document MUST include a "Read These Files First" section with these s
 - `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
 - `DEVELOPMENT_STANDARDS.md` - Development standards and anti-patterns
 
-### **Task-Specific Context:**
-- Add any additional context files specific to the task domain
-- Include relevant ADRs that apply to the specific task type
-
 ## **Task Categories**
+
+### **CRITICAL: Task Naming Convention**
+
+**Executable Tasks**: `E01_[MEANINGFUL_NAME].md`
+- **E** = Executable (ready for hands-free execution)
+- **01** = Sequence number (E01, E02, E03...)
+- **MEANINGFUL_NAME** = Key identifier (visible in Cursor @ attachment)
+
+**Solutioning Tasks**: `S01_[MEANINGFUL_NAME].md`
+- **S** = Solutioning (needs analysis and design)
+- **01** = Sequence number (S01, S02, S03...)
+- **MEANINGFUL_NAME** = Key identifier (visible in Cursor @ attachment)
+
+**Examples**:
+- `E01_TESTDRIVE_ORCHESTRATOR.md` - "Create TestDriveDataOrchestrator following established pattern"
+- `E02_QBOMAPPER_IMPLEMENTATION.md` - "Implement QBOMapper for bill data mapping"
+- `S01_CONSOLE_PAYMENT_WORKFLOW.md` - "Design Console Payment Decision Workflow"
+- `S02_BULK_DIGEST_PROCESSING.md` - "Architect bulk digest processing for 1000+ businesses"
+
+**Benefits**:
+- **Prefix visible** in Cursor's @ attachment (E01_, S01_)
+- **Key identifier visible** immediately after prefix
+- **Sequence number** for ordering
+- **Short enough** to be readable in file explorers
+
+### **CRITICAL: Task Granularity Guidelines**
+
+**Executable Tasks (E01_, E02_, E03_...)**:
+- **Size**: 2-4 hours of focused work
+- **Scope**: One service, one pattern, one feature
+- **Dependencies**: Minimal external context needed
+- **Thread Assignment**: 3-5 executable tasks per thread
+
+**Solutioning Tasks (S01_, S02_, S03_...)**:
+- **Size**: One major architectural problem
+- **Scope**: One complex system or integration
+- **Dependencies**: Extensive discovery and analysis needed
+- **Thread Assignment**: One solutioning task per thread
+
+**Granularity Decision Tree**:
+When curating tasks, ask:
+1. **Can this be completed in 2-4 hours?** → Executable Task (E prefix)
+2. **Does this need extensive discovery?** → Solutioning Task (S prefix)
+3. **Is this too big for one thread?** → Break into smaller tasks
+4. **Is this too small to be meaningful?** → Combine with related tasks
+
+### **CRITICAL: Solutioning Task Lifecycle Management**
+
+**Solutioning Task Status Tracking**:
+```markdown
+## **Status**: [ ] Discovery | [ ] Analysis | [ ] Design | [ ] Executable Tasks | [ ] Complete
+
+## **Dependencies**
+- **Depends on**: [List of prerequisite solutioning tasks]
+- **Blocks**: [List of tasks this blocks]
+
+## **Thread Assignment**
+- **Assigned to**: [Thread name/date]
+- **Started**: [Date]
+- **Completed**: [Date]
+```
+
+**Solutioning Coordination**:
+- **One solutioning task per thread** (keep focused)
+- **Update status** when starting/completing tasks
+- **Convert to executable tasks** when design is complete
+- **Archive completed tasks** to `archive/` folder
+
+**File Organization**:
+```
+zzz_fix_backlogs/working/
+├── E01_TESTDRIVE_ORCHESTRATOR.md
+├── E02_QBOMAPPER_IMPLEMENTATION.md
+├── S01_CONSOLE_PAYMENT_WORKFLOW.md
+├── S02_BULK_DIGEST_PROCESSING.md
+├── SOLUTIONING_COORDINATION.md
+└── archive/
+    ├── S01_CONSOLE_PAYMENT_WORKFLOW.md
+    └── [other completed tasks]
+```
+
+### **CRITICAL: Thread Porting Templates**
+
+**Use these templates with `@` commands to generate consistent porting requirements:**
+
+#### **THREAD_PORTING_SUMMARY_TEMPLATE.md**
+```markdown
+# Thread Porting Summary - [FEATURE_AREA]
+
+*Thread: [BRANCH_NAME] - [BRIEF_DESCRIPTION]*
+
+## **✅ COMPLETED WORK**
+
+### **1. Core Architecture Foundation**
+- **Architecture**: [What patterns were established]
+- **Critical Issues**: [What problems were solved]
+- **Services**: [What services were created/refactored]
+
+### **2. Critical Issues Resolved**
+- **Issue 1**: [Brief description] - ✅ **ELIMINATED**
+- **Issue 2**: [Brief description] - ✅ **CLARIFIED**
+- **Issue 3**: [Brief description] - ✅ **ARCHITECTED**
+
+## **🔄 READY FOR EXECUTION**
+
+### **Task [E01_NAME]**: [Brief Description] (P[1-3] [Priority])
+**Status**: Added to `001_EXECUTABLE_TASKS.md` as Task [E01_NAME]
+
+**Key Requirements**:
+- [Requirement 1]
+- [Requirement 2]
+- [Requirement 3]
+
+**Implementation**: [Service/Pattern] with [method] method
+
+### **Task [E02_NAME]**: [Brief Description] (P[1-3] [Priority])
+**Status**: Added to `001_EXECUTABLE_TASKS.md` as Task [E02_NAME]
+
+**Key Requirements**:
+- [Requirement 1]
+- [Requirement 2]
+- [Requirement 3]
+
+**Implementation**: [Service/Pattern] with [method] method
+
+## **📋 NEXT THREAD PRIORITIES**
+
+### **Immediate Execution Tasks** (Ready for hands-free execution):
+1. **Task [E01_NAME]** - [Brief description] ([X] hours)
+2. **Task [E02_NAME]** - [Brief description] ([X] hours)
+3. **Task [E03_NAME]** - [Brief description] ([X] hours)
+
+### **Solutioning Required** (In `002_NEEDS_SOLVING_TASKS.md`):
+- **Task [S01_NAME]** - [Brief description] (complex, needs analysis)
+
+## **🎯 KEY SUCCESS PATTERNS ESTABLISHED**
+
+1. **Pattern Name**: [Brief description]
+2. **Pattern Name**: [Brief description]
+3. **Pattern Name**: [Brief description]
+
+## **📁 FILE STATUS**
+
+### **Ready for Archive** (Move to archive folder):
+- `[FILE_NAME].md` - [Brief description] (completed)
+- `[FILE_NAME].md` - [Brief description] (completed)
+
+### **Keep Active** (Long-term documentation):
+- `001_EXECUTABLE_TASKS.md` - Updated with Tasks [E01_NAME], [E02_NAME], [E03_NAME]
+- `002_NEEDS_SOLVING_TASKS.md` - Contains Task [S01_NAME] for [brief description]
+- `ARCHITECTURAL_FOUNDATION_SUMMARY.md` - Key architectural decisions
+
+## **🚀 THREAD STATUS: READY FOR CLOSE**
+
+**All critical architectural work completed:**
+- ✅ Core architecture foundation solid
+- ✅ Critical issues resolved
+- ✅ Remaining work properly documented as executable tasks
+- ✅ Next thread has clear priorities and implementation details
+
+**The codebase is architecturally sound and ready for the next phase of development.**
+```
+
+#### **NEXT_THREAD_EXECUTION_GUIDE_TEMPLATE.md**
+```markdown
+# Next Thread Execution Guide - [FEATURE_AREA]
+
+*Ready for immediate execution - [DATE]*
+
+## **🎯 IMMEDIATE EXECUTION TASKS**
+
+### **Task [E01_NAME]**: [Brief Description]
+- **Status**: `[ ]` Ready for execution
+- **Priority**: P[1-3] [Priority]
+- **Pattern**: [Pattern description]
+- **Files**: 
+  - Create: `[FILE_PATH]`
+  - Update: `[FILE_PATH]`
+- **Key Pattern**: [Key implementation pattern]
+
+### **Task [E02_NAME]**: [Brief Description]
+- **Status**: `[ ]` Ready for execution
+- **Priority**: P[1-3] [Priority]
+- **Pattern**: [Pattern description]
+- **Files**:
+  - Create: `[FILE_PATH]`
+  - Update: `[FILE_PATH]`
+- **Key Pattern**: [Key implementation pattern]
+
+## **📋 CRITICAL SUCCESS PATTERNS**
+
+### **Pattern Name (MANDATORY)**
+```python
+# Code example showing the pattern
+class ExampleService:
+    def __init__(self, db: Session, business_id: str):
+        # Pattern implementation
+        pass
+```
+
+**Key Principles**:
+1. **Principle 1**: [Description]
+2. **Principle 2**: [Description]
+3. **Principle 3**: [Description]
+
+## **📁 REFERENCE FILES**
+
+### **Architecture Context**
+- `ARCHITECTURAL_FOUNDATION_SUMMARY.md` - Complete architectural decisions and patterns
+- `001_EXECUTABLE_TASKS.md` - Updated with corrected Tasks [E01_NAME] and [E02_NAME]
+- `002_NEEDS_SOLVING_TASKS.md` - Remaining solutioning work
+
+### **Implementation Examples**
+- `[FILE_PATH]` - Example of correct pattern implementation
+- `[FILE_PATH]` - Example of correct pattern implementation
+
+## **🚀 EXECUTION ORDER**
+
+1. **Start with Task [E01_NAME]** - [Brief description]
+   - Follows established pattern
+   - Clear implementation examples
+   - Straightforward execution
+
+2. **Then Task [E02_NAME]** - [Brief description]
+   - Follows established pattern
+   - Clear implementation examples
+   - Straightforward execution
+
+## **⚠️ CRITICAL WARNINGS**
+
+1. **DO NOT** [Common mistake to avoid]
+2. **DO NOT** [Common mistake to avoid]
+3. **DO NOT** [Common mistake to avoid]
+
+## **✅ VERIFICATION COMMANDS**
+
+After each task completion:
+
+```bash
+# Check for correct pattern usage
+grep -r "PatternName" [DIRECTORY]/
+grep -r "ServiceName" [DIRECTORY]/
+
+# Check for no old patterns
+grep -r "OldPattern" [DIRECTORY]/
+
+# Check server status
+# Check uvicorn in Cursor terminal - should be running without errors
+```
+
+## **📊 SUCCESS METRICS**
+
+- All services follow the established pattern
+- No circular dependencies between services
+- Server runs without errors
+- All tests pass
+
+**Ready for execution!** 🚀
+```
+
+#### **Usage Instructions**
+
+**To generate porting requirements:**
+1. **Copy the template** you need (THREAD_PORTING_SUMMARY_TEMPLATE.md or NEXT_THREAD_EXECUTION_GUIDE_TEMPLATE.md)
+2. **Replace placeholders** with actual values:
+   - `[FEATURE_AREA]` → Actual feature area
+   - `[BRANCH_NAME]` → Actual branch name
+   - `[E01_NAME]` → Actual task names
+   - `[S01_NAME]` → Actual solutioning task names
+   - `[DATE]` → Current date
+3. **Paste into thread** or create new file
+4. **Use `@` command** to reference the template
+
+**Template Benefits**:
+- **Consistent format** across all threads
+- **No missing sections** - template ensures completeness
+- **Easy to customize** - just replace placeholders
+- **Professional appearance** - standardized structure
 
 ### **0_EXECUTABLE_TASKS.md** - Ready for Hands-Free Execution
 **Characteristics:**
@@ -38,21 +308,20 @@ Every task document MUST include a "Read These Files First" section with these s
 - Context for All Tasks
 - Critical Warnings from Painful Lessons
 - **CRITICAL: Recursive Discovery/Triage Pattern** - Built into every task
+- **Progress Tracking Instructions** - Clear steps for updating task status as work progresses
 - Task details with:
   - Status, Priority, Justification
   - **Initial Files to Fix** (starting point, not comprehensive)
   - **MANDATORY: Comprehensive Discovery Commands** (find ALL occurrences)
   - **MANDATORY: Recursive Triage Process** (understand context before changing)
-  - **MANDATORY: Comprehensive Cleanup Requirements** (handle all edge cases)
-  - Required Imports/Changes
-  - Pattern to Implement (with code examples)
-  - Dependencies
+  - **Pattern to Implement** (with code examples) - WHAT you're building
+  - **Required Imports/Changes** (what needs to change) - HOW to implement
+  - **Dependencies** (what this depends on) - WHAT you need
+  - **MANDATORY: Comprehensive Cleanup Requirements** (handle all edge cases) - CLEANUP after implementation
   - Verification Commands
   - Definition of Done
-- **Progress Tracking Instructions** - Clear steps for updating task status as work progresses
 - **Git Workflow Instructions** - Surgical commit steps for each task
 - **Todo List Integration** - Cursor todo list management requirements
-- **Comprehensive Cleanup Requirements** - Explicit cleanup steps for files, code, and documentation
 
 ### **1_NEEDS_SOLVING_TASKS.md** - Needs Analysis and Solution Work
 **Characteristics:**
@@ -66,16 +335,20 @@ Every task document MUST include a "Read These Files First" section with these s
 
 **Required Sections:**
 - Context for All Tasks
+- **Progress Tracking Instructions** - Clear steps for updating task status as analysis progresses
 - Task details with:
   - Status, Priority, Justification
-  - Code Pointers
-  - Current Issues to Resolve
-  - Required Analysis
-  - Dependencies
-  - Verification
-  - Definition of Done
-  - Solution Required (what needs to be figured out)
-- **Progress Tracking Instructions** - Clear steps for updating task status as analysis progresses
+  - **Code Pointers** (where to look)
+  - **MANDATORY: Discovery Commands** (how to find all related code)
+  - **Current Issues to Resolve** (what's broken)
+  - **Assumption Validation** (what assumptions need to be tested)
+  - **Required Analysis** (what needs to be figured out)
+  - **Architecture Analysis** (how this fits with existing patterns)
+  - **Solution Design Process** (step-by-step approach to solving)
+  - **Dependencies** (what this depends on)
+  - **Verification** (how to verify the solution works)
+  - **Definition of Done** (what the solution should achieve)
+  - **Solution Required** (what needs to be figured out)
 - **Todo List Integration** - Cursor todo list management requirements
 
 ### **2_BLOCKED_TASKS.md** - Blocked by Solution Tasks
@@ -133,6 +406,65 @@ For each task, ask:
 - **Will it become executable once unblocked?** (No additional analysis needed)
 
 **If ALL answers are YES → Blocked**
+
+#### **Document Creation Gatekeeping Questions:**
+When you discover a new issue during task curation, ask:
+
+**For Solutioning Tasks:**
+- **Is this a major architectural problem?** (Requires extensive discovery/analysis)
+- **Does this intersect with multiple systems?** (Complex untangling needed)
+- **Is this a standalone problem?** (Can be contained in one solutioning doc)
+- **Does this need its own solutioning thread?** (Too complex to add to existing task)
+
+**If YES to any → Create new solutioning task**
+
+**For Executable Tasks:**
+- **Is this a simple implementation issue?** (Can be added to existing task)
+- **Is this a discovery finding?** (Add to task document, don't create new doc)
+- **Is this a verification step?** (Add to task document)
+
+**If YES to any → Add to existing executable task, NO new docs**
+
+### **CRITICAL: Architectural Decision Promotion**
+
+**When to Promote Working Docs to ADRs:**
+- **Architectural decisions are stable** - no more changes expected
+- **Patterns are proven** - have been implemented and tested
+- **Hard won wisdom** - decisions that required significant iteration
+- **Reusable patterns** - other developers need to follow these patterns
+- **Verification commands exist** - can be automatically checked
+
+**ADR Promotion Process:**
+1. **Working doc contains stable architectural decision**
+2. **Create ADR-XXX in `docs/architecture/`**
+3. **Use ADR template** - status, decision, implementation, examples, verification
+4. **Archive working doc** - move to `archive/` folder
+5. **Update references** - point to new ADR location
+
+**ADR Template:**
+```markdown
+# ADR-XXX: [Decision Title]
+
+## Status
+- **Date**: YYYY-MM-DD
+- **Status**: Proposed/Accepted/Deprecated
+- **Context**: [What problem this solves]
+
+## Decision
+[What was decided]
+
+## Implementation
+[How to implement this pattern]
+
+## Examples
+[Code examples showing the pattern]
+
+## Verification
+[How to verify this pattern is being followed]
+
+## Related ADRs
+- ADR-XXX: [Related decision]
+```
 
 ### **CRITICAL: Assumption Validation Before Task Curation**
 
@@ -289,6 +621,18 @@ grep -r "get_.*_for_digest" . --include="*.py"
      - Handle edge cases and multiple patterns in same file
      - Update related logic that depends on the changes
 
+- **Pattern to Implement:**
+  ```python
+  # Code example here - WHAT you're building
+  ```
+
+- **Required Imports/Changes:**
+  - Remove: `old_import`
+  - Add: `new_import`
+  - Update: `method_name` → `new_method_name`
+
+- **Dependencies:** [List any dependencies]
+
 - **MANDATORY: Comprehensive Cleanup Requirements:**
   - **File Operations:** Use `cp` then `rm` for moves, never just `mv`
   - **Import Cleanup:** Remove ALL old imports, add ALL new imports
@@ -296,17 +640,6 @@ grep -r "get_.*_for_digest" . --include="*.py"
   - **Dependency Cleanup:** Update ALL dependent code
   - **Test Cleanup:** Update ALL test files that reference changed code
   - **Documentation Cleanup:** Update ALL documentation references
-
-- **Required Imports/Changes:**
-  - Remove: `old_import`
-  - Add: `new_import`
-
-- **Pattern to Implement:**
-  ```python
-  # Code example here
-  ```
-
-- **Dependencies:** [List any dependencies]
 
 - **Verification:** 
   - Run `grep -r "old_pattern" . --include="*.py"` - should return no results
@@ -356,20 +689,54 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Status:** `[ ]` Not started
 - **Priority:** P1 High / P2 Medium
 - **Justification:** [Why this task is needed]
+
 - **Code Pointers:**
   - `file1.py` - [what to look at]
   - `file2.py` - [what to look at]
+
+- **MANDATORY: Discovery Commands:**
+  ```bash
+  # Find all related code
+  grep -r "related_pattern" . --include="*.py"
+  grep -r "import.*related" . --include="*.py"
+  find . -name "*.py" -exec grep -l "pattern" {} \;
+  ```
+
 - **Current Issues to Resolve:**
   - [Issue 1]
   - [Issue 2]
+
+- **Assumption Validation:**
+  - [What assumptions need to be tested against actual codebase]
+  - [What might be different from what we think]
+
 - **Required Analysis:**
   - [What needs to be figured out]
+  - [What architectural decisions are needed]
+
+- **Architecture Analysis:**
+  - [How this fits with existing patterns]
+  - [What ADRs apply to this problem]
+  - [What services/patterns should be used]
+
+- **Solution Design Process:**
+  1. [Step 1: Discovery phase]
+  2. [Step 2: Analysis phase]
+  3. [Step 3: Design phase]
+  4. [Step 4: Documentation phase]
+
 - **Dependencies:** [List any dependencies]
+
 - **Verification:** 
   - [How to verify the solution works]
+  - [What tests need to be written]
+
 - **Definition of Done:**
   - [What the solution should achieve]
+  - [What documentation needs to be created]
+
 - **Solution Required:** [What needs to be figured out]
+
 - **Progress Tracking:**
   - Update status to `[🔄]` when starting analysis
   - Update status to `[💡]` when solution is identified

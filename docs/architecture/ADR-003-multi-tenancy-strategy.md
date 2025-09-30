@@ -2,26 +2,18 @@
 
 **Date**: 2025-09-17  
 **Status**: Accepted  
-**Deciders**: Steve Simpson, Claude (AI Assistant)  
-**Technical Story**: Phase 0 Data Architecture Foundation  
+**Decision**: Single-Database Multi-Tenancy with `business_id` as primary tenant identifier
 
 ## Context
 
-Oodaloo needs to support multiple business customers with complete data isolation, while maintaining performance and development simplicity. The system must handle:
-
-1. **Single-tenant businesses** using Runway directly (Phase 0-1)
-2. **Multi-tenant CAS firms** managing multiple clients via RowCol (Phase 2+)
-3. **Data isolation** ensuring businesses never see each other's data
-4. **Performance** at scale with thousands of businesses
-5. **Development simplicity** without over-engineering early phases
+Multi-product platform needs data isolation for single-tenant businesses (Phase 0-3) and multi-tenant CAS firms (Phase 4+) while maintaining performance and development simplicity.
 
 ## Decision
 
-We will implement a **Single-Database Multi-Tenancy** strategy using `business_id` as the primary tenant identifier, with a migration path to **Database-per-Tenant** for enterprise CAS firms.
+**Single-Database Multi-Tenancy** using `business_id` as primary tenant identifier, with migration path to **Database-per-Tenant** for enterprise CAS firms.
 
 ### **Primary Tenancy Model**
-
-**Business-Centric Tenancy**:
+**Pattern**: Business-Centric Tenancy + Row-Level Security
 - `business_id` is the primary tenant identifier
 - All domain models include `business_id` foreign key
 - Row-level security enforced at application and database levels
@@ -45,7 +37,6 @@ class Bill(Base):
 ```
 
 ### **Tenant Hierarchy**
-
 ```
 Business (Primary Tenant)
 ├── Users (business owners, staff)
