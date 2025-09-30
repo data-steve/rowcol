@@ -1,12 +1,20 @@
-# ADR-003: Multi-Tenancy Strategy
+# ADR-003: Multi-Tenancy Strategy (Firm-First)
 
-**Date**: 2025-09-17  
+**Date**: 2025-09-30 (Updated from 2025-09-17)  
 **Status**: Accepted  
-**Decision**: Single-Database Multi-Tenancy with `business_id` as primary tenant identifier
+**Decision**: Single-Database Multi-Tenancy with **Firm-First hierarchy**: `firm_id` → `client_id` (business_id)
 
 ## Context
 
-Multi-product platform needs data isolation for single-tenant businesses (Phase 0-3) and multi-tenant CAS firms (Phase 4+) while maintaining performance and development simplicity.
+**STRATEGIC PIVOT (2025-09-30)**: Based on market feedback from Levi Morehouse (Aiwyn.ai President), Oodaloo is **pivoting to CAS firms as primary ICP**, not individual business owners.
+
+**Why**: 
+- Owners won't maintain data completeness (missing bills = broken trust)
+- CAS firms can ensure data quality and enforce the ritual
+- $50/mo per client scales better than $99/mo per owner
+- Weekly cash call is unaddressed opportunity for CAS firms
+
+**Multi-tenancy must now support firm-first from Phase 3** (not Phase 4+). CAS firms manage 20-100 clients, with firm-level users, RBAC, and batch workflows.
 
 ## Decision
 
@@ -36,22 +44,23 @@ class Bill(Base):
     )
 ```
 
-### **Tenant Hierarchy**
+### **Tenant Hierarchy (Firm-First)**
 ```
-Business (Primary Tenant)
-├── Users (business owners, staff)
-├── QBO Integration (one per business)
-├── Bank Accounts (from QBO)
-├── Transactions (from QBO)
-├── Runway Reserves (Oodaloo-specific)
-├── Tray Items (Oodaloo-specific)
-└── Digest Settings (Oodaloo-specific)
+Firm (Primary Tenant) - CAS accounting firm
+├── Firm Staff (admins, staff, view-only)
+├── Clients (Businesses) - Sub-tenants
+│   ├── QBO Integration (one per client)
+│   ├── Bank Accounts (from QBO + Plaid)
+│   ├── Transactions (from QBO)
+│   ├── Runway Reserves (Oodaloo-specific)
+│   ├── Tray Items (Oodaloo-specific)
+│   └── Digest Settings (Oodaloo-specific)
+├── Firm Dashboard (batch runway view across clients)
+├── Data Quality Scoring (per-client completeness)
+└── Firm Reporting (aggregate analytics)
 
-Future: CAS Firm (Secondary Tenant)
-├── Multiple Businesses (sub-tenants)
-├── Firm-level Users (accountants, admins)
-├── Firm-level Reporting (across businesses)
-└── RBAC (role-based access control)
+Future: Direct Owner (business.firm_id = NULL)
+└── Same as Client structure, but no firm association
 ```
 
 ## Implementation Strategy
@@ -78,26 +87,51 @@ async def get_tray_items(
     return items
 ```
 
-### **Phase 2+: CAS Firm Multi-Tenancy**
+### **Phase 3: Firm-First Multi-Tenancy** 🔴 CURRENT PRIORITY
 
-**Future Implementation**:
+**Immediate Implementation** (Weeks 1-2, 40h):
 - CAS firms manage multiple business sub-tenants
 - Firm-level users with RBAC permissions
 - Cross-business reporting and analytics
 - Hierarchical data access patterns
 
 ```python
-# Future: Hierarchical tenant model
-class CASFirm(Base):
-    firm_id = Column(String(36), primary_key=True)
-    name = Column(String(255))
-    subscription_tier = Column(String(50))
+# Phase 3: Firm-first hierarchical model
+class Firm(Base):
+    __tablename__ = "firms"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    contact_email = Column(String(255))
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    clients = relationship("Business", back_populates="firm")
+    staff = relationship("FirmStaff", back_populates="firm")
+
+class FirmStaff(Base):
+    __tablename__ = "firm_staff"
+    id = Column(Integer, primary_key=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role = Column(String(50), nullable=False)  # admin, staff, view_only
+    active = Column(Boolean, default=True)
+    
+    # Relationships
+    firm = relationship("Firm", back_populates="staff")
+    user = relationship("User")
 
 class Business(Base):
-    business_id = Column(String(36), primary_key=True)
-    firm_id = Column(String(36), ForeignKey("cas_firms.firm_id"), nullable=True)
-    # Null firm_id = direct Runway customer
-    # Non-null firm_id = RowCol sub-tenant
+    __tablename__ = "businesses"
+    id = Column(Integer, primary_key=True)
+    firm_id = Column(Integer, ForeignKey("firms.id"), nullable=True)
+    # NULL firm_id = direct owner (future Phase 7+)
+    # Non-NULL firm_id = CAS firm client
+    name = Column(String(255), nullable=False)
+    qbo_realm_id = Column(String(255))
+    
+    # Relationships
+    firm = relationship("Firm", back_populates="clients")
 ```
 
 ## Data Isolation Patterns
@@ -381,5 +415,25 @@ async def endpoint(
 
 ---
 
-**Last Updated**: 2025-09-17  
-**Next Review**: Phase 2 planning (RowCol multi-tenancy implementation)
+**Last Updated**: 2025-09-30 (Firm-first pivot)  
+**Next Review**: Phase 3 implementation (Weeks 1-2)
+
+## Firm-First Implementation Priorities
+
+### **Phase 3 (Weeks 1-2, 40h)** 🔴 P0 CRITICAL
+1. Add Firm, FirmStaff models (16h)
+2. Add firm_id to Business (nullable) (4h)
+3. Firm-level authentication & RBAC (12h)
+4. Firm-level routes (GET /firms/{firm_id}/clients) (8h)
+
+### **What This Enables**
+- CAS firms can manage 20-100 clients
+- Batch runway views across all clients
+- Firm staff with role-based access (admin/staff/view-only)
+- Data quality scoring per client
+- $50/mo per client pricing model
+
+### **What's Deprioritized** (Phase 7+)
+- Direct owner access (business.firm_id = NULL)
+- QBO App Store distribution
+- Agentic positioning / Smart Policies
