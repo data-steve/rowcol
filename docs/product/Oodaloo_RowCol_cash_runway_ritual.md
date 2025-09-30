@@ -214,3 +214,62 @@ CAS firms benefit as low-value categorization is automated by QBO agents; RowCol
 * **Feature Prioritization**: "Which modules do CAS firms buy first, and which are nice-to-have?"
 * **Client Retention**: "How does this tool help CAS firms retain clients vs. just improving efficiency?"
 
+---
+
+## **💊 Painkiller Assessment (Firm-First Features)**
+
+### **P0 Critical Painkillers (Data Reliability)**
+| Feature | Description | Why It's a Painkiller | Pain Relief Rating |
+|---------|-------------|-----------------------|---------------------|
+| **Multi-Client Runway Digest** | Batch overview across all clients showing runway risk, late AR, AP due, and data quality issues. | Addresses CAS firm's biggest pain: "Which of my 50 clients are at risk this week?" Prevents client surprises and enables proactive management. | **High (90% relief)**: Transforms reactive client management into proactive portfolio oversight. |
+| **Data Completeness Module** | Bank feed integration, missing bill detection, POS integration across client portfolio. | Solves the #1 trust killer: missing bills = wrong runway = broken client relationship. CAS firms can ensure data quality where individual owners won't. | **High (95% relief)**: Prevents 80%+ of client trust issues, enables reliable runway calculations. |
+| **Portfolio Management Dashboard** | Landscape view of all clients, risk prioritization, staff tasking workflows, client health scoring. | Tackles CAS firm's scale challenge: "How do I manage 50+ clients without missing critical issues?" Enables efficient resource allocation. | **High (85% relief)**: Saves 10-15 hours/week on client prioritization and task management. |
+
+### **P1 High Painkillers (Firm-Level Management)**
+| Feature | Description | Why It's a Painkiller | Pain Relief Rating |
+|---------|-------------|-----------------------|---------------------|
+| **Smart AP (Client Rules)** | Per-client earmarking, timeline conditional releases, vendor credit handling across portfolio. | Solves CAS firm's AP management at scale: "How do I ensure consistent payment policies across 50 clients?" Reduces manual decision-making. | **High (80% relief)**: Saves 5-8 hours/week on AP management, ensures consistent client policies. |
+| **Smart AR (Client Collections)** | Per-client priorities, custom reminder drips, auto-pause on payment, match/clean deposits. | Addresses CAS firm's collections challenge: "How do I efficiently chase AR across multiple clients without overwhelming them?" | **Medium (70% relief)**: Boosts collection rates by 40%+ while reducing manual follow-up time. |
+| **White-Label Module** | Firm branding, custom domains, client-facing reports with firm identity. | Solves CAS firm's professional presentation need: "How do I show clients we're using sophisticated tools without exposing internal processes?" | **Medium (60% relief)**: Enhances client perception and firm differentiation. |
+
+### **P2 Future Painkillers (Advanced Intelligence)**
+| Feature | Description | Why It's a Painkiller | Pain Relief Rating |
+|---------|-------------|-----------------------|---------------------|
+| **Advanced Forecasting Module** | 13-week planning, seasonal adjustments, scenario modeling across client portfolio. | Addresses Levi's expectation for longer-term visibility: "How do I help clients plan beyond just weekly runway?" | **Medium (65% relief)**: Enables strategic client advisory, justifies premium pricing. |
+| **Analytics Pack (Portfolio Insights)** | Cross-client AR/AP aging trends, profit analysis, benchmarking, shareable dashboards. | Solves CAS firm's need for client insights: "How do I provide valuable analytics to differentiate from basic bookkeeping?" | **Medium (70% relief)**: Transforms bookkeeping into advisory, increases client retention. |
+| **Advanced Automation Module** | Smart policies, agentic features, advanced workflows across client portfolio. | Addresses CAS firm's scale challenge: "How do I automate routine decisions across 50+ clients while maintaining control?" | **High (85% relief)**: Enables true scale, transforms CAS firm into AI-powered advisory practice. |
+
+---
+
+## **🎯 CAS Firm ICP Profile & Value Proposition**
+
+### **Primary ICP: CAS Firms (20-100 clients)**
+- **Demographics**: Accounting firms offering advisory/CFO services, 2-10 staff, managing 20-100 client businesses
+- **Geographics**: US-based, tech-savvy, willing to invest in tools that differentiate their service
+- **Firmographics**: 3-10 years in business, growing client base, seeking to move beyond compliance-only services
+- **Psychographics**: Frustrated with manual client management, seeking tools that scale their advisory capabilities
+
+### **Secondary ICP: Individual Business Owners (Phase 7+)**
+- **Demographics**: Service-based agencies (marketing, consulting, creative) with 10-30 FTE, $1-5M revenue
+- **Geographics**: US-based, QBO users, $30-200/mo spend on finance tools
+- **Firmographics**: 1-3 years post-scaling, variable cash flow, need weekly runway clarity
+- **Psychographics**: Frustrated with QBO's silos, seeking simplicity over complexity
+
+### **Core Value Proposition**
+**For CAS Firms**: "Scale your weekly cash call ritual across 50+ clients with data completeness and intelligent automation—transform bookkeeping into advisory."
+
+**For Individual Owners**: "Get weekly runway clarity with one ritual—know if payroll clears Friday without spreadsheets or guesswork."
+
+### **What RowCol Solves (CAS Firm Needs)**
+- **Portfolio Visibility**: "Which of my 50 clients are at risk this week?"
+- **Data Completeness**: "How do I ensure reliable data across all clients?"
+- **Scale Management**: "How do I efficiently manage AP/AR decisions across multiple clients?"
+- **Client Differentiation**: "How do I show clients we're using sophisticated tools?"
+- **Staff Coordination**: "How do I ensure consistent processes across my team?"
+
+### **What RowCol Doesn't Solve (Out of Scope)**
+- **Deep Bookkeeping**: Transaction categorization, payroll processing (QBO handles)
+- **Tax Preparation**: Tax planning, compliance, filing (specialized tools)
+- **Enterprise Workflows**: Multi-entity consolidation, complex reporting (enterprise tools)
+- **Client Communication**: Client portals, document sharing (existing CAS tools)
+

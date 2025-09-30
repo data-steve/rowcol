@@ -1,12 +1,13 @@
-# Oodaloo v4.5 Restructured Build Plan: Logical MVP Flow
+# RowCol v6.0 Firm-First Build Plan: CAS Firm Multi-Client Platform
 
-**Version**: 4.5  
-**Date**: 2025-09-18  
-**Restructured From**: v4.4 Master Build Plan  
+**Version**: 6.0  
+**Date**: 2025-09-30  
+**Strategic Pivot**: Firm-First (CAS firms as primary ICP)  
 **Key Changes**: 
-- Removed unrealistic features requiring external data we don't have
-- Reordered phases: Analytics → Budget Planning → Smart Automation
-- Split major components into dedicated phases for better focus
+- Pivoted to CAS firms managing 20-100 clients
+- Prioritized data completeness (bank feeds, missing bill detection)
+- Deprioritized agentic AI messaging for MVP
+- Updated pricing to $50/mo per client
 
 ## Oodaloo → RowCol Transition Architecture
 
