@@ -7,31 +7,31 @@
 
 **Core Value Proposition**: Multi-client weekly cash call that compresses dozens of decisions across client portfolios into one intelligent approval, protecting client payroll and maximizing runway through automated orchestration.
 
-**Intelligent Architecture**: Built on the OODA loop (Observe, Orient, Decide, Act) - the same pattern as modern intelligent systems, scaled for multi-client workflows:
-- **Sense**: Pull AR/AP/balance data from QBO across client portfolio
-- **Think**: Calculate runway impact, prioritize decisions, simulate scenarios per client
-- **Act**: Stage Must Pay/Can Delay, queue actions across multiple clients
-- **Review**: Firm approval → execute to QBO across client portfolio
+**Agentic Architecture**: Built on the OODA loop (Observe, Orient, Decide, Act) - the same pattern as modern AI agents:
+- **Sense**: Pull AR/AP/balance data from QBO
+- **Think**: Calculate runway impact, prioritize decisions, simulate scenarios
+- **Act**: Stage Must Pay/Can Delay, queue actions
+- **Review**: Human approval → execute to QBO
 
 ## Architectural Principles
 1. **Domains/Runway Separation** (ADR-001): QBO primitives vs product orchestration
 2. **Multi-Tenancy Strategy** (ADR-003): Firm-first tenant isolation (firm_id → client_id)
 3. **QBO API Strategy** (ADR-005): SmartSyncService as orchestration layer
-4. **Data Orchestrator Pattern** (ADR-006): Intelligent loop implementation (Sense → Think → Act → Review)
+4. **Data Orchestrator Pattern** (ADR-006): Agentic loop implementation (Sense → Think → Act → Review)
 5. **Service Boundaries** (ADR-007): Clear dependency rules and responsibilities
-6. **Multi-Client Architecture** (ADR-008): Human-in-the-loop intelligence for multi-client decision orchestration (PLANNED)
+6. **Agentic Architecture** (ADR-008): Human-in-the-loop AI for decision orchestration (PLANNED)
 
 ## Core Architectural Patterns
 
-### **Intelligent Loop Pattern (ADR-006: Data Orchestrator)**
-**Purpose**: Implement the OODA loop (intelligent pattern) through data orchestrators for multi-client workflows
-**Pattern**: `Experience Service → Data Orchestrator (Sense) → Calculators (Think) → Experiences (Act) → Firm Review`
+### **Agentic Loop Pattern (ADR-006: Data Orchestrator)**
+**Purpose**: Implement the OODA loop (agentic pattern) through data orchestrators
+**Pattern**: `Experience Service → Data Orchestrator (Sense) → Calculators (Think) → Experiences (Act) → Human Review`
 
-**Intelligent Flow**:
-1. **Sense** (Data Orchestrator): Pull and stage raw data from QBO across client portfolio
-2. **Think** (Calculators): Analyze runway impact, prioritize decisions per client
-3. **Act** (Experience Service): Present staged decisions for approval across client portfolio
-4. **Review** (Firm Staff): Approve batch → execute to QBO across multiple clients
+**Agentic Flow**:
+1. **Sense** (Data Orchestrator): Pull and stage raw data from QBO
+2. **Think** (Calculators): Analyze runway impact, prioritize decisions
+3. **Act** (Experience Service): Present staged decisions for approval
+4. **Review** (Human): Approve batch → execute to QBO
 
 ```python
 # Experience Service Integration Pattern
