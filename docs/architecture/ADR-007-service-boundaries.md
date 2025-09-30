@@ -105,6 +105,51 @@ grep -r "from.*experiences" runway/experiences/ --include="*.py"
 3. **Verify service boundaries** - each service has clear responsibilities
 4. **Test service instantiation** - no dependency injection issues
 
+## **Circular Dependencies Prevention**
+
+### **Critical Dependency Rules**
+**Circular dependencies** between services can cause import errors, testing problems, and architectural violations.
+
+#### **Dependency Direction (Enforced)**
+```
+Infra Services → Domain Services → Runway Services → Experience Services
+     ↑              ↑                ↑                  ↑
+   (Base)        (CRUD)          (Logic)           (UI/UX)
+```
+
+#### **Forbidden Dependencies**
+- **Runway → Domains**: ❌ Runway services cannot import from domains
+- **Experience → Runway**: ❌ Experience services cannot import from runway (circular)
+- **Cross-Domain**: ❌ Domain services cannot import from other domains
+
+#### **Allowed Dependencies**
+- **Domains → Infra**: ✅ Domain services can use infrastructure
+- **Runway → Domains**: ✅ Runway services can use domain services
+- **Experience → Both**: ✅ Experience services can use runway AND domain services
+
+### **Import Pattern Enforcement**
+```python
+# ✅ CORRECT: Experience service using both runway and domain
+from runway.services.calculators.runway_calculator import RunwayCalculator
+from domains.ap.services.bill_service import BillService
+
+class BillExperienceService:
+    def __init__(self, db: Session, business_id: str):
+        self.runway_calc = RunwayCalculator(db, business_id)
+        self.bill_service = BillService(db, business_id)
+
+# ❌ WRONG: Runway service importing from domains
+from domains.ap.services.bill_service import BillService  # Circular dependency!
+
+# ❌ WRONG: Cross-domain import
+from domains.ar.services.invoice_service import InvoiceService  # Violates boundaries!
+```
+
+### **Testing Dependencies**
+- **Unit Tests**: Mock all dependencies, test in isolation
+- **Integration Tests**: Test service boundaries, not internal implementations
+- **E2E Tests**: Test complete user workflows across all layers
+
 ## Related ADRs
 - **ADR-001**: Domain separation principles (foundation)
 - **ADR-005**: QBO API strategy (domain service patterns)

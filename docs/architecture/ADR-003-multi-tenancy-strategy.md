@@ -406,6 +406,57 @@ async def endpoint(
     return service.get_data()
 ```
 
+## **Security & Multi-Tenancy Hardening**
+
+### **Critical Security Requirements**
+**Multi-tenant data isolation** must be enforced at multiple layers to prevent data leakage between businesses and firms.
+
+#### **Data Isolation Enforcement**
+1. **Database Level**: All queries MUST include business_id filtering
+2. **Service Level**: TenantAwareService base class enforces business_id scoping
+3. **API Level**: Authentication context must include business_id
+4. **Route Level**: No hardcoded values, all business_id from auth context
+
+#### **Authentication & Authorization**
+```python
+# SECURITY: All routes must use auth context, not hardcoded values
+@router.get("/bills")
+async def get_bills(
+    current_user: User = Depends(get_current_user),  # ✅ Auth context
+    db: Session = Depends(get_db)
+):
+    # ❌ WRONG: hardcoded business_id
+    # bills = db.query(Bill).filter(Bill.business_id == 1).all()
+    
+    # ✅ CORRECT: business_id from auth context
+    bills = db.query(Bill).filter(Bill.business_id == current_user.business_id).all()
+```
+
+#### **Security Headers & Validation**
+- **CORS**: Properly configured for multi-tenant access
+- **Input Validation**: All inputs validated with Pydantic schemas
+- **SQL Injection**: Parameterized queries only, no string concatenation
+- **XSS Protection**: All user inputs sanitized
+
+#### **Audit Logging**
+```python
+# All multi-tenant operations must be logged
+audit_log = AuditLog(
+    user_id=current_user.id,
+    business_id=current_user.business_id,
+    action="bill_created",
+    resource_type="bill",
+    resource_id=bill.id,
+    details={"amount": bill.amount, "vendor": bill.vendor_name}
+)
+```
+
+### **Firm-Level Security (Phase 3+)**
+- **Firm Isolation**: firm_id must be enforced for all firm-level operations
+- **Staff RBAC**: Role-based access control within firms
+- **Client Data Access**: Staff can only access assigned clients
+- **Audit Trails**: All firm-level actions logged with staff context
+
 ## References
 
 - **Multi-Tenant Architecture**: Guo, Lei. "Multi-Tenant SaaS Architecture"
@@ -415,7 +466,7 @@ async def endpoint(
 
 ---
 
-**Last Updated**: 2025-09-30 (Firm-first pivot)  
+**Last Updated**: 2025-09-30 (Firm-first pivot + Security hardening)  
 **Next Review**: Phase 3 implementation (Weeks 1-2)
 
 ## Firm-First Implementation Priorities
