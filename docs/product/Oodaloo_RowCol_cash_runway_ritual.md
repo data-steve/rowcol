@@ -86,14 +86,48 @@ For our primary ICP (CAS firms), RowCol automates the weekly cash runway ritual 
 
 ### Planned Modules (Firm-First Feature Evolution)
 
+#### **Base Product: Weekly Cash Call Ritual**
 * **Core Multi-Client Ritual (Foundation):** Batch Weekly Digest, Multi-Client Console, Data Quality Score, Client Prep Tray, Portfolio Runway metrics—scaled for CAS firm workflows.
-* **Data Completeness (P0 Critical):** Bank feed integration, missing bill detection, POS integration—ensures reliable runway calculations across client portfolio.
+
+#### **P0 Critical Modules (Data Reliability)**
+* **Data Completeness Module:** Bank feed integration, missing bill detection, POS integration—ensures reliable runway calculations across client portfolio.
+
+#### **P1 High Modules (Firm-Level Management)**
+* **Portfolio Management Module:** Landscape view of all clients, risk prioritization dashboard, staff tasking workflows, client health scoring—solves "Which of my 50 clients need attention this week?"
 * **Smart AP (Client Rules):** Per-client earmarking, timeline conditional releases, vendor credit handling—learns payment preferences per client and auto-stages decisions.
 * **Smart AR (Client Collections):** Per-client priorities, custom reminder drips, auto-pause on payment, match/clean deposits—optimizes collection timing by customer behavior per client.
+
+#### **P2 Future Modules (Advanced Intelligence)**
 * **Smart Budgets (Client Constraints):** Per-client guardrails for essential vs discretionary spend, vacation pre-planning, policy engine—enforces spending rules and learns from deviations per client.
 * **Analytics Pack (Portfolio Insights):** Cross-client AR/AP aging trends, profit analysis, 2–4 week forecasts, shareable dashboards, benchmarking—predicts scenarios and recommends optimizations across portfolio.
+* **Advanced Forecasting Module:** 13-week planning, seasonal adjustments, scenario modeling—addresses Levi's expectation for longer-term visibility.
+
+#### **Enterprise Modules (Scale & Branding)**
+* **White-Label Module:** Firm branding, custom domains, client-facing reports—professional presentation for client relationships.
+* **Advanced Automation Module:** Smart policies, agentic features, advanced workflows—scales decision-making across large client portfolios.
 
 RowCol is modular by design. Not every client has complex AR or AP needs that justify tools like Ramp, but every CAS firm needs the weekly cash runway ritual across their portfolio. Smaller CAS-only shops can use RowCol as their core operating console; larger firms can layer it on top of existing rails, using Multi-Client Ritual + Analytics as the shared judgment surface even when AP/AR execution happens elsewhere.
+
+---
+
+### Pricing Model (Modular Approach)
+
+**Base Product**: Weekly Cash Call Ritual
+- **Core ritual**: Batch runway reviews, Must Pay vs Can Delay, one approval → batch actions
+- **Foundation**: Multi-client dashboard, data quality scoring, basic QBO integration
+
+**Module Pricing** (Add-on to base):
+- **Data Completeness Module**: $25/mo per client (bank feeds, missing bill detection)
+- **Portfolio Management Module**: $15/mo per client (landscape view, staff tasking)
+- **Smart AP/AR Modules**: $20/mo per client (automated collections, payment rules)
+- **Analytics Pack**: $30/mo per client (forecasting, benchmarking, insights)
+- **White-Label Module**: $200/mo per firm (branding, custom domains)
+- **Advanced Automation**: $40/mo per client (agentic features, smart policies)
+
+**Example Firm Pricing** (50 clients):
+- **Starter**: Base + Data Completeness = $75/mo per client = $3,750/mo
+- **Professional**: Base + Data + Portfolio + Smart AP/AR = $110/mo per client = $5,500/mo
+- **Enterprise**: All modules = $150/mo per client = $7,500/mo
 
 ---
 
@@ -156,4 +190,27 @@ CAS firms benefit as low-value categorization is automated by QBO agents; RowCol
 * **Distribution reality:** Does direct sales to CAS firms drive real adoption, or is QBO Marketplace the true growth engine?
 * **Durability of the ritual:** Is the weekly runway ritual powerful enough — with multi-client AP/AR, budgeting, and analytics — to anchor an enduring app, or will firms still see it as "just another tool"?
 * **Data completeness:** Can CAS firms ensure data quality across 20-100 clients, or will missing bills/data break the runway calculations?
+
+---
+
+## **🔍 Exploration Angles & Future Possibilities**
+
+### **Consider This: Advanced Firm-Level Painkillers**
+* **Client Risk Correlation**: "If Client A's runway drops, how does it affect our overall firm risk exposure?"
+* **Staff Workload Balancing**: "Which team members are overloaded with high-risk clients this week?"
+* **Client Onboarding Automation**: "Can we auto-detect when a new client needs immediate attention vs. standard onboarding?"
+* **Portfolio Health Scoring**: "What's our overall firm health score across all clients, and which clients are dragging it down?"
+
+### **TODO: Explore Further This Possible Angle**
+* **13-Week Forecasting Tension**: Levi mentioned this expectation—explore how to balance weekly ritual focus with longer-term planning needs
+* **Client Communication Automation**: "Can we auto-generate client-facing reports that explain runway decisions without exposing internal firm processes?"
+* **Integration with CAS Firm Tools**: "How does this connect with existing CAS firm workflows (Keeper, Fathom, client portals)?"
+* **Regulatory Compliance**: "Do we need SOC 2, audit trails, or other compliance features for enterprise CAS firms?"
+* **AI-Powered Client Insights**: "Can we surface patterns like 'Client A always has cash flow issues in Q4' or 'Client B's customers pay 15 days faster than average'?"
+
+### **Strategic Questions to Explore**
+* **Market Positioning**: "Are we competing with Keeper (compliance) or complementing it (advisory)?"
+* **Pricing Psychology**: "Do CAS firms prefer per-client pricing or per-firm tiers with client limits?"
+* **Feature Prioritization**: "Which modules do CAS firms buy first, and which are nice-to-have?"
+* **Client Retention**: "How does this tool help CAS firms retain clients vs. just improving efficiency?"
 
