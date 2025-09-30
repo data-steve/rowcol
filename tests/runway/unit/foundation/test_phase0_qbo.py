@@ -2,173 +2,140 @@
 Phase 0 QBO Integration Tests
 
 Tests for basic QBO integration functionality that's core to Phase 0 MVP.
-Uses the enhanced QBOAPIClient with proper mock/real switching.
+Uses the enhanced SmartSyncService with proper QBO integration.
 """
 import pytest
 import asyncio
 from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
-from domains.core.models import Business, Integration
-from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
+from domains.core.models import Business
+from infra.qbo.client import QBORawClient
 
 
 def test_qbo_provider_import():
-    """Test that QBOAPIClient can be imported"""
-    assert QBOAPIClient is not None
-    assert get_qbo_client is not None
+    """Test that QBORawClient can be imported"""
+    from infra.qbo.smart_sync import SmartSyncService
+    assert QBORawClient is not None
+    assert SmartSyncService is not None
 
 
 def test_qbo_provider_factory_real(db: Session, test_business: Business):
-    """Test QBO provider factory returns real provider"""
-    provider = get_qbo_client(test_business.business_id, db)
-    assert isinstance(provider, QBOAPIClient)
-    assert provider.business_id == test_business.business_id
+    """Test SmartSyncService can be created with business"""
+    from infra.qbo.smart_sync import SmartSyncService
+    smart_sync = SmartSyncService(test_business.business_id)
+    assert smart_sync is not None
+    assert smart_sync.business_id == test_business.business_id
 
 
 def test_qbo_provider_factory_auto_realm_lookup(db: Session, test_business: Business):
-    """Test QBO provider factory can lookup realm_id automatically"""
-    # This will use the fallback "mock_realm" since no integration exists
-    provider = get_qbo_client(test_business.business_id, db)
-    assert isinstance(provider, QBOAPIClient)
-    assert provider.realm_id == "mock_realm"
+    """Test SmartSyncService can be created with business QBO fields"""
+    from infra.qbo.smart_sync import SmartSyncService
+    # Update business with QBO fields for testing
+    test_business.qbo_realm_id = "test_realm_123"
+    test_business.qbo_status = "connected"
+    db.commit()
+    
+    smart_sync = SmartSyncService(test_business.business_id)
+    assert smart_sync is not None
+    assert smart_sync.business_id == test_business.business_id
 
 
-def test_integration_model_structure():
-    """Test that Integration model has correct Phase 0 attributes"""
-    assert hasattr(Integration, 'integration_id')
-    assert hasattr(Integration, 'business_id')
-    assert hasattr(Integration, 'platform')
-    assert hasattr(Integration, 'access_token')
-    assert hasattr(Integration, 'refresh_token')
-    assert hasattr(Integration, 'expires_at')
-    assert Integration.__tablename__ == 'integrations'
+def test_business_qbo_fields_structure():
+    """Test that Business model has correct QBO integration fields"""
+    from domains.core.models.business import Business
+    assert hasattr(Business, 'qbo_realm_id')
+    assert hasattr(Business, 'qbo_access_token')
+    assert hasattr(Business, 'qbo_refresh_token')
+    assert hasattr(Business, 'qbo_connected_at')
+    assert hasattr(Business, 'qbo_status')
+    assert hasattr(Business, 'qbo_environment')
+    assert hasattr(Business, 'qbo_token_expires_at')
+    assert hasattr(Business, 'qbo_error_message')
+    assert Business.__tablename__ == 'businesses'
 
 
-def test_integration_creation(db: Session, test_business: Business):
-    """Test basic Integration model creation for QBO"""
+def test_business_qbo_fields_update(db: Session, test_business: Business):
+    """Test basic Business QBO fields update for QBO integration"""
     from datetime import datetime, timedelta
 
-    integration = Integration(
-        # Do not set integration_id as it's an auto-incremented Integer primary key
-        business_id=test_business.business_id,
-        platform="QBO",
-        access_token="mock_access_token",
-        refresh_token="mock_refresh_token",
-        expires_at=datetime.now() + timedelta(hours=1),
-        status="active"
-    )
+    # Update business with QBO integration fields
+    test_business.qbo_realm_id = "mock_realm_123"
+    test_business.qbo_access_token = "mock_access_token"
+    test_business.qbo_refresh_token = "mock_refresh_token"
+    test_business.qbo_connected_at = datetime.now()
+    test_business.qbo_status = "connected"
+    test_business.qbo_environment = "sandbox"
+    test_business.qbo_token_expires_at = datetime.now() + timedelta(hours=1)
 
-    db.add(integration)
     db.commit()
+    db.refresh(test_business)
 
-    assert integration.business_id == test_business.business_id
-    assert integration.platform == "QBO"
-    assert integration.status == "active"
+    assert test_business.qbo_realm_id == "mock_realm_123"
+    assert test_business.qbo_access_token == "mock_access_token"
+    assert test_business.qbo_refresh_token == "mock_refresh_token"
+    assert test_business.qbo_status == "connected"
+    assert test_business.qbo_environment == "sandbox"
 
 
 @pytest.mark.asyncio
-async def test_qbo_provider_get_bills_real():
+async def test_qbo_provider_get_bills_real(qbo_connected_business):
     """Test QBO provider can get bills using real provider with production database"""
-    import os
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    from domains.core.models.integration import Integration, IntegrationStatuses
-    from domains.core.models.business import Business
+    business = qbo_connected_business
     
-    # Connect to MAIN database (not test database) to get real QBO integration
-    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
-    engine = create_engine(database_url)
-    Session = sessionmaker(bind=engine)
+    if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
+        pytest.skip("SKIPPING: QBO business missing required tokens.")
+
+    # Test with real SmartSyncService
+    from infra.qbo.smart_sync import SmartSyncService
+    smart_sync = SmartSyncService(business.business_id)
     
-    with Session() as session:
-        # Look for existing QBO integration in MAIN database
-        integration = session.query(Integration).filter(
-            Integration.platform == "qbo",
-            Integration.status == IntegrationStatuses.CONNECTED.value
-        ).first()
-
-        if not integration:
-            pytest.skip("SKIPPING: No QBO integration found. Run token refresh script.")
-
-        if not all([integration.access_token, integration.refresh_token, integration.realm_id]):
-            pytest.skip("SKIPPING: QBO integration missing required tokens.")
-
-        # Get the associated business
-        business = session.query(Business).filter(Business.business_id == integration.business_id).first()
-        if not business:
-            pytest.skip("SKIPPING: Business not found for QBO integration.")
-
-        # Test with real QBO provider
-        provider = get_qbo_client(business.business_id, session)
-        
-        # Test that provider can get bills (should work with valid tokens)
-        try:
-            bills = await provider.get_bills()
-            assert isinstance(bills, list)
-            print(f"✅ Successfully retrieved {len(bills)} bills from QBO")
-        except Exception as e:
-            # If it fails, it should be with a proper error message
-            assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
+    # Test that SmartSyncService can get bills (should work with valid tokens)
+    try:
+        bills = await smart_sync.get_bills()
+        assert isinstance(bills, list)
+        print(f"✅ Successfully retrieved {len(bills)} bills from QBO")
+    except Exception as e:
+        # If it fails, it should be with a proper error message
+        assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
 
 
 @pytest.mark.asyncio
-async def test_qbo_provider_get_invoices_real():
+async def test_qbo_provider_get_invoices_real(qbo_connected_business):
     """Test QBO provider can get invoices using real provider with production database"""
-    import os
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-    from domains.core.models.integration import Integration, IntegrationStatuses
-    from domains.core.models.business import Business
+    business = qbo_connected_business
     
-    # Connect to MAIN database (not test database) to get real QBO integration
-    database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
-    engine = create_engine(database_url)
-    Session = sessionmaker(bind=engine)
+    if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
+        pytest.skip("SKIPPING: QBO business missing required tokens.")
+
+    # Test with real SmartSyncService
+    from infra.qbo.smart_sync import SmartSyncService
+    smart_sync = SmartSyncService(business.business_id)
     
-    with Session() as session:
-        # Look for existing QBO integration in MAIN database
-        integration = session.query(Integration).filter(
-            Integration.platform == "qbo",
-            Integration.status == IntegrationStatuses.CONNECTED.value
-        ).first()
-
-        if not integration:
-            pytest.skip("SKIPPING: No QBO integration found. Run token refresh script.")
-
-        if not all([integration.access_token, integration.refresh_token, integration.realm_id]):
-            pytest.skip("SKIPPING: QBO integration missing required tokens.")
-
-        # Get the associated business
-        business = session.query(Business).filter(Business.business_id == integration.business_id).first()
-        if not business:
-            pytest.skip("SKIPPING: Business not found for QBO integration.")
-
-        # Test with real QBO provider
-        provider = get_qbo_client(business.business_id, session)
-        
-        # Test that provider can get invoices (should work with valid tokens)
-        try:
-            invoices = await provider.get_invoices()
-            assert isinstance(invoices, list)
-            print(f"✅ Successfully retrieved {len(invoices)} invoices from QBO")
-        except Exception as e:
-            # If it fails, it should be with a proper error message
-            assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
+    # Test that SmartSyncService can get invoices (should work with valid tokens)
+    try:
+        invoices = await smart_sync.get_invoices()
+        assert isinstance(invoices, list)
+        print(f"✅ Successfully retrieved {len(invoices)} invoices from QBO")
+    except Exception as e:
+        # If it fails, it should be with a proper error message
+        assert "No valid QBO access token" in str(e) or "IntegrationError" in str(e)
 
 
 def test_qbo_provider_business_relationship(db: Session, test_business: Business):
-    """Test that QBO provider properly references business"""
-    provider = get_qbo_client(test_business.business_id, db)
+    """Test that SmartSyncService properly references business"""
+    from infra.qbo.smart_sync import SmartSyncService
+    smart_sync = SmartSyncService(test_business.business_id)
     
-    assert provider.business_id == test_business.business_id
+    assert smart_sync.business_id == test_business.business_id
 
 
 def test_qbo_provider_factory_function(db: Session, test_business: Business):
-    """Test QBO provider factory function"""
-    provider = get_qbo_client(test_business.business_id, db)
+    """Test SmartSyncService factory function"""
+    from infra.qbo.smart_sync import SmartSyncService
+    smart_sync = SmartSyncService(test_business.business_id)
     
-    assert isinstance(provider, QBOAPIClient)
-    assert provider.business_id == test_business.business_id
+    assert smart_sync is not None
+    assert smart_sync.business_id == test_business.business_id
 
 
 def test_qbo_provider_phase0_scope():
@@ -185,9 +152,9 @@ def test_qbo_provider_phase0_scope():
     # - Advanced reconciliation
     
     try:
-        from domains.integrations.qbo.client import QBOAPIClient, get_qbo_client
-        assert QBOAPIClient is not None
-        assert get_qbo_client is not None
+        from infra.qbo.client import QBORawClient
+        from infra.qbo.smart_sync import SmartSyncService
+        assert SmartSyncService is not None
         
         # Basic provider should be importable
         assert True

@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 from domains.ar.models.customer import Customer
 from domains.core.services.base_service import TenantAwareService
-from config import CollectionsRules, CommunicationRules, RiskAssessmentRules
+from infra.config import CollectionsRules, CommunicationRules, RiskAssessmentRules
 
 import logging
 
@@ -58,10 +58,6 @@ class CustomerService(TenantAwareService):
         except Exception as e:
             logger.error(f"Failed to get active customers: {e}")
             return []
-    
-    def get_customers_for_digest(self) -> List[Dict[str, Any]]:
-        """Get customers formatted for digest generation."""
-        return self.get_active_customers()
     
     def calculate_collection_priority_score(self, customer: Customer) -> float:
         """
@@ -311,19 +307,13 @@ class CustomerService(TenantAwareService):
         
         customer.risk_score = risk_score
         
-        # Update risk category
-        if customer.risk_score >= 70:
-            customer.risk_category = "high"
-            customer.credit_status = "poor"
-        elif customer.risk_score >= 50:
-            customer.risk_category = "medium"
-            customer.credit_status = "fair"
-        elif customer.risk_score >= 30:
-            customer.risk_category = "low"
-            customer.credit_status = "good"
-        else:
-            customer.risk_category = "low"
-            customer.credit_status = "excellent"
+        # Update risk category - TODO: Implement real credit assessment
+        # For now, raise NotImplementedError to prevent fake credit status updates
+        raise NotImplementedError(
+            "Customer credit status assessment not implemented. "
+            "This requires real credit check integration and risk assessment logic, "
+            "not just score-based assignments. See build_plan_v5.md Phase 2: Smart AR."
+        )
     
     def get_customer_summary(self, customer: Customer) -> Dict[str, Any]:
         """

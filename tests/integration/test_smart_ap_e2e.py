@@ -17,15 +17,15 @@ from typing import Dict, Any, List
 
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model
 from domains.ap.models.bill import Bill, BillStatus
 from domains.ap.models.vendor import Vendor
 from domains.ap.services.bill_ingestion import BillService  # Available service
 from domains.ap.services.payment import PaymentService
-from domains.integrations import SmartSyncService
-from runway.core.runway_calculator import RunwayCalculator
-from runway.experiences.tray import TrayService
-from runway.core.payment_priority_calculator import PaymentPriorityCalculator
+from infra.qbo.smart_sync import SmartSyncService
+from runway.services.1_calculators.runway_calculator import RunwayCalculator
+from runway.services.2_experiences.tray import TrayService
+from runway.services.1_calculators.priority_calculator import PriorityCalculator
 from domains.core.models.balance import Balance
 
 @pytest.mark.integration
@@ -286,7 +286,7 @@ class TestSmartAPE2E:
             assert "priority_score" in prioritized_bills[0], "Payment priority logic failed"
     
             # Test 5: Tray Integration - Use QBO data provider, not mocks!
-            from runway.experiences.tray import QBOTrayDataProvider
+            from runway.services.2_experiences.tray import QBOTrayDataProvider
             qbo_tray_provider = QBOTrayDataProvider(db, ap_business.business_id)
             tray_service = TrayService(db, ap_business.business_id, data_provider=qbo_tray_provider)
             tray_items = tray_service.get_tray_items(ap_business.business_id)

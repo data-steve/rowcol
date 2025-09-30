@@ -11,7 +11,7 @@ Handles vendor business logic and lifecycle operations:
 Enhanced service following established architecture patterns.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
 import logging
@@ -78,10 +78,6 @@ class VendorService(TenantAwareService):
             logger.error(f"Error listing vendors for business {self.business_id}: {e}")
             return []
     
-    def get_vendors_for_digest(self) -> List[Dict[str, Any]]:
-        """Get vendors formatted for digest generation."""
-        return self.get_active_vendors()
-    
     # ==================== VENDOR BUSINESS LOGIC ====================
     
     def get_vendor_payment_methods(self, vendor: Vendor) -> List[str]:
@@ -117,7 +113,7 @@ class VendorService(TenantAwareService):
             return "high"
         
         # Use centralized payment rules for consistent thresholds
-        from config import PaymentRules
+        from infra.config import PaymentRules
         HIGH_AMOUNT_THRESHOLD = PaymentRules.HIGH_AMOUNT_THRESHOLD
         HIGH_RELIABILITY_THRESHOLD = PaymentRules.HIGH_RELIABILITY_THRESHOLD
         
@@ -236,6 +232,94 @@ class VendorService(TenantAwareService):
             query = query.filter(Vendor.name == name)
         
         return query.all()
+    
+    def find_vendor_by_name(self, name: str) -> Optional[Vendor]:
+        """Find single vendor by name with fuzzy matching."""
+        vendors = self.find_vendors_by_name(name, fuzzy_match=True)
+        return vendors[0] if vendors else None
+    
+    def find_vendor_by_qbo_id(self, qbo_vendor_id: str) -> Optional[Vendor]:
+        """Find vendor by QBO vendor ID."""
+        return self._base_query(Vendor).filter(
+            Vendor.qbo_vendor_id == qbo_vendor_id
+        ).first()
+    
+    def get_or_create_vendor_from_qbo_data(self, qbo_bill_data: Dict[str, Any]) -> Optional[Vendor]:
+        """
+        Extract vendor information from QBO bill data and create/find vendor in our database.
+        
+        Args:
+            qbo_bill_data: QBO bill data containing vendor_ref
+            
+        Returns:
+            Vendor if found/created, None otherwise
+        """
+        try:
+            vendor_ref = qbo_bill_data.get('vendor_ref', {})
+            if not vendor_ref:
+                return None
+                
+            vendor_name = vendor_ref.get('name')
+            qbo_vendor_id = vendor_ref.get('value')
+            
+            if not vendor_name:
+                return None
+            
+            # Try to find existing vendor by QBO ID first
+            vendor = self.find_vendor_by_qbo_id(qbo_vendor_id)
+            if vendor:
+                return vendor
+            
+            # Try to find by name (fuzzy match)
+            vendor = self.find_vendor_by_name(vendor_name)
+            if vendor:
+                # Update with QBO ID if found by name
+                vendor.qbo_vendor_id = qbo_vendor_id
+                self.db.flush()
+                return vendor
+            
+            # Create new vendor
+            vendor = Vendor(
+                business_id=self.business_id,
+                name=vendor_name,
+                qbo_vendor_id=qbo_vendor_id,
+                is_active=True
+            )
+            self.db.add(vendor)
+            self.db.flush()
+            
+            logger.info(f"Created vendor {vendor.vendor_id}: {vendor_name} from QBO data")
+            return vendor
+            
+        except Exception as e:
+            logger.warning(f"Failed to create vendor from QBO data: {e}")
+            return None
+    
+    def get_or_create_vendor_from_qbo_ref(self, vendor_ref: Dict) -> Optional[Vendor]:
+        """Find existing vendor or create new one from QBO vendor reference."""
+        if not vendor_ref:
+            return None
+        
+        qbo_vendor_id = vendor_ref.get("value")
+        vendor_name = vendor_ref.get("name")
+        
+        # Try to find existing vendor
+        vendor = self.find_vendor_by_qbo_id(qbo_vendor_id)
+        if vendor:
+            return vendor
+        
+        if vendor_name:
+            # Create new vendor
+            vendor = Vendor(
+                business_id=self.business_id,
+                qbo_vendor_id=qbo_vendor_id,
+                name=vendor_name,
+                is_active=True
+            )
+            self.db.add(vendor)
+            self.db.flush()
+        
+        return vendor
     
     def get_critical_vendors(self) -> List[Vendor]:
         """Get all critical vendors for the business."""

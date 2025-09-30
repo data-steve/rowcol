@@ -9,9 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id, get_current_user
-from runway.core.reserve_runway import RunwayReserveService
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id, get_current_user
+from runway.services.1_calculators.reserve_runway import RunwayReserveService
 from runway.schemas.runway_reserve import (
     RunwayReserveCreate, RunwayReserveUpdate, RunwayReserve,
     ReserveAllocationCreate, ReserveAllocation,

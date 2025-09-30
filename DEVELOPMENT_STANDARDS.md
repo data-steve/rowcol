@@ -1,82 +1,11 @@
 # Development Standards & Anti-Patterns
 
-## Quick Reference
-- [Build Plan](Oodaloo_v4.5_Build_Plan.md)
-
-
-
-### Service Abstraction Benefits
-
-1. **Rapid Development**: No external API setup required for Phases 0-3
-2. **Predictable Testing**: Mock data ensures consistent test results
-3. **Cost Control**: No API usage charges during development
-4. **Offline Development**: Work without internet connectivity
-5. **Easy Productionalization**: Simple environment variable changes
-
-### Clean Mocking Architecture Standards
-
-**Core Principle**: Business logic functions must be completely agnostic to whether they're using mock or real data providers.
-
-**Implementation Pattern**:
-```python
-# ✅ GOOD: Clean dependency injection
-class TrayService:
-    def __init__(self, db: Session, data_provider: TrayDataProvider = None):
-        self.data_provider = data_provider or get_tray_data_provider()
-    
-    def calculate_runway_impact(self, item):
-        return self.data_provider.get_runway_impact(item.type)
-
-# ❌ BAD: Mock data embedded in business logic
-class TrayService:
-    def calculate_runway_impact(self, item):
-        if item.type == "overdue_bill":
-            return {"cash_impact": -1500}  # Hard-coded mock data
-```
-
-**Provider Pattern Requirements**:
-1. **Abstract Base Class**: Define interface contract
-2. **Mock Provider**: External class with realistic test data
-3. **Production Provider**: Real integration implementation
-4. **Factory Function**: Environment-based provider selection
-5. **Environment Variables**: `USE_MOCK_*=true/false` controls
-
-**Mock Data Strategy**:
-
-**Mock Email Provider**:
-- Logs emails to console and `logs/mock_emails_*.json`
-- Tracks engagement metrics for testing
-- Simulates delivery success/failure scenarios
-- **Location**: `runway/services/email/mock_provider.py`
-
-**Mock QBO Integration**:
-- Returns realistic bill/invoice/balance data
-- Simulates API rate limiting and errors
-- Supports different business scenarios (healthy, cash-strapped, etc.)
-- **Location**: `domains/integrations/qbo/mock_provider.py`
-
-**Mock Tray Data**:
-- Priority weights, runway impacts, action results
-- Realistic business scenarios and edge cases
-- **Location**: `runway/tray/providers/mock_data_provider.py`
-
-**Mock Payment Processing**:
-- Simulates payment success/failure rates
-- Mock bank account verification
-- Realistic processing delays and confirmations
-- **Location**: `domains/ap/providers/mock_payment_provider.py`
-
-**Benefits of Clean Mocking**:
-- Services work identically with mock/real providers
-- Easy to swap providers via environment variables
-- Mock data can be shared across tests
-- No risk of "fooling ourselves" with embedded test data
-- Production code has zero mock contamination
+## Core Principle: "Junior Developer Test"
+Every piece of code should be understandable and debuggable by a junior/mid-level developer within 30 seconds.
 
 ## Coding Standards for Maintainability
 
-### Core Principle: "Junior Developer Test"
-Every piece of code should be understandable and debuggable by a junior/mid-level developer within 30 seconds.
+
 
 ### Database Transaction Patterns
 
@@ -180,50 +109,7 @@ if priority_score > 80:  # Why 80? Who decided this?
 
 ### Service Layer Patterns
 
-**✅ GOOD: Clear Dependencies and Error Boundaries**
-```python
-class DigestService:
-    def __init__(self, db: Session, email_provider: EmailProvider, 
-                 runway_calculator: RunwayCalculator):
-        self.db = db
-        self.email_provider = email_provider
-        self.runway_calculator = runway_calculator
-    
-    def generate_weekly_digest(self, business_id: str) -> DigestResult:
-        """Generate weekly runway digest for a business.
-        
-        Args:
-            business_id: UUID of the business
-            
-        Returns:
-            DigestResult with email status and runway data
-            
-        Raises:
-            BusinessNotFoundError: If business doesn't exist
-            RunwayCalculationError: If runway calculation fails
-            EmailDeliveryError: If email sending fails
-        """
-        business = self._get_business_or_raise(business_id)
-        runway_data = self.runway_calculator.calculate(business)
-        email_result = self.email_provider.send_digest(runway_data)
-        return DigestResult(runway_data=runway_data, email_result=email_result)
-```
 
-**❌ BAD: Unclear Dependencies and No Documentation**
-```python
-class DigestService:
-    def generate_digest(self, biz_id):  # What type? What does it return?
-        # Complex logic with no explanation
-        pass
-```
-
-### Why These Standards Matter
-
-1. **Onboarding Speed**: New developers productive in days, not weeks
-2. **Debugging Efficiency**: Find and fix bugs in minutes, not hours  
-3. **Change Velocity**: Business requirement changes don't require rewrites
-4. **Code Reviews**: Reviewers can focus on business logic, not deciphering code
-5. **Technical Debt**: Prevents accumulation of "clever" code that becomes unmaintainable
 
 ## Risk Mitigation
 
@@ -242,4 +128,5 @@ class DigestService:
 - **Market Validation**: Beta program with real agencies, measure engagement metrics
 - **Pricing Sensitivity**: Modular pricing, clear ROI demonstration, free tier
 - **Sales Channel**: QBO marketplace + direct CAS firm outreach
+
 

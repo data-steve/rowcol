@@ -17,8 +17,8 @@ import os
 from sqlalchemy.orm import Session as SQLAlchemySession
 
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration, IntegrationStatuses
-from domains.integrations.qbo.client import get_real_qbo_client
+# from infra.qbo.integration_models import Integration, IntegrationStatuses  # Replaced with Business model
+from infra.qbo.client import QBORawClient
 from tests.conftest import test_business  # Re-using the basic business fixture
 
 @pytest.mark.qbo_real_api
@@ -50,25 +50,22 @@ class TestRealQBOApi:
         Session = sessionmaker(bind=engine)
         
         with Session() as session:
-            # Look for existing QBO integration in MAIN database
-            integration = session.query(Integration).filter(
-                Integration.platform == "qbo",
-                Integration.status == IntegrationStatuses.CONNECTED.value
+            # Look for existing QBO-connected business in MAIN database
+            business = session.query(Business).filter(
+                Business.qbo_status == "connected",
+                Business.qbo_access_token.isnot(None)
             ).first()
 
-            if not integration:
-                pytest.skip("SKIPPING REAL QBO TESTS: No QBO integration found. Run 'poetry run python domains/integrations/qbo/get_qbo_tokens.py' to set up tokens.")
-
-            if not all([integration.access_token, integration.refresh_token, integration.realm_id]):
-                pytest.skip("SKIPPING REAL QBO TESTS: QBO integration missing required tokens. Run token exchange script to refresh.")
-
-            # Get the associated business
-            business = session.query(Business).filter(Business.business_id == integration.business_id).first()
             if not business:
-                pytest.skip("SKIPPING REAL QBO TESTS: Business not found for QBO integration.")
+                pytest.skip("SKIPPING REAL QBO TESTS: No QBO-connected business found. Run 'poetry run python domains/integrations/qbo/get_qbo_tokens.py' to set up tokens.")
+
+            if not all([business.qbo_access_token, business.qbo_refresh_token, business.qbo_realm_id]):
+                pytest.skip("SKIPPING REAL QBO TESTS: QBO business missing required tokens. Run token exchange script to refresh.")
+
+            # Business is already loaded above
 
             # Return both business and realm_id to avoid session issues
-            return business, integration.realm_id
+            return business, business.qbo_realm_id
 
     @pytest.mark.asyncio
     async def test_connect_and_get_bills_from_real_qbo_sandbox(self, real_qbo_business: tuple[Business, str]):

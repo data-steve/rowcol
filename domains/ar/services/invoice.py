@@ -1,9 +1,9 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from domains.ar.models.invoice import Invoice as InvoiceModel
 from domains.ar.schemas.invoice import Invoice
 from domains.policy.services.policy_engine import PolicyEngineService
-from domains.integrations import SmartSyncService
+from infra.qbo.smart_sync import SmartSyncService
 from datetime import datetime, timedelta
 from domains.core.services.base_service import TenantAwareService
 import logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class InvoiceService(TenantAwareService):
     def __init__(self, db: Session, business_id: str):
         super().__init__(db, business_id)
-        self.smart_sync = SmartSyncService(db, business_id)
+        self.smart_sync = SmartSyncService(business_id, "", self.db)
         self.policy_engine = PolicyEngineService(db)
     
     # ==================== SMART SYNC DATA METHODS ====================
@@ -51,10 +51,6 @@ class InvoiceService(TenantAwareService):
         except Exception as e:
             logger.error(f"Failed to get overdue invoices: {e}")
             return []
-    
-    def get_invoices_for_digest(self) -> List[Dict[str, Any]]:
-        """Get all overdue invoices for digest generation."""
-        return self.get_overdue_invoices(0)
     
     def get_aging_buckets(self) -> Dict[str, List[Dict[str, Any]]]:
         """Get invoices organized by aging buckets."""
@@ -136,15 +132,12 @@ class InvoiceService(TenantAwareService):
             self.db.rollback()
             raise ValueError(f"Invoice creation failed: {str(e)}")
 
-    def sync_invoices(self, business_id: int) -> List[Invoice]:
+    async def sync_invoices(self, business_id: int) -> List[Invoice]:
         """Sync invoices from QBO via SmartSyncService."""
         try:
-            if not self.smart_sync:
-                # Fallback for when business_id wasn't provided in constructor
-                self.smart_sync = SmartSyncService(self.db, str(business_id))
+            # Use SmartSyncService for sync orchestration
+            qbo_data = await self.smart_sync.get_invoices()
             
-            # Use SmartSyncService to get QBO invoices data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
             qbo_invoices = qbo_data.get("invoices", [])
             
             invoices = []
@@ -171,7 +164,8 @@ class InvoiceService(TenantAwareService):
             
             self.db.commit()
             
-            # Record sync activity
+            # Cache results and record activity
+            self.smart_sync.set_cache("qbo", invoices, ttl_minutes=240)
             self.smart_sync.record_user_activity("invoice_sync")
             
             return invoices
@@ -221,3 +215,19 @@ class InvoiceService(TenantAwareService):
             self.db.rollback()
             logger.error(f"Failed to ingest invoice from QBO: {e}")
             raise ValueError(f"Failed to ingest invoice from QBO: {e}")
+    
+    # ==================== UTILITY METHODS ====================
+    
+    def get_invoice_by_qbo_id(self, qbo_id: str) -> Optional[InvoiceModel]:
+        """Get invoice by QBO ID for this business."""
+        return self.db.query(InvoiceModel).filter(
+            InvoiceModel.business_id == self.business_id,
+            InvoiceModel.qbo_invoice_id == qbo_id
+        ).first()
+    
+    def get_invoice_by_id(self, invoice_id: int) -> Optional[InvoiceModel]:
+        """Get invoice by internal ID for this business."""
+        return self.db.query(InvoiceModel).filter(
+            InvoiceModel.business_id == self.business_id,
+            InvoiceModel.invoice_id == invoice_id
+        ).first()

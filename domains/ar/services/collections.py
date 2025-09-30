@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from domains.integrations import SmartSyncService
+from infra.qbo.smart_sync import SmartSyncService
 from domains.core.services.base_service import TenantAwareService
 from common.exceptions import ValidationError
 import logging
@@ -35,9 +35,9 @@ class CollectionsService(TenantAwareService):
     
     def __init__(self, db: Session, business_id: str = None):
         super().__init__(db, business_id)
-        self.smart_sync = SmartSyncService(db, business_id) if business_id else None
+        self.smart_sync = SmartSyncService(business_id, "", db) if business_id else None
     
-    def get_overdue_invoices(self, days_overdue_min: int = 1, priority: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def get_overdue_invoices(self, days_overdue_min: int = 1, priority: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Get overdue invoices with priority scoring and collection recommendations.
         
@@ -52,9 +52,11 @@ class CollectionsService(TenantAwareService):
             if not self.smart_sync:
                 raise ValidationError("SmartSyncService not available - business_id required")
             
-            # Get QBO invoice data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
-            invoices = qbo_data.get("invoices", [])
+            # Use SmartSyncService for data retrieval
+            # QBOClient import removed - using SmartSyncService directly
+            
+            # Get invoices using SmartSyncService
+            invoices = await self.smart_sync.get_invoices()
             
             today = datetime.utcnow()
             overdue_invoices = []
@@ -147,20 +149,24 @@ class CollectionsService(TenantAwareService):
             
             # TODO: Implement actual reminder sending logic
             # This would integrate with email service, SMS service, etc.
+            # reminder_result = {
+            #     "invoice_id": invoice_id,
+            #     "customer_name": target_invoice["customer"]["name"],
+            #     "reminder_type": reminder_type,
+            #     "amount": target_invoice["amount"],
+            #     "days_overdue": target_invoice["days_overdue"],
+            #     "sent_at": datetime.utcnow().isoformat(),
+            #     "status": "sent",  # TODO: Get actual status from communication 
+            #     service
+            #     "message": custom_message or self._generate_reminder_message
+            #     (target_invoice, reminder_type)
+            # }
             
-            reminder_result = {
-                "invoice_id": invoice_id,
-                "customer_name": target_invoice["customer"]["name"],
-                "reminder_type": reminder_type,
-                "amount": target_invoice["amount"],
-                "days_overdue": target_invoice["days_overdue"],
-                "sent_at": datetime.utcnow().isoformat(),
-                "status": "sent",  # TODO: Get actual status from communication service
-                "message": custom_message or self._generate_reminder_message(target_invoice, reminder_type)
-            }
-            
-            # TODO: Record reminder in database for tracking
-            self._record_reminder_sent(invoice_id, reminder_type, reminder_result)
+            raise NotImplementedError(
+                "Collections reminder sending is not yet implemented. "
+                "This feature requires integration with email service and QBO collections API. "
+                "See build_plan_v5.md Phase 2: Smart AR & Collections for implementation plan."
+            )
             
             # Record activity for smart sync
             if self.smart_sync:
@@ -172,7 +178,7 @@ class CollectionsService(TenantAwareService):
             logger.error(f"Failed to send reminder for invoice {invoice_id}: {str(e)}")
             raise ValidationError(f"Failed to send reminder: {str(e)}")
     
-    def get_aging_report(self) -> Dict[str, Any]:
+    async def get_aging_report(self) -> Dict[str, Any]:
         """
         Generate aging report with buckets and totals.
         
@@ -183,9 +189,11 @@ class CollectionsService(TenantAwareService):
             if not self.smart_sync:
                 raise ValidationError("SmartSyncService not available - business_id required")
             
-            # Get QBO invoice data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
-            invoices = qbo_data.get("invoices", [])
+            # Use SmartSyncService for data retrieval
+            # QBOClient import removed - using SmartSyncService directly
+            
+            # Get invoices using SmartSyncService
+            invoices = await self.smart_sync.get_invoices()
             
             today = datetime.utcnow()
             aging_buckets = {
@@ -256,7 +264,7 @@ class CollectionsService(TenantAwareService):
             logger.error(f"Failed to generate aging report: {str(e)}")
             raise ValidationError(f"Failed to generate aging report: {str(e)}")
     
-    def get_customer_payment_history(self, customer_id: str) -> Dict[str, Any]:
+    async def get_customer_payment_history(self, customer_id: str) -> Dict[str, Any]:
         """
         Get payment history and reliability score for a customer.
         
@@ -270,9 +278,11 @@ class CollectionsService(TenantAwareService):
             if not self.smart_sync:
                 raise ValidationError("SmartSyncService not available - business_id required")
             
-            # Get QBO data
-            qbo_data = self.smart_sync.get_qbo_data_for_digest()
-            invoices = qbo_data.get("invoices", [])
+            # Use SmartSyncService for data retrieval
+            # QBOClient import removed - using SmartSyncService directly
+            
+            # Get invoices using SmartSyncService
+            invoices = await self.smart_sync.get_invoices()
             
             customer_invoices = []
             total_invoiced = 0

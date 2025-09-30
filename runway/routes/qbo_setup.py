@@ -10,8 +10,8 @@ including OAuth flow, connection manager establishment, and health verification.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Dict, Any
-from db.session import get_db
-from runway.infrastructure.qbo_setup.qbo_setup_service import QBOSetupService
+from infra.database.session import get_db
+from infra.qbo.setup import QBOSetupService
 
 router = APIRouter(prefix="/qbo-setup", tags=["qbo-setup"])
 

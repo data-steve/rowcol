@@ -19,10 +19,11 @@ from .payments import router as ap_payments_router
 from .vendors import router as ap_vendors_router
 from .collections import router as ar_collections_router
 from .invoices import router as ar_invoices_router
-from .kpis import router as analytics_kpis_router
+# KPIs route removed - QBO has built-in KPIs
 from .onboarding import router as onboarding_router
 from .tray import router as tray_router
 from .test_drive import router as test_drive_router
+from .console import router as console_router
 
 # Import QBO setup routes
 from .qbo_setup import router as qbo_setup_router
@@ -40,6 +41,7 @@ router.include_router(reserves_router, prefix="/runway")
 router.include_router(onboarding_router, prefix="/onboarding")
 router.include_router(tray_router, prefix="/tray")
 router.include_router(test_drive_router, prefix="/test-drive")
+router.include_router(console_router, prefix="/console")
 
 # AP routes
 router.include_router(ap_bills_router, prefix="/ap")
@@ -50,8 +52,7 @@ router.include_router(ap_vendors_router, prefix="/ap")
 router.include_router(ar_collections_router, prefix="/ar")
 router.include_router(ar_invoices_router, prefix="/ar")
 
-# Analytics routes
-router.include_router(analytics_kpis_router, prefix="/analytics")
+# Analytics routes removed - QBO has built-in KPIs
 
 # QBO setup infrastructure routes
 router.include_router(qbo_setup_router, prefix="/infrastructure")

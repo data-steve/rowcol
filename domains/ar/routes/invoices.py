@@ -4,7 +4,7 @@ Handles invoice creation and management for AR domain.
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from db.session import get_db
+from infra.database.session import get_db
 from domains.ar.services.invoice import InvoiceService
 from datetime import datetime
 
@@ -29,10 +29,12 @@ def get_invoices(business_id: int, db: Session = Depends(get_db)):
 
 @router.post("/collections/remind")
 def send_collection_reminder(business_id: str, invoice_id: str, db: Session = Depends(get_db)):
-    # Simple mock response for test compatibility
-    return {
-        "status": "reminder_sent",
-        "business_id": business_id,
-        "invoice_id": invoice_id,
-        "message": "Collection reminder sent successfully"
-    }
+    """Send collection reminder using CollectionsService."""
+    from domains.ar.services.collections import CollectionsService
+    
+    try:
+        collections_service = CollectionsService(db, business_id)
+        result = collections_service.send_reminder(invoice_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send reminder: {str(e)}")

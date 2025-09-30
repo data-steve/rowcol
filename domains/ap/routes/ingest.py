@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from db.session import get_db
-from domains.ap.services.ap_ingestion import IngestionService
+from infra.database.session import get_db
+from domains.ap.services.bill_ingestion import BillService
 from domains.ap.services.payment import PaymentService
 from domains.ap.services.statement_reconciliation import StatementReconciliationService
 from datetime import date
@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.post("/")
 def ingest_bill(file_path: str, business_id: int, db: Session = Depends(get_db)):
-    service = IngestionService(db, str(business_id))
+    service = BillService(db, str(business_id))
     return service.ingest_document(file_path, business_id)
 
 @router.post("/payments")

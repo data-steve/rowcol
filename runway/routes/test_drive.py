@@ -9,8 +9,8 @@ Provides endpoints for proof-of-value demonstrations including:
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Dict, Any
-from db.session import get_db
-from runway.experiences.test_drive import DemoTestDriveService
+from infra.database.session import get_db
+from runway.services.2_experiences.test_drive import TestDriveService, DemoTestDriveService
 
 router = APIRouter(prefix="/test-drive", tags=["test-drive"])
 
@@ -22,8 +22,18 @@ async def get_test_drive(business_id: str, db: Session = Depends(get_db)) -> Dic
     Returns a 4-week retrospective analysis of what Oodaloo would have 
     recommended based on the business's QBO data.
     """
-    service = DemoTestDriveService(db)
-    return await service.generate_test_drive(business_id)
+    service = TestDriveService(db)
+    return await service.get_test_drive_experience(business_id)
+
+@router.get("/{business_id}/test-drive/enhanced")
+async def get_enhanced_test_drive(business_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Get enhanced test drive data with insights and value proposition analysis.
+    
+    Returns enhanced analysis with insights, value proposition, and demo metrics.
+    """
+    service = TestDriveService(db)
+    return await service.get_enhanced_test_drive_experience(business_id)
 
 @router.get("/{business_id}/hygiene-score")
 def get_hygiene_score(business_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:

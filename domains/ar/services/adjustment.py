@@ -50,8 +50,13 @@ class AdjustmentService(TenantAwareService):
         - Runway impact calculation (shows cash flow effect)
         - Clear reason tracking for business insights
         """
-        # Smart approval logic
-        status = "review" if amount > 1000 else "applied"
+        # Smart approval logic - TODO: Implement real approval workflow
+        # For now, raise NotImplementedError to prevent fake status updates
+        raise NotImplementedError(
+            "Credit memo approval workflow not implemented. "
+            "This requires real approval logic based on business rules, "
+            "not just amount thresholds. See build_plan_v5.md Phase 2: Smart AR."
+        )
         
         # Calculate runway impact (Phase 2 enhancement)
         runway_impact_days = self._calculate_runway_impact(amount)

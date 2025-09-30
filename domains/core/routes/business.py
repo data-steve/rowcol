@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-from db.session import get_db
+from infra.database.session import get_db
 from domains.core.services.business import BusinessService
 from domains.core.schemas.business import (
     BusinessCreate, 

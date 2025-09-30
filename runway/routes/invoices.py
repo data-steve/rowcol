@@ -10,12 +10,11 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
 from domains.ar.services.collections import CollectionsService
-from domains.integrations import SmartSyncService
-from runway.core.reserve_runway import RunwayReserveService
+from runway.services.1_calculators.reserve_runway import RunwayReserveService
 from common.exceptions import ValidationError
 
 router = APIRouter(tags=["AR Invoices"])
@@ -28,7 +27,6 @@ def get_services(
     return {
         "invoice_service": InvoiceService(db, business_id),
         "collections_service": CollectionsService(db, business_id),
-        "smart_sync": SmartSyncService(db, business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -46,12 +44,14 @@ async def list_invoices(
     Shows invoice status, payment progress, and cash flow impact calculations.
     """
     try:
-        smart_sync = services["smart_sync"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
-        # Get QBO invoice data
-        qbo_data = smart_sync.get_qbo_data_for_digest()
-        invoices = qbo_data.get("invoices", [])
+        # Get invoice data using domain service
+        invoice_service = services["invoice_service"]
+        
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         # Get current runway for impact calculations
         runway_calc = reserve_service.calculate_runway_with_reserves()
@@ -60,7 +60,7 @@ async def list_invoices(
         enhanced_invoices = []
         count = 0
         
-        for invoice_data in invoices:
+        for invoice_data in overdue_invoices:
             # Apply filters
             if status_filter:
                 balance = float(invoice_data.get("Balance", 0))
@@ -143,16 +143,18 @@ async def get_invoice(
 ):
     """Get detailed invoice information with payment history and collection status."""
     try:
-        smart_sync = services["smart_sync"]
         collections_service = services["collections_service"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
-        # Get QBO data
-        qbo_data = smart_sync.get_qbo_data_for_digest()
-        invoices = qbo_data.get("invoices", [])
+        # Get invoice data using domain service
+        invoice_service = services["invoice_service"]
+        
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         # Find the specific invoice
-        target_invoice = next((inv for inv in invoices if inv.get("Id") == invoice_id), None)
+        target_invoice = next((inv for inv in overdue_invoices if inv.get("Id") == invoice_id), None)
         if not target_invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -281,14 +283,16 @@ async def get_payment_options(
     Shows different payment timing options and their runway impact.
     """
     try:
-        smart_sync = services["smart_sync"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
-        # Get invoice details
-        qbo_data = smart_sync.get_qbo_data_for_digest()
-        invoices = qbo_data.get("invoices", [])
+        # Get invoice details using domain service
+        invoice_service = services["invoice_service"]
         
-        target_invoice = next((inv for inv in invoices if inv.get("Id") == invoice_id), None)
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
+        
+        target_invoice = next((inv for inv in overdue_invoices if inv.get("Id") == invoice_id), None)
         if not target_invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -365,17 +369,19 @@ async def get_invoices_runway_impact(
     Shows total AR value and potential runway extension from collections.
     """
     try:
-        smart_sync = services["smart_sync"]
         reserve_service = services["reserve_service"]
+        business_id = services["reserve_service"].business_id
         
         # Get current runway
         runway_calc = reserve_service.calculate_runway_with_reserves()
         current_runway = runway_calc.get("runway_days", 0)
         daily_burn = runway_calc.get("daily_burn", 1)
         
-        # Get outstanding invoices
-        qbo_data = smart_sync.get_qbo_data_for_digest()
-        invoices = qbo_data.get("invoices", [])
+        # Get outstanding invoices using domain service
+        invoice_service = services["invoice_service"]
+        
+        # Get overdue invoices using domain service
+        overdue_invoices = await invoice_service.get_overdue_invoices()
         
         total_ar = 0
         overdue_ar = 0
@@ -385,7 +391,7 @@ async def get_invoices_runway_impact(
         
         today = datetime.utcnow()
         
-        for invoice_data in invoices:
+        for invoice_data in overdue_invoices:
             balance = float(invoice_data.get("Balance", 0))
             if balance <= 0:
                 continue

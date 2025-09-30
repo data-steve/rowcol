@@ -18,14 +18,14 @@ from typing import Dict, Any, List
 
 from sqlalchemy.orm import Session as SQLAlchemySession
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration
-from domains.integrations.qbo.client import get_qbo_client
-from domains.integrations import SmartSyncService
-from runway.core.runway_calculator import RunwayCalculator
-from runway.core.data_quality_analyzer import DataQualityAnalyzer
-from runway.core.reserve_runway import RunwayReserveService
+# from infra.qbo.integration_models import Integration  # Replaced with Business model
+from infra.qbo.client import QBORawClient
+from infra.qbo.smart_sync import SmartSyncService
+from runway.services.1_calculators.runway_calculator import RunwayCalculator
+from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
+from runway.services.1_calculators.reserve_runway import RunwayReserveService
 from runway.schemas.runway_reserve import RunwayReserveCreate, ReserveTypeEnum, ReserveAllocationCreate
-from config import RunwayAnalysisSettings
+from infra.config import RunwayAnalysisSettings
 
 # Test configuration
 QBO_SANDBOX_COMPANIES = {
@@ -54,7 +54,7 @@ class TestRunwayReserveE2E:
         import os
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
-        from domains.core.models.integration import IntegrationStatuses
+        # from infra.qbo.integration_models import Integration  # Replaced with Business modelStatuses
         
         # Connect to MAIN database (not test database)
         database_url = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///oodaloo.db')
@@ -62,20 +62,17 @@ class TestRunwayReserveE2E:
         Session = sessionmaker(bind=engine)
         
         with Session() as session:
-            # Look for existing QBO integration in MAIN database
-            integration = session.query(Integration).filter(
-                Integration.platform == "qbo",
-                Integration.status == IntegrationStatuses.CONNECTED.value
+            # Look for existing QBO-connected business in MAIN database
+            from domains.core.models.business import Business
+            business = session.query(Business).filter(
+                Business.qbo_status == "connected",
+                Business.qbo_access_token.isnot(None)
             ).first()
 
-            if not integration:
-                pytest.skip("SKIPPING: No QBO integration found. Run token refresh script.")
-
-            # Get the associated business
-            business = session.query(Business).filter(Business.business_id == integration.business_id).first()
             if not business:
-                pytest.skip("SKIPPING: Business not found for QBO integration.")
+                pytest.skip("SKIPPING: No QBO-connected business found. Run token refresh script.")
 
+            # Business is already loaded above
             return business
     
     @pytest.mark.asyncio
@@ -150,7 +147,7 @@ class TestRunwayReserveE2E:
         
         with Session() as prod_session:
             smart_sync = SmartSyncService(prod_session, qbo_business.business_id)
-            data_quality_analyzer = DataQualityAnalyzer(prod_session, qbo_business.business_id)
+            data_quality_analyzer = DataQualityCalculator(prod_session, qbo_business.business_id)
             runway_calculator = RunwayCalculator(prod_session, qbo_business.business_id)
             
             # Get real QBO data
@@ -278,8 +275,7 @@ class TestRunwayReserveE2E:
         Session = sessionmaker(bind=engine)
         
         with Session() as prod_session:
-            qbo_provider = get_qbo_client(qbo_business.business_id, prod_session)
-            smart_sync = SmartSyncService(prod_session, qbo_business.business_id)
+            smart_sync = SmartSyncService(qbo_business.business_id)
             
             # Test multiple rapid API calls (simulating Smart AP usage)
             api_calls = []
@@ -360,7 +356,7 @@ class TestRunwayReserveE2E:
                 assert runway_analysis["base_runway_days"] > 0, "Runway calculation failed"
                 
                 # Test 3: Data Quality Analysis Works
-                data_quality_analyzer = DataQualityAnalyzer(prod_session, qbo_business.business_id)
+                data_quality_analyzer = DataQualityCalculator(prod_session, qbo_business.business_id)
                 hygiene_analysis = data_quality_analyzer.calculate_hygiene_score(qbo_data)
                 assert 0 <= hygiene_analysis["hygiene_score"] <= 100, "Data quality analysis failed"
                 

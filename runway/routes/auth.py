@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from db.session import get_db
+from infra.database.session import get_db
 from domains.core.models.user import User
 from domains.core.models.business import Business
-from runway.schemas.auth import (
+from infra.auth.auth import (
     LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
     RegisterRequest, PasswordResetRequest, PasswordResetConfirm
 )
-from runway.infrastructure.middleware.auth import create_access_token, verify_token
+from infra.auth.auth import create_access_token, verify_token
 import hashlib
 import secrets
 

@@ -2,26 +2,19 @@
 
 **Date**: 2025-09-17  
 **Status**: Accepted  
-**Deciders**: Steve Simpson, Claude (AI Assistant)  
-**Technical Story**: Phase 0.2 Core API Foundation  
+**Decision**: Two-layer architecture with strict dependency rules for multi-product platform
 
 ## Context
 
-Oodaloo requires a clear architectural separation between core business logic and product-specific orchestration. As we build toward a multi-product platform (Runway for cash management, future RowCol for multi-tenant CAS firms), we need a sustainable code organization that:
-
-1. **Prevents circular dependencies** between domain logic and product features
-2. **Enables code reuse** across multiple products (Runway, RowCol, future products)
-3. **Maintains clear boundaries** for QBO-facing primitives vs user-facing workflows
-4. **Supports junior/mid-level developer maintainability**
-5. **Allows independent testing** of business logic vs product orchestration
+Multi-product platform (Runway, RowCol) needs clear separation between business logic and product orchestration to prevent circular dependencies and enable code reuse.
 
 ## Decision
 
-We will organize the codebase into two primary architectural layers:
+**Two-Layer Architecture** with strict dependency rules:
 
 ### **`domains/` - Core Business Primitives (QBO-facing)**
-
-**Purpose**: Reusable, product-agnostic business logic that directly interfaces with QBO and other external systems.
+**Pattern**: Domain-Driven Design + Repository Pattern + Single Responsibility
+**Purpose**: Reusable, product-agnostic business logic that directly interfaces with QBO
 
 **Structure**:
 ```
@@ -33,14 +26,8 @@ domains/
 └── integrations/   # QBO, payment processors, email providers
 ```
 
-**Characteristics**:
-- **Single Responsibility**: Each domain handles one business area
-- **QBO-Centric**: Models and services mirror QBO data structures
-- **Product-Agnostic**: No knowledge of Runway, RowCol, or other products
-- **Stateless**: Pure business logic with minimal side effects
-- **Testable**: Can be tested independently with mock data
+**Characteristics**: Single Responsibility, QBO-Centric, Product-Agnostic, Stateless, Testable
 
-**Example**:
 ```python
 # domains/ap/services/bill_payment.py
 class BillPaymentService:
@@ -50,8 +37,8 @@ class BillPaymentService:
 ```
 
 ### **`runway/` - Product Orchestration (User-facing)**
-
-**Purpose**: Runway-specific workflows that orchestrate multiple domain services to deliver user value.
+**Pattern**: Orchestration Layer + Facade Pattern + State Management
+**Purpose**: Runway-specific workflows that orchestrate multiple domain services
 
 **Structure**:
 ```
@@ -63,14 +50,8 @@ runway/
 └── tray/           # Prep Tray feature (models, services, providers)
 ```
 
-**Characteristics**:
-- **User-Centric**: Designed around user workflows and value delivery
-- **Orchestration**: Combines multiple domain services for complex workflows
-- **Product-Specific**: Contains Runway business rules and UI logic
-- **Stateful**: Manages user sessions, preferences, and workflow state
-- **Integration**: Handles external APIs (email, notifications, analytics)
+**Characteristics**: User-Centric, Orchestration, Product-Specific, Stateful, Integration
 
-**Example**:
 ```python
 # runway/services/tray.py
 class TrayService:
@@ -89,100 +70,37 @@ class TrayService:
 
 ## Import Rules and Enforcement
 
-### **Allowed Import Patterns**:
-
-✅ **Runway → Domains**: Runway can import and orchestrate domain services
-```python
-# runway/services/digest.py
-from domains.core.services.balance_calculation import BalanceService
-from domains.ap.services.bill_ingestion import BillService
-```
-
-✅ **Domain → Domain**: Domains can import other domains (with care)
-```python
-# domains/ap/services/vendor_payment.py  
-from domains.bank.services.account_validation import AccountService
-```
-
+### **Allowed Import Patterns**
+✅ **Runway → Domains**: Runway can import and orchestrate domain services  
+✅ **Domain → Domain**: Domains can import other domains (with care)  
 ✅ **Both → Common**: Both can import shared utilities
-```python
-from common.exceptions import ValidationError
-from config.business_rules import PaymentSettings
-```
 
-### **Forbidden Import Patterns**:
-
-❌ **Domains → Runway**: Domains cannot import runway-specific code
-```python
-# domains/ap/services/bill_payment.py
-from runway.services.digest import DigestService  # FORBIDDEN
-```
-
+### **Forbidden Import Patterns**
+❌ **Domains → Runway**: Domains cannot import runway-specific code  
 ❌ **Circular Dependencies**: No circular imports between any modules
-```python
-# domains/ap → domains/ar → domains/ap  # FORBIDDEN
-```
 
 ### **CI/CD Import Validation**
-
-We will implement automated import checks:
-
 ```bash
 # Pre-commit hook to validate import rules
 poetry run python scripts/validate_imports.py
 ```
 
-**Validation Rules**:
-1. No imports from `runway/` within `domains/`
-2. No circular dependencies detected
-3. All imports resolve correctly
-4. External dependencies properly declared
+**Validation Rules**: No imports from `runway/` within `domains/`, no circular dependencies, all imports resolve correctly
 
 ## Benefits
-
-### **1. Clear Separation of Concerns**
-- **Domain services** focus on business logic correctness
-- **Runway services** focus on user experience and workflow orchestration
-- **Testing** can target each layer independently
-
-### **2. Code Reusability**
-- Domain services can be reused across Runway, RowCol, and future products
-- Business logic changes propagate automatically to all products
-- Shared domain models ensure data consistency
-
-### **3. Scalable Development**
-- **Junior developers** can work on domain services with clear boundaries
-- **Senior developers** can focus on complex orchestration in runway services
-- **Teams** can work independently on different domains
-
-### **4. Future-Proof Architecture**
-- Adding RowCol requires only new orchestration layer
-- Domain services remain unchanged
-- QBO integration points are centralized and reusable
+- **Clear Separation of Concerns**: Domain services (business logic) vs Runway services (orchestration)
+- **Code Reusability**: Domain services work across Runway, RowCol, future products
+- **Scalable Development**: Junior devs (domains) vs Senior devs (orchestration)
+- **Future-Proof Architecture**: Adding RowCol requires only new orchestration layer
 
 ## Consequences
+**Positive**: Maintainability, Testability, Reusability, Scalability  
+**Negative**: Complexity, Overhead, Discipline required
 
-### **Positive**:
-- ✅ **Maintainability**: Clear boundaries reduce cognitive load
-- ✅ **Testability**: Each layer can be tested in isolation  
-- ✅ **Reusability**: Domain logic works across all products
-- ✅ **Scalability**: Architecture supports multiple products and teams
-
-### **Negative**:
-- ⚠️ **Complexity**: More files and structure to understand initially
-- ⚠️ **Overhead**: Some business logic requires coordination across services
-- ⚠️ **Discipline**: Requires consistent adherence to import rules
-
-### **Risks and Mitigations**:
-
-**Risk**: Developers bypass architecture and create shortcuts  
-**Mitigation**: Automated CI/CD import validation + code review guidelines
-
-**Risk**: Over-engineering simple features  
-**Mitigation**: Start with simple implementations, refactor when complexity justifies separation
-
-**Risk**: Performance overhead from service orchestration  
-**Mitigation**: Profile and optimize hot paths, consider caching strategies
+**Risks & Mitigations**:
+- **Architecture bypass**: Automated CI/CD validation + code review
+- **Over-engineering**: Start simple, refactor when complexity justifies separation
+- **Performance overhead**: Profile hot paths, consider caching strategies
 
 ## Implementation Guidelines
 

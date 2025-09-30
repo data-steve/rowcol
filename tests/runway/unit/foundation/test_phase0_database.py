@@ -7,7 +7,7 @@ These tests focus on the database infrastructure, not seeded data.
 import pytest
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from db import create_db_and_tables
+from infra.database import create_db_and_tables
 from domains.core.models.business import Business
 from domains.core.models.user import User
 from domains.core.services.business import BusinessService

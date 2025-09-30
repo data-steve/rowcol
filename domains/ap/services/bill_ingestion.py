@@ -21,7 +21,7 @@ from fastapi import UploadFile, HTTPException
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.bill import Bill, BillStatus, BillPriority
 from domains.ap.models.vendor import Vendor
-from domains.integrations.qbo.client import QBOAPIClient
+from infra.qbo.smart_sync import SmartSyncService
 from common.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -58,10 +58,10 @@ class BillService(TenantAwareService):
         """
         super().__init__(db, business_id, validate_business=validate_business)
         
-        # NOTE: Providers parked for future strategy - using QBOAPIClient directly
-        from domains.integrations.qbo.client import get_qbo_client
-        self.qbo_client = qbo_provider or get_qbo_client(business_id, self.db)
-        self.document_processor = document_processor  # TODO: Implement when provider strategy decided
+        # Use SmartSyncService for QBO operations
+        self.smart_sync = SmartSyncService(business_id, "", self.db)
+        # self.document_processor = document_processor  # TODO: Implement when provider strategy decided
+        self.document_processor = None  # Document processing not yet implemented
         self.runway_reserve_service = runway_reserve_service
         
         logger.info(f"Initialized BillService for business {business_id}")
@@ -155,10 +155,6 @@ class BillService(TenantAwareService):
             logger.error(f"Failed to get bills due in {days} days: {e}")
             return []
     
-    def get_bills_for_digest(self) -> List[Dict[str, Any]]:
-        """Get bills formatted for digest generation."""
-        return self.get_bills_due_in_days(30)
-    
     def get_overdue_bills(self) -> List[Dict[str, Any]]:
         """Get overdue bills for collections."""
         try:
@@ -187,6 +183,33 @@ class BillService(TenantAwareService):
 
     # ==================== BILL INGESTION ====================
     
+    
+    
+    async def sync_bills_from_qbo(self, days_back: int = 90) -> List[Bill]:
+        """Sync bills from QBO for the specified time period."""
+        try:
+            logger.info(f"Syncing bills from QBO for business {self.business_id}, {days_back} days back")
+            
+            # Get bills from QBO using SmartSyncService
+            since_date = datetime.utcnow() - timedelta(days=days_back)
+            qbo_bills = await self.smart_sync.get_bills()
+            
+            synced_bills = []
+            for qbo_bill_data in qbo_bills:
+                bill = self._process_qbo_bill(qbo_bill_data)
+                if bill:
+                    synced_bills.append(bill)
+            
+            self.db.commit()
+            logger.info(f"Successfully synced {len(synced_bills)} bills from QBO")
+            return synced_bills
+            
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"QBO bill sync failed: {str(e)}")
+            raise ValidationError(f"QBO sync failed: {str(e)}")
+        
+        
     async def process_bill(self, file: UploadFile, vendor_id: int = None):
         """Process uploaded bill document."""
         if not file.filename.endswith(".pdf"):
@@ -203,30 +226,6 @@ class BillService(TenantAwareService):
         )
         
         return {"status": "success", "bill_id": bill.bill_id}
-    
-    def sync_bills_from_qbo(self, days_back: int = 90) -> List[Bill]:
-        """Sync bills from QBO for the specified time period."""
-        try:
-            logger.info(f"Syncing bills from QBO for business {self.business_id}, {days_back} days back")
-            
-            # Get bills from QBO
-            since_date = datetime.utcnow() - timedelta(days=days_back)
-            qbo_bills = self.qbo_client.get_bills(since_date=since_date)
-            
-            synced_bills = []
-            for qbo_bill_data in qbo_bills:
-                bill = self._process_qbo_bill(qbo_bill_data)
-                if bill:
-                    synced_bills.append(bill)
-            
-            self.db.commit()
-            logger.info(f"Successfully synced {len(synced_bills)} bills from QBO")
-            return synced_bills
-            
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"QBO bill sync failed: {str(e)}")
-            raise ValidationError(f"QBO sync failed: {str(e)}")
     
     def ingest_document(self, file_data: bytes, filename: str, 
                        vendor_id: Optional[int] = None) -> Bill:
@@ -266,7 +265,9 @@ class BillService(TenantAwareService):
             qbo_id = qbo_bill_data.get('qbo_id')
             
             # Extract and create/find vendor from QBO vendor_ref
-            vendor_id = self._get_or_create_vendor_from_qbo_data(qbo_bill_data)
+            vendor_service = self._get_vendor_service()
+            vendor = vendor_service.get_or_create_vendor_from_qbo_data(qbo_bill_data)
+            vendor_id = vendor.vendor_id if vendor else None
             
             bill = self.db.query(Bill).filter(
                 Bill.qbo_bill_id == qbo_id,
@@ -297,46 +298,7 @@ class BillService(TenantAwareService):
             logger.error(f"Failed to ingest bill from QBO: {e}")
             raise ValueError(f"Failed to ingest bill from QBO: {e}")
 
-    # ==================== BILL BUSINESS LOGIC ====================
     
-    def calculate_bill_priority(self, bill: Bill) -> str:
-        """Calculate bill priority based on due date and amount."""
-        if self.is_bill_overdue(bill):
-            return BillPriority.URGENT
-        
-        days_until_due = self.get_days_until_due(bill)
-        if days_until_due is None:
-            return BillPriority.LOW
-        
-        # Business rule thresholds - TODO: Make configurable per business
-        URGENT_DAYS_THRESHOLD = 7
-        HIGH_AMOUNT_THRESHOLD = Decimal('5000.00')
-        
-        # New scoring system for more nuanced priority
-        score = 0
-        if self.is_bill_overdue(bill):
-            score += 80  # Overdue is high priority
-        
-        # Add points for due date proximity
-        if days_until_due is not None and days_until_due > 0:
-            if days_until_due <= URGENT_DAYS_THRESHOLD:
-                score += (URGENT_DAYS_THRESHOLD - days_until_due) * 10
-            score += max(0, 30 - days_until_due)
-
-        # Add points for high amount
-        if bill.amount >= HIGH_AMOUNT_THRESHOLD:
-            score += 40 # Give high-amount bills a significant boost
-
-        # Convert score to priority enum
-        if score >= 80:
-            return BillPriority.URGENT
-        elif score >= 40:  # High amount alone should trigger HIGH
-            return BillPriority.HIGH
-        elif score >= 15:  # Due in 15 days should trigger MEDIUM
-            return BillPriority.MEDIUM
-        else:
-            return BillPriority.LOW
-
     def is_bill_overdue(self, bill: Bill) -> bool:
         """Check if bill is past due."""
         if not bill.due_date:
@@ -350,75 +312,47 @@ class BillService(TenantAwareService):
         delta = bill.due_date - datetime.utcnow()
         return delta.days
 
-    def calculate_latest_safe_pay_date(self, bill: Bill, grace_days: int = 5) -> Optional[datetime]:
-        """
-        Calculate the latest safe payment date for a bill.
 
-        This is a "smart" feature that considers:
-        - Bill due date
-        - Vendor-specific payment terms (future enhancement)
-        - A configurable grace period to avoid late fees
-        - Vendor relationship health (future enhancement)
-        """
-        if not bill.due_date:
-            return None
-
-        # Simple logic for now: due date + grace period
-        # Future: Enhance with vendor-specific terms from Vendor model
-        latest_safe_date = bill.due_date + timedelta(days=grace_days)
-        
-        return latest_safe_date
-
-    def get_runway_impact_suggestion(self, bill: Bill, runway_days: int) -> Dict[str, Any]:
-        """
-        Generates a 'smart' suggestion about the runway impact of paying a bill.
-
-        This is a "Connective Intelligence" feature that links AP decisions
-        to the cash runway.
-        """
-        if not bill.due_date or not bill.amount:
-            return {
-                "recommendation": "Pay when convenient.",
-                "impact_days": 0,
-                "confidence": 0.5,
-                "reasoning": "Bill details are incomplete."
-            }
-
-        days_to_delay = (self.calculate_latest_safe_pay_date(bill) - datetime.utcnow()).days
-        
-        # Simplified runway impact calculation
-        # Future: Use a more sophisticated calculation from a dedicated runway service
-        daily_burn_rate = 1000  # Placeholder
-        impact_days = int(bill.amount / daily_burn_rate)
-
-        if days_to_delay > 0:
-            recommendation = (
-                f"Delaying this ${bill.amount:,.2f} payment by {days_to_delay} days "
-                f"could protect {impact_days} days of runway."
-            )
-            confidence = 0.9
-            reasoning = "Based on your current runway and the bill's flexibility."
-        else:
-            recommendation = f"Paying this overdue bill will cost {impact_days} days of runway."
-            confidence = 0.95
-            reasoning = "This bill is past its due date and should be paid promptly."
-
-        return {
-            "recommendation": recommendation,
-            "impact_days": impact_days,
-            "confidence": confidence,
-            "reasoning": reasoning
-        }
+    # REMOVED: get_runway_impact_suggestion() - This belongs in runway/ services, not domains/
+    # Runway impact calculations should be handled by RunwayCalculationService or BillImpactCalculator
 
     def can_bill_be_approved(self, bill: Bill) -> bool:
         """Check if bill can be approved."""
         return bill.status in [BillStatus.PENDING, BillStatus.REVIEW] and bill.requires_approval
     
-    def approve_bill_entity(self, bill: Bill, approved_by_user_id: str, notes: str = None) -> bool:
-        """Approve the bill entity (business logic extracted from model)."""
+    async def approve_bill_entity(self, bill: Bill, approved_by_user_id: str, notes: str = None) -> bool:
+        """Approve the bill entity with real QBO API integration."""
         if not self.can_bill_be_approved(bill):
             return False
         
+        # Execute real QBO bill approval
+        if self.smart_sync and bill.qbo_bill_id:
+            try:
+                # Prepare QBO bill update data for approval
+                qbo_bill_data = {
+                    "Id": bill.qbo_bill_id,
+                    "SyncToken": bill.qbo_sync_token or "0",
+                    "sparse": True,  # Only update changed fields
+                    "PrivateNote": f"Approved by {approved_by_user_id}" + (f" - {notes}" if notes else "")
+                }
+                
+                # Update bill in QBO to mark as approved
+                qbo_response = await self.smart_sync.execute_qbo_call(
+                    "update_bill_in_qbo",
+                    bill_data=qbo_bill_data
+                )
+                
+                # Update local bill with QBO response
+                if qbo_response and "Bill" in qbo_response:
+                    bill.qbo_sync_token = qbo_response["Bill"].get("SyncToken")
+                    bill.qbo_last_sync = datetime.utcnow()
+                    
+            except Exception as e:
+                logger.error(f"Failed to approve bill in QBO: {e}")
+                # Continue with local approval even if QBO fails
+                # This allows for offline approval processing
+        
+        # Update local status after QBO approval
         bill.status = BillStatus.APPROVED
         bill.approval_status = "approved"
         bill.approved_by = approved_by_user_id
@@ -427,23 +361,9 @@ class BillService(TenantAwareService):
         bill.updated_at = datetime.utcnow()
         return True
     
-    def schedule_bill_payment(self, bill: Bill, payment_date: datetime, 
-                             payment_method: str = None, payment_account: str = None) -> bool:
-        """Schedule the bill for payment (business logic extracted from model)."""
-        if bill.status != BillStatus.APPROVED:
-            return False
-        
-        bill.status = BillStatus.SCHEDULED
-        bill.scheduled_payment_date = payment_date
-        bill.payment_method = payment_method
-        bill.payment_account = payment_account
-        bill.updated_at = datetime.utcnow()
-        return True
     
     def _bill_to_dict(self, bill: Bill) -> Dict[str, Any]:
         """Convert bill to dictionary for API responses."""
-        latest_safe_pay_date = self.calculate_latest_safe_pay_date(bill)
-        runway_impact = self.get_runway_impact_suggestion(bill, runway_days=90) # Placeholder runway
         return {
             'bill_id': bill.bill_id,
             'business_id': bill.business_id,
@@ -454,7 +374,7 @@ class BillService(TenantAwareService):
             'due_date': bill.due_date.isoformat() if bill.due_date else None,
             'issue_date': bill.issue_date.isoformat() if bill.issue_date else None,
             'status': bill.status,
-            'priority': bill.priority or self.calculate_bill_priority(bill),
+            'priority': bill.priority,  # Priority calculated elsewhere
             'approval_status': bill.approval_status,
             'approved_by': bill.approved_by,
             'approved_at': bill.approved_at.isoformat() if bill.approved_at else None,
@@ -467,8 +387,6 @@ class BillService(TenantAwareService):
             'confidence': bill.confidence,
             'is_overdue': self.is_bill_overdue(bill),
             'days_until_due': self.get_days_until_due(bill),
-            'latest_safe_pay_date': latest_safe_pay_date.isoformat() if latest_safe_pay_date else None,
-            'runway_impact_suggestion': runway_impact,
             'requires_approval': bill.requires_approval,
             'description': bill.description,
             'tags': bill.tags,
@@ -482,12 +400,27 @@ class BillService(TenantAwareService):
         """Get bill by ID or raise ValidationError."""
         return self._get_by_id_or_raise(Bill, bill_id, f"Bill {bill_id} not found")
     
+    def get_bill_by_qbo_id(self, qbo_id: str) -> Optional[Bill]:
+        """Get bill by QBO ID for this business."""
+        return self.db.query(Bill).filter(
+            Bill.business_id == self.business_id,
+            Bill.qbo_bill_id == qbo_id
+        ).first()
+    
+    def get_bill_by_id(self, bill_id: int) -> Optional[Bill]:
+        """Get bill by internal ID for this business."""
+        return self.db.query(Bill).filter(
+            Bill.business_id == self.business_id,
+            Bill.bill_id == bill_id
+        ).first()
+    
     def _create_bill_from_document(self, extracted_data: Dict, 
                                   vendor_id: Optional[int] = None) -> Bill:
         """Create Bill from document extraction data."""
         # Find vendor if not provided
         if not vendor_id and extracted_data.get("vendor_name"):
-            vendor = self._find_vendor_by_name(extracted_data["vendor_name"])
+            vendor_service = self._get_vendor_service()
+            vendor = vendor_service.find_vendor_by_name(extracted_data["vendor_name"])
             vendor_id = vendor.vendor_id if vendor else None
         
         # Create bill
@@ -513,67 +446,10 @@ class BillService(TenantAwareService):
         
         return bill
     
-    def _find_vendor_by_name(self, vendor_name: str) -> Optional[Vendor]:
-        """Find vendor by name with fuzzy matching."""
-        return self._base_query(Vendor).filter(
-            Vendor.name.ilike(f"%{vendor_name}%")
-        ).first()
-    
-    def _get_or_create_vendor_from_qbo_data(self, qbo_bill_data: Dict[str, Any]) -> Optional[int]:
-        """
-        Extract vendor information from QBO bill data and create/find vendor in our database.
-        
-        Args:
-            qbo_bill_data: QBO bill data containing vendor_ref
-            
-        Returns:
-            vendor_id if found/created, None otherwise
-        """
-        try:
-            vendor_ref = qbo_bill_data.get('vendor_ref', {})
-            if not vendor_ref:
-                return None
-                
-            vendor_name = vendor_ref.get('name')
-            qbo_vendor_id = vendor_ref.get('value')
-            
-            if not vendor_name:
-                return None
-            
-            # Try to find existing vendor by QBO ID first
-            from domains.ap.models.vendor import Vendor
-            vendor = self.db.query(Vendor).filter(
-                Vendor.business_id == self.business_id,
-                Vendor.qbo_vendor_id == qbo_vendor_id
-            ).first()
-            
-            if vendor:
-                return vendor.vendor_id
-            
-            # Try to find by name (fuzzy match)
-            vendor = self._find_vendor_by_name(vendor_name)
-            if vendor:
-                # Update with QBO ID if found by name
-                vendor.qbo_vendor_id = qbo_vendor_id
-                self.db.flush()
-                return vendor.vendor_id
-            
-            # Create new vendor
-            vendor = Vendor(
-                business_id=self.business_id,
-                name=vendor_name,
-                qbo_vendor_id=qbo_vendor_id,
-                is_active=True
-            )
-            self.db.add(vendor)
-            self.db.flush()
-            
-            logger.info(f"Created vendor {vendor.vendor_id}: {vendor_name} from QBO data")
-            return vendor.vendor_id
-            
-        except Exception as e:
-            logger.warning(f"Failed to create vendor from QBO data: {e}")
-            return None
+    def _get_vendor_service(self):
+        """Get VendorService instance for vendor operations."""
+        from domains.ap.services.vendor import VendorService
+        return VendorService(self.db, self.business_id)
 
     def _requires_approval(self, bill: Bill) -> bool:
         """Determine if a bill requires approval based on business rules."""
@@ -611,7 +487,8 @@ class BillService(TenantAwareService):
     def _create_bill_from_qbo_data(self, qbo_bill_data: Dict) -> Bill:
         """Create a new Bill from QBO data."""
         # Find or create vendor
-        vendor = self._find_or_create_vendor(qbo_bill_data.get("VendorRef"))
+        vendor_service = self._get_vendor_service()
+        vendor = vendor_service.get_or_create_vendor_from_qbo_ref(qbo_bill_data.get("VendorRef"))
         
         # Create bill
         bill = Bill(
@@ -621,8 +498,8 @@ class BillService(TenantAwareService):
             qbo_sync_token=qbo_bill_data.get("SyncToken"),
             bill_number=qbo_bill_data.get("DocNumber"),
             amount=Decimal(str(qbo_bill_data.get("TotalAmt", 0))),
-            due_date=self._parse_qbo_date(qbo_bill_data.get("DueDate")),
-            issue_date=self._parse_qbo_date(qbo_bill_data.get("TxnDate")),
+            due_date=self._get_qbo_utils().parse_qbo_date(qbo_bill_data.get("DueDate")),
+            issue_date=self._get_qbo_utils().parse_qbo_date(qbo_bill_data.get("TxnDate")),
             status=BillStatus.PENDING,
             description=qbo_bill_data.get("Memo"),
             qbo_last_sync=datetime.utcnow()
@@ -640,43 +517,8 @@ class BillService(TenantAwareService):
         logger.info(f"Created new bill {bill.bill_id} from QBO bill {bill.qbo_bill_id}")
         return bill
     
-    def _find_or_create_vendor(self, vendor_ref: Dict) -> Optional[Vendor]:
-        """Find existing vendor or create new one from QBO vendor reference."""
-        if not vendor_ref:
-            return None
-        
-        qbo_vendor_id = vendor_ref.get("value")
-        vendor_name = vendor_ref.get("name")
-        
-        # Try to find existing vendor
-        vendor = self.db.query(Vendor).filter(
-            Vendor.business_id == self.business_id,
-            Vendor.qbo_vendor_id == qbo_vendor_id
-        ).first()
-        
-        if not vendor and vendor_name:
-            # Create new vendor
-            vendor = Vendor(
-                business_id=self.business_id,
-                qbo_vendor_id=qbo_vendor_id,
-                name=vendor_name,
-                is_active=True
-            )
-            self.db.add(vendor)
-            self.db.flush()
-        
-        return vendor
     
-    def _parse_qbo_date(self, date_str: Optional[str]) -> Optional[datetime]:
-        """Parse QBO date string to datetime."""
-        if not date_str:
-            return None
-        
-        try:
-            return datetime.strptime(date_str, "%Y-%m-%d")
-        except ValueError:
-            try:
-                return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
-            except ValueError:
-                logger.warning(f"Could not parse QBO date: {date_str}")
-                return None
+    def _get_qbo_utils(self):
+        """Get QBO utilities for QBO-specific operations."""
+        from infra.qbo.utils import QBOUtils
+        return QBOUtils

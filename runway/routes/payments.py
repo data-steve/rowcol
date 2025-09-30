@@ -10,11 +10,10 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 from datetime import datetime
 
-from db.session import get_db
-from runway.infrastructure.middleware.auth import get_current_business_id
+from infra.database.session import get_db
+from infra.auth.auth import get_current_business_id
 from domains.ap.services.payment import PaymentService
-from domains.integrations import SmartSyncService
-from runway.core.reserve_runway import RunwayReserveService
+from runway.services.1_calculators.reserve_runway import RunwayReserveService
 from domains.ap.schemas.payment import PaymentResponse, PaymentExecutionRequest
 from common.exceptions import BusinessRuleViolationError
 
@@ -27,7 +26,6 @@ def get_services(
     """Get all required services with business context."""
     return {
         "payment_service": PaymentService(db, business_id),
-        "smart_sync": SmartSyncService(db, business_id),
         "reserve_service": RunwayReserveService(db, business_id)
     }
 
@@ -117,20 +115,12 @@ async def execute_payment(
     """
     try:
         payment_service = services["payment_service"]
-        smart_sync = services["smart_sync"]
-        services["reserve_service"]
         
-        # Execute the payment workflow
-        payment = payment_service.execute_payment_workflow(
+        # Execute the payment workflow (handles QBO integration internally)
+        payment = await payment_service.execute_payment_workflow(
             payment_id=payment_id,
             confirmation_number=execution_data.confirmation_number
         )
-        
-        # Record user activity for smart sync
-        smart_sync.record_user_activity("payment_executed")
-        
-        # Trigger QBO sync for payment recording
-        sync_result = smart_sync.sync_platform("qbo", smart_sync.SyncStrategy.EVENT_TRIGGERED)
         
         return {
             "message": "Payment executed successfully",
@@ -138,7 +128,7 @@ async def execute_payment(
             "confirmation_number": payment.confirmation_number,
             "execution_date": payment.execution_date.isoformat(),
             "amount": float(payment.amount),
-            "qbo_sync_status": sync_result.get("status", "pending"),
+            "qbo_confirmation": qbo_payment.get("Id"),
             "runway_impact": payment_service.calculate_payment_runway_impact(payment)
         }
         
@@ -248,14 +238,13 @@ async def batch_execute_payments(
     """
     try:
         payment_service = services["payment_service"]
-        smart_sync = services["smart_sync"]
         
         results = []
         total_amount = 0
         
         for payment_id in payment_ids:
             try:
-                payment = payment_service.execute_payment_workflow(payment_id)
+                payment = await payment_service.execute_payment_workflow(payment_id)
                 results.append({
                     "payment_id": payment_id,
                     "status": "executed",
@@ -270,10 +259,6 @@ async def batch_execute_payments(
                     "status": "failed",
                     "error": str(e)
                 })
-        
-        # Single QBO sync for all payments
-        smart_sync.record_user_activity("batch_payment_execution")
-        sync_result = smart_sync.sync_platform("qbo", smart_sync.SyncStrategy.ON_DEMAND)
         
         executed_count = len([r for r in results if r["status"] == "executed"])
         failed_count = len([r for r in results if r["status"] == "failed"])

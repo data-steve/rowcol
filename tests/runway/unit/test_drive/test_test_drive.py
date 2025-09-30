@@ -10,9 +10,9 @@ from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 
-from runway.experiences.test_drive import DemoTestDriveService
+from runway.services.2_experiences.test_drive import DemoTestDriveService
 from domains.core.models.business import Business
-from domains.core.models.integration import Integration
+# from infra.qbo.integration_models import Integration  # Replaced with Business model
 from common.exceptions import BusinessNotFoundError
 
 @pytest.fixture
@@ -53,15 +53,15 @@ class TestTestDrive:
         # Mock database query
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
-        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
-            mock_provider = Mock()
-            mock_provider.get_bills.return_value = mock_qbo_data["bills"]
-            mock_provider.get_invoices.return_value = mock_qbo_data["invoices"]
-            mock_provider.get_vendors.return_value = mock_qbo_data.get("vendors", [])
-            mock_provider.get_customers.return_value = mock_qbo_data.get("customers", [])
-            mock_provider.get_accounts.return_value = mock_qbo_data.get("accounts", [])
-            mock_provider.get_company_info.return_value = mock_qbo_data.get("company_info", {})
-            mock_get_provider.return_value = mock_provider
+        with patch('runway.experiences.test_drive.SmartSyncService') as mock_smart_sync:
+            mock_smart_sync_instance = Mock()
+            mock_smart_sync_instance.get_bills.return_value = mock_qbo_data["bills"]
+            mock_smart_sync_instance.get_invoices.return_value = mock_qbo_data["invoices"]
+            mock_smart_sync_instance.get_vendors.return_value = mock_qbo_data.get("vendors", [])
+            mock_smart_sync_instance.get_customers.return_value = mock_qbo_data.get("customers", [])
+            mock_smart_sync_instance.get_accounts.return_value = mock_qbo_data.get("accounts", [])
+            mock_smart_sync_instance.get_company_info.return_value = mock_qbo_data.get("company_info", {})
+            mock_smart_sync.return_value = mock_smart_sync_instance
             
             # Generate runway replay
             result = await self.service.generate_test_drive("test-business-123")
@@ -107,7 +107,7 @@ class TestTestDrive:
         # Mock business exists but QBO provider fails
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
-        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
+        with patch('runway.experiences.test_drive.SmartSyncService') as mock_smart_sync:
             mock_get_provider.side_effect = Exception("QBO API error")
             
         # Should return demo data when QBO fails (graceful fallback)
@@ -121,7 +121,7 @@ class TestTestDrive:
     def test_weekly_analysis_generation(self, mock_qbo_data):
         """Test individual week analysis generation."""
         # Test the DemoTestDriveService since that's where _generate_weekly_analysis now lives after reorganization
-        from runway.experiences.test_drive import DemoTestDriveService
+        from runway.services.2_experiences.test_drive import DemoTestDriveService
         service = DemoTestDriveService(self.mock_db)
         
         week_start = datetime.now() - timedelta(weeks=2)
@@ -165,24 +165,24 @@ class TestTestDrive:
     @pytest.mark.asyncio
     async def test_test_drive_integration_with_qbo_connection(self):
         """Test runway replay is generated during QBO connection."""
-        # Mock integration
-        mock_integration = Mock(spec=Integration)
-        mock_integration.business_id = "test-business-123"
-        mock_integration.created_by = "user-123"
-        mock_integration.realm_id = "realm-123"
+        # Mock business with QBO fields instead of integration
+        mock_business = Mock(spec=Business)
+        mock_business.business_id = "test-business-123"
+        mock_business.qbo_realm_id = "realm-123"
+        mock_business.qbo_status = "connected"
         
         # Mock business
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
-        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
-            mock_provider = Mock()
-            mock_provider.get_bills.return_value = [{"amount": 3000}]
-            mock_provider.get_invoices.return_value = [{"amount": 5000}]
-            mock_provider.get_vendors.return_value = []
-            mock_provider.get_customers.return_value = []
-            mock_provider.get_accounts.return_value = []
-            mock_provider.get_company_info.return_value = {}
-            mock_get_provider.return_value = mock_provider
+        with patch('runway.experiences.test_drive.SmartSyncService') as mock_smart_sync:
+            mock_smart_sync_instance = Mock()
+            mock_smart_sync_instance.get_bills.return_value = [{"amount": 3000}]
+            mock_smart_sync_instance.get_invoices.return_value = [{"amount": 5000}]
+            mock_smart_sync_instance.get_vendors.return_value = []
+            mock_smart_sync_instance.get_customers.return_value = []
+            mock_smart_sync_instance.get_accounts.return_value = []
+            mock_smart_sync_instance.get_company_info.return_value = {}
+            mock_smart_sync.return_value = mock_smart_sync_instance
             
             # Generate runway replay directly (as called during QBO connection)
             result = await self.service.generate_test_drive("test-business-123")
@@ -245,15 +245,15 @@ class TestHygieneScore:
             ]
         }
         
-        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
-            mock_provider = Mock()
-            mock_provider.get_bills.return_value = mock_qbo_data["bills"]
-            mock_provider.get_invoices.return_value = mock_qbo_data["invoices"]
-            mock_provider.get_vendors.return_value = []
-            mock_provider.get_customers.return_value = []
-            mock_provider.get_accounts.return_value = []
-            mock_provider.get_company_info.return_value = {}
-            mock_get_provider.return_value = mock_provider
+        with patch('runway.experiences.test_drive.SmartSyncService') as mock_smart_sync:
+            mock_smart_sync_instance = Mock()
+            mock_smart_sync_instance.get_bills.return_value = mock_qbo_data["bills"]
+            mock_smart_sync_instance.get_invoices.return_value = mock_qbo_data["invoices"]
+            mock_smart_sync_instance.get_vendors.return_value = []
+            mock_smart_sync_instance.get_customers.return_value = []
+            mock_smart_sync_instance.get_accounts.return_value = []
+            mock_smart_sync_instance.get_company_info.return_value = {}
+            mock_smart_sync.return_value = mock_smart_sync_instance
             
             # Generate hygiene score
             result = self.service.generate_hygiene_score("test-business-123")
@@ -308,15 +308,15 @@ class TestHygieneScore:
             ]
         }
         
-        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
-            mock_provider = Mock()
-            mock_provider.get_bills.return_value = mock_qbo_data["bills"]
-            mock_provider.get_invoices.return_value = mock_qbo_data["invoices"]
-            mock_provider.get_vendors.return_value = []
-            mock_provider.get_customers.return_value = []
-            mock_provider.get_accounts.return_value = []
-            mock_provider.get_company_info.return_value = {}
-            mock_get_provider.return_value = mock_provider
+        with patch('runway.experiences.test_drive.SmartSyncService') as mock_smart_sync:
+            mock_smart_sync_instance = Mock()
+            mock_smart_sync_instance.get_bills.return_value = mock_qbo_data["bills"]
+            mock_smart_sync_instance.get_invoices.return_value = mock_qbo_data["invoices"]
+            mock_smart_sync_instance.get_vendors.return_value = []
+            mock_smart_sync_instance.get_customers.return_value = []
+            mock_smart_sync_instance.get_accounts.return_value = []
+            mock_smart_sync_instance.get_company_info.return_value = {}
+            mock_smart_sync.return_value = mock_smart_sync_instance
             
             result = self.service.generate_hygiene_score("test-business-123")
             
@@ -335,15 +335,15 @@ class TestHygieneScore:
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
         # Test excellent health (no issues)
-        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
-            mock_provider = Mock()
-            mock_provider.get_bills.return_value = [{"amount": 2000, "vendor": "Vendor X", "due_date": "2025-10-15", "category": "Office Supplies"}]
-            mock_provider.get_invoices.return_value = [{"amount": 3000, "due_date": "2025-12-31", "status": "paid", "category": "Services"}]
-            mock_provider.get_vendors.return_value = []
-            mock_provider.get_customers.return_value = []
-            mock_provider.get_accounts.return_value = []
-            mock_provider.get_company_info.return_value = {}
-            mock_get_provider.return_value = mock_provider
+        with patch('runway.experiences.test_drive.SmartSyncService') as mock_smart_sync:
+            mock_smart_sync_instance = Mock()
+            mock_smart_sync_instance.get_bills.return_value = [{"amount": 2000, "vendor": "Vendor X", "due_date": "2025-10-15", "category": "Office Supplies"}]
+            mock_smart_sync_instance.get_invoices.return_value = [{"amount": 3000, "due_date": "2025-12-31", "status": "paid", "category": "Services"}]
+            mock_smart_sync_instance.get_vendors.return_value = []
+            mock_smart_sync_instance.get_customers.return_value = []
+            mock_smart_sync_instance.get_accounts.return_value = []
+            mock_smart_sync_instance.get_company_info.return_value = {}
+            mock_smart_sync.return_value = mock_smart_sync_instance
             
             result = self.service.generate_hygiene_score("test-business-123")
             
@@ -356,7 +356,7 @@ class TestHygieneScore:
         # Mock business exists but SmartSync fails
         self.mock_db.query.return_value.filter.return_value.first.return_value = self.mock_business
         
-        with patch('runway.experiences.test_drive.get_qbo_client') as mock_get_provider:
+        with patch('runway.experiences.test_drive.SmartSyncService') as mock_smart_sync:
             mock_get_provider.side_effect = Exception("QBO API error")
             
             # Should return minimal hygiene data instead of crashing
@@ -370,8 +370,8 @@ class TestHygieneScore:
     def test_is_overdue_helper(self):
         """Test the _is_overdue helper method."""
         # Test the DataQualityAnalyzer directly since that's where _is_overdue lives
-        from runway.core.data_quality_analyzer import DataQualityAnalyzer
-        analyzer = DataQualityAnalyzer(self.mock_db, "test-business-123")
+        from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
+        analyzer = DataQualityCalculator(self.mock_db, "test-business-123")
         
         # Test overdue invoice
         overdue_invoice = {"due_date": "2023-08-01"}
@@ -392,8 +392,8 @@ class TestHygieneScore:
     def test_hygiene_summary_generation(self):
         """Test hygiene summary statement generation."""
         # Test the DataQualityAnalyzer directly since that's where _generate_hygiene_summary lives
-        from runway.core.data_quality_analyzer import DataQualityAnalyzer
-        analyzer = DataQualityAnalyzer(self.mock_db, "test-business-123")
+        from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
+        analyzer = DataQualityCalculator(self.mock_db, "test-business-123")
         
         # High impact scenario
         summary = analyzer._generate_hygiene_summary(60, 3, 8.5)
