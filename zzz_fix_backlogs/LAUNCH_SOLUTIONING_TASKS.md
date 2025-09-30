@@ -1,234 +1,90 @@
-# Launch Solutioning Tasks - Comprehensive Framework
+# Launch Solutioning Tasks - Context & Mindset
 
-*This file contains the complete solutioning methodology for tackling complex tasks that require analysis, discovery, and solution design*
+*This file provides the context and mindset needed for solutioning tasks. The actual solutioning work is defined in the individual task documents.*
 
-## **CRITICAL: Read This Twice Before Starting**
+## **Quick Start**
+1. **Read Architecture Context** (below) - understand system patterns
+2. **Navigate**: `cd ~/projects/oodaloo`
+3. **Activate**: `poetry shell` (one-time)
+4. **Create Branch**: `git checkout -b solutioning/[task-name]`
+5. **Start App**: `uvicorn main:app --reload` (keep running)
+6. **Execute**: Follow the specific solutioning task document
 
-This framework exists because solutioning is fundamentally different from execution. You will be given tasks that require discovery, analysis, and design work before they can be executed. **DO NOT RUSH TO SOLUTIONS.** Follow this process religiously to avoid the mistakes that have been made before.
+## **Architecture Context**
 
-## **CRITICAL: Read These Files First**
+### **Core System Patterns:**
+- **Domain Services** (`domains/*/services/`): Business logic + CRUD operations
+- **Runway Services** (`runway/`): Product orchestration and user experiences
+- **Infrastructure Services** (`infra/`): Cross-cutting concerns (auth, database, external APIs)
+- **Two-Layer Architecture**: `domains/` for business primitives, `runway/` for product features
 
-Before starting any solutioning tasks, you MUST read these files to understand the system:
+### **Key Principles:**
+- **Service Boundaries**: Clear separation between domain operations and product orchestration
+- **Single Responsibility**: Each service has one clear purpose
+- **Dependency Direction**: Runway depends on domains, not vice versa
+- **Tenant Awareness**: All services filter by `business_id` for multi-tenancy
 
-### **Architecture Context:**
-- `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Complete system architecture
-- `docs/build_plan_v5.md` - Current build plan and phase context
-- `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
-- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
-- `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
-- `DEVELOPMENT_STANDARDS.md` - Development standards and anti-patterns
+## **What This Launch Doc Provides**
 
-### **Solutioning Context:**
-- Review the specific solutioning task document for additional context
-- Understand the current phase and architectural constraints
-- Familiarize yourself with the codebase structure and patterns
+### **What Solutioning Task Docs Already Have:**
+- Discovery commands to find all related code
+- Analysis questions that need to be answered
+- Architecture decisions that need to be made
+- Progress tracking and status updates
 
-## **Context for All Solutioning Tasks**
+### **What This Launch Doc Adds:**
+- **System context** to understand the architecture
+- **Solutioning mindset** for approaching complex problems
+- **Document creation guidelines** for when to create new docs
+- **Success criteria** for knowing when you're done
 
-### **What is Solutioning?**
-Solutioning is the process of taking complex, ambiguous problems and turning them into clear, executable tasks. Unlike execution tasks that are ready to implement, solutioning tasks require:
+## **Solutioning Mindset**
 
-- **Discovery work** - understanding what actually exists vs what you assume
-- **Analysis work** - identifying gaps, patterns, and relationships  
-- **Design work** - creating solutions that fit the current system
-- **Documentation work** - converting solutions into executable tasks
+### **The Core Problem:**
+Solutioning tasks are complex and ambiguous. They require discovery, analysis, and design before they can be executed. **Don't rush to solutions.**
 
-### **Why This Process Exists**
-Complex software problems have dependencies, assumptions, and unknowns that must be discovered before solutions can be designed. Rushing to solutions without proper discovery leads to:
-- Wrong assumptions about what exists
-- Solutions that don't fit the current system
-- Wasted effort on problems that don't exist
-- Breaking things that were working
+### **The Solutioning Approach:**
+1. **Discover what actually exists** - don't assume task descriptions are accurate
+2. **Analyze gaps and patterns** - understand what's missing or unclear
+3. **Design solutions that fit** - create approaches that work with the current system
+4. **Document executable tasks** - convert solutions to hands-free implementation tasks
 
-### **The Solutioning Mindset**
-- **Be curious, not judgmental** - discover what exists before deciding what to fix
+### **Key Principles:**
 - **Validate assumptions** - test every assumption against reality
-- **Trust the process** - don't skip steps or rush to solutions
+- **One problem per solutioning doc** - keep complexity contained
 - **Document everything** - write down what you find vs what you assumed
-- **One task at a time** - focus deeply on each problem
+- **Focus deeply** - don't try to solve multiple problems at once
 
-## **The Solutioning Process**
+## **Document Creation Guidelines**
 
-### **Phase 0: Mandatory Discovery and Assumption Validation**
+### **When to Create New Docs:**
+- Try to work as much as you can in the solution doc where you started. We're currently doing one solution-oriented task per doc for this reason. 
+- **All discovery, analysis, and untangling stays in that doc**
+- If a truly complex problem disentangles into a separate requirement set, it may make sense to pull that off and put in a separate solutioning task for later. 
+- Otherwise when tasks get disentangled to the point the become truly "hands free" executable, they should be added to the executable task list following that task-types template pattern... or if its trulier compact enough to quickly implement, just do it then if it doesn't take thread too far off base from the solutioning task focus.
 
-**BEFORE doing any analysis or design work, you MUST complete discovery:**
+### **When NOT to Create New Docs:**
+- **During execution phase** - executable tasks should be hands-free
+- **For simple questions** - use the existing solutioning doc
+- **For minor clarifications** - add to existing progress doc
 
-#### **CRITICAL: Create Scratch Notes Document**
-**Solutioning tasks traverse extensive history, context, and dialog before reaching clarity. You MUST create a scratch notes document to track progress and prevent drift.**
+## **Success Criteria**
 
-**Required Pattern:**
-1. **Create `SOLUTIONING_PROGRESS_[TASKNAME].md`** at the start of each solutioning task
-2. **Document every discovery finding** as you work through the problem
-3. **Capture architectural decisions** as they emerge
-4. **Track implications** for other tasks
-5. **Maintain context** through the extensive dialog process
-6. **Produce clarity** that becomes execution task info or README documentation
+### **You're Done When:**
+- **Discovery complete** - all commands run, all files read, all assumptions validated
+- **Analysis complete** - current state mapped, gaps identified, patterns found
+- **Solution designed** - clear implementation approach with dependencies mapped
+- **Documentation complete** - executable tasks created with specific patterns
+- **No "figure out" language** - everything is specific and actionable
+- **Verification defined** - specific commands to test success
 
-**Example Structure:**
-```markdown
-# Solutioning Progress - [Task Name]
-*Status: [Discovery/Analysis/Design/Complete]*
+---
 
-## Problem Statement (Clarified)
-## Architecture Decisions Made
-## Proposed Architecture
-## Implementation Plan
-## Key Decisions Pending
-## Success Criteria
-## Next Steps
-## Implications for Other Tasks
-## Files to Update
-## Status: [Current State]
-```
+## **TASK LIST GOES HERE**
 
-1. **Read the task completely** - understand what it's trying to solve
-2. **Run ALL discovery commands** - don't skip any, even if they seem obvious
-3. **Read ALL files listed in "Files to Read First"** - don't assume you know what's in them
-4. **Answer ALL "Required Analysis" questions** - don't skip any questions
-5. **Document what actually exists** - write down what you find vs what the task assumes
-6. **Validate every assumption** - test if things actually exist before proceeding
+*Attach your specific solutioning task list to this file*
 
-#### **CRITICAL: Assumption Validation Framework**
-
-**NEVER start solutioning without validating assumptions against reality.**
-
-**Required Validation Steps:**
-1. **Run Discovery Commands** - Find all occurrences of patterns mentioned in tasks
-2. **Read Actual Code** - Don't assume task descriptions are accurate
-3. **Compare Assumptions vs Reality** - Document mismatches
-4. **Identify Architecture Gaps** - Understand current vs intended state
-5. **Question Task Scope** - Are tasks solving the right problems?
-
-**Discovery Documentation Template:**
-```
-### What Actually Exists:
-- [List what you found that exists]
-
-### What the Task Assumed:
-- [List what the task assumed exists]
-
-### Assumptions That Were Wrong:
-- [List assumptions that don't match reality]
-
-### Architecture Mismatches:
-- [List where current implementation differs from intended architecture]
-
-### Task Scope Issues:
-- [List where tasks may be solving wrong problems or have unclear scope]
-```
-
-**Validation Process:**
-1. **From a basic grep, search recursively outward** in that file until you understand what that code was intended to help with
-2. **Then you will understand what the fix actually needs to be** beyond simplistic search and replace
-3. **With that understanding you can compare it** to your understanding of broader task and ADRs, building plan etc
-4. **Document mismatches** between task assumptions and code reality
-5. **Plan solutions based on reality** not assumptions
-
-**Discovery Commands (Run ALL of them):**
-```bash
-# Find all references to understand usage
-grep -r "pattern" . --include="*.py"
-
-# Understand file relationships  
-find . -name "*.py" -exec grep -l "pattern" {} \;
-
-# Check current imports
-grep -r "import.*pattern" . --include="*.py"
-
-# Test current state
-uvicorn main:app --reload
-pytest
-```
-
-**CRITICAL: Recursive Discovery/Triage Pattern**
-
-**NEVER do blind search-and-replace!** This pattern prevents costly mistakes during discovery:
-
-1. **Search for all occurrences** of the pattern you need to understand
-2. **Read the broader context** around each occurrence to understand what the method, service, route, or file is doing
-3. **Triage each occurrence** - determine what it actually does vs what you assumed:
-   - What is this method's real purpose?
-   - What are its dependencies and relationships?
-   - What would break if you changed it?
-   - Is this a false positive or actually relevant?
-4. **Map the real system** - understand how things actually work vs how you assumed they work
-5. **Document assumptions vs reality** - write down what you found vs what you assumed
-6. **Plan based on reality** - design solutions based on what actually exists
-
-**Example Discovery Pattern:**
-```bash
-# Step 1: Find all occurrences
-grep -r "get_.*_for_digest" . --include="*.py"
-
-# Step 2: For each file found, read the broader context
-# - What is this method actually doing?
-# - What are its real dependencies?
-# - How is it being used in practice?
-# - What would break if we changed it?
-
-# Step 3: Map the real system
-# - How do these pieces actually connect?
-# - What are the real data flows?
-# - What are the real dependencies?
-
-# Step 4: Document reality vs assumptions
-# - What did we assume vs what actually exists?
-# - What patterns are we seeing?
-# - What needs to be designed vs what can be fixed?
-```
-
-**Discovery Documentation Template:**
-```
-## Discovery Findings for [Task Name]
-
-### What Actually Exists:
-- [List what you found that exists]
-
-### What the Task Assumed:
-- [List what the task assumed exists]
-
-### Assumptions That Were Wrong:
-- [List assumptions that don't match reality]
-
-### Files That Need Updates:
-- [List files that need changes based on discovery]
-
-### Dependencies Discovered:
-- [List dependencies that weren't obvious]
-```
-
-### **Phase 1: Analysis and Gap Identification**
-
-**Only after discovery is complete:**
-
-1. **Map current system state** - understand how things actually work
-2. **Identify gaps** - what's missing or unclear
-3. **Find patterns** - look at similar solutions in codebase
-4. **Understand relationships** - how different parts connect
-5. **Document findings** - write down what you learned
-
-### **Phase 2: Solution Design**
-
-**Only after analysis is complete:**
-
-1. **Design solution** - create clear implementation plan
-2. **Map dependencies** - understand what needs to be done first
-3. **Create patterns** - design reusable approaches
-4. **Plan verification** - how to test the solution works
-5. **Document solution** - write down the complete approach
-
-### **Phase 3: Solution Documentation**
-
-**Only after design is complete:**
-
-1. **Create executable task list** - convert solution to hands-free tasks
-2. **Write specific patterns** - provide code examples and patterns
-3. **Define verification steps** - specific commands to test success
-4. **Map dependencies** - clear order of execution
-5. **Update task status** - mark as complete
-
-## **Progress Tracking**
-
+**⚠️ IMPORTANT: These tasks require analysis and solution work - do not attempt hands-free execution!**
 - `[ ]` - Not started
 - `[🔄]` - In progress (discovery phase)
 - `[🔍]` - Analysis phase (after discovery complete)
@@ -236,24 +92,15 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - `[✅]` - Solution documented (ready for executable phase)
 - `[❌]` - Blocked/Need help
 
-**IMPORTANT**: Always update the task status in the document as you work through tasks. This allows tracking progress and identifying which solutions are complete.
+**IMPORTANT**: Always update the task status in the document as you work through tasks.
 
-## **Todo List Management (MANDATORY)**
+### **Cursor Todo Integration:**
+1. **Create Cursor Todo** when starting analysis
+2. **Update Todo Status** as analysis progresses
+3. **Add Discovery Todos** for discovered issues
+4. **Complete Todos** when analysis is done
+5. **Clean Up Todos** when analysis is complete
 
-### **For Each Task:**
-1. **Create Cursor Todo:** When starting analysis, create a todo in Cursor
-2. **Update Todo Status:** As analysis progresses, update todo status
-3. **Add Discovery Todos:** For discovered issues, add discovery todos
-4. **Complete Todos:** Mark todos complete when analysis is done
-5. **Clean Up Todos:** Remove obsolete todos when analysis is complete
-
-### **Todo Status Mapping:**
-- `[ ]` Not started → Todo: "Not Started"
-- `[🔄]` In progress → Todo: "In Progress"
-- `[🔍]` Analysis phase → Todo: "Analysis"
-- `[💡]` Solution identified → Todo: "Solution Ready"
-- `[✅]` Solution documented → Todo: "Complete"
-- `[❌]` Blocked/Need help → Todo: "Blocked"
 
 ## **Solutioning Checklist**
 
@@ -340,7 +187,6 @@ grep -r "QBODataService" . --include="*.py"
 **⚠️ IMPORTANT: These tasks require analysis and solution work - do not attempt hands-free execution!**
 
 **⚠️ CRITICAL: Follow the discovery → analysis → design → document process religiously!**
-
 ## **Working Relationship Guidelines**
 
 ### **Solutioning Phase Role**
@@ -372,3 +218,4 @@ grep -r "QBODataService" . --include="*.py"
 - **AI Coder Support**: Code should be maintainable with AI assistance
 - **Documentation**: In-line comments, preambles, docstrings, clear naming, clear patterns
 - **Future Maintenance**: Code should be understandable weeks/months later by you, colleagues, or GPT-coders
+

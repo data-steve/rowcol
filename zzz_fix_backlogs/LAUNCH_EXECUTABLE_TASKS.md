@@ -29,29 +29,52 @@ Before starting any executable tasks, you MUST read these files to understand th
 - Understand the current phase and architectural constraints
 - Familiarize yourself with the codebase structure and patterns
 
-## **Progress Tracking**
+## **Progress Tracking & Todo Management**
 
+### **Task Status Tracking:**
 - `[ ]` - Not started
 - `[🔄]` - In progress  
 - `[✅]` - Completed
 - `[❌]` - Failed/Blocked
 
-**IMPORTANT**: Always update the task status in the document as you work through tasks. This allows tracking progress and identifying which tasks are complete.
+**IMPORTANT**: Always update the task status in the document as you work through tasks.
 
-## **Todo List Management (MANDATORY)**
+### **Cursor Todo Integration:**
+1. **Create Cursor Todo** when starting a task
+2. **Update Todo Status** as work progresses
+3. **Add Cleanup Todos** for discovered edge cases
+4. **Complete Todos** when work is done
+5. **Clean Up Todos** when files are deleted
 
-### **For Each Task:**
-1. **Create Cursor Todo:** When starting a task, create a todo in Cursor
-2. **Update Todo Status:** As work progresses, update todo status
-3. **Add Cleanup Todos:** For discovered edge cases, add cleanup todos
-4. **Complete Todos:** Mark todos complete when work is done
-5. **Clean Up Todos:** Remove obsolete todos when files are deleted
-
-### **Todo Status Mapping:**
+### **Status Mapping:**
 - `[ ]` Not started → Todo: "Not Started"
 - `[🔄]` In progress → Todo: "In Progress"
 - `[✅]` Completed → Todo: "Complete"
 - `[❌]` Failed/Blocked → Todo: "Blocked"
+
+## **How This Launch Doc Helps Task Docs Succeed**
+
+### **Purpose of This Document:**
+This launch doc provides the **context, patterns, and workflow** that executable task docs need to succeed. It's the "boilerplate" that makes task docs immediately actionable.
+
+### **What Task Docs Provide:**
+- **Specific files to fix** with exact changes needed
+- **Implementation patterns** with code examples
+- **Verification commands** to test success
+- **Discovery commands** to find all occurrences
+
+### **What This Launch Doc Provides:**
+- **Architecture context** to understand the system
+- **Workflow patterns** for consistent execution
+- **Progress tracking** to manage multiple tasks
+- **Common commands** for verification and cleanup
+- **Git workflow** for proper version control
+
+### **Together They Enable:**
+- **Immediate execution** without additional context gathering
+- **Consistent patterns** across all executable tasks
+- **Proper progress tracking** and todo management
+- **Clean, maintainable results** with proper cleanup
 
 ## **Execution Pattern**
 
@@ -224,12 +247,17 @@ git branch -d cleanup/[task-name]
 
 ## **Architecture Context**
 
-- **SmartSyncService** (`infra/jobs/smart_sync.py`): Central orchestration for ALL QBO interactions
-- **QBOBulkScheduledService** (`domains/qbo/service.py`): ONLY bulk background operations (digest generation)
-- **QBODataService** (`domains/qbo/data_service.py`): ONLY `runway/experiences/` data formatting
-- **Direct QBO API calls** (`domains/qbo/client.py`): Immediate user actions (pay bill, delay payment)
+### **Core System Patterns:**
+- **Domain Services** (`domains/*/services/`): Business logic + CRUD operations
+- **Runway Services** (`runway/`): Product orchestration and user experiences
+- **Infrastructure Services** (`infra/`): Cross-cutting concerns (auth, database, external APIs)
+- **Two-Layer Architecture**: `domains/` for business primitives, `runway/` for product features
 
-**Key Principle**: User actions = Direct QBO API calls wrapped in SmartSyncService. Data syncs = SmartSyncService orchestration.
+### **Key Principles:**
+- **Service Boundaries**: Clear separation between domain operations and product orchestration
+- **Single Responsibility**: Each service has one clear purpose
+- **Dependency Direction**: Runway depends on domains, not vice versa
+- **Tenant Awareness**: All services filter by `business_id` for multi-tenancy
 
 ---
 
@@ -239,9 +267,7 @@ git branch -d cleanup/[task-name]
 
 **⚠️ IMPORTANT: Do NOT run multiple tasks simultaneously - they have dependencies and will collide!**
 
-**⚠️ IMPORTANT: Use surgical git commits - only commit the files you actually modified for each task!**
-
-## **Working Relationship Guidelines**
+**⚠️ IMPORTANT: Use surgical git commits - only commit the files you actually modified for each task!**## **Working Relationship Guidelines**
 
 ### **Execution Phase Role**
 - **Junior Dev Level**: Execute "solutioned" problems with clear implementation patterns
@@ -257,3 +283,4 @@ git branch -d cleanup/[task-name]
 - **Implementation Clarification**: "Should I use this pattern or the alternative approach?"
 - **Scope Boundaries**: "Should I handle this edge case as part of this task?"
 - **Verification**: "Does this implementation match the expected behavior?"
+
