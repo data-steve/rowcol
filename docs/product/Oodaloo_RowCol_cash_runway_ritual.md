@@ -59,28 +59,32 @@ The ritual is the perfect candidate for software:
 
 ---
 
-## Oodaloo — The Weekly Cash Console
+## Oodaloo — The Agentic Cash Flow Console
 
-**Why “Oodaloo”?** From the OODA loop: *observe, orient, decide, act—rinse and repeat.*
+**Why "Oodaloo"?** From the OODA loop: *observe, orient, decide, act—rinse and repeat.* The same pattern modern AI agents use.
 
-For our ICP, Oodaloo’s Core Ritual product fills the missing layer between ops tools and QBO:
+**Positioning**: Domain-specific AI agent for cash flow survival. Not a chatbot or autopilot—an intelligent system that stages decisions, you approve and execute.
 
-* **Friday Digest:** A one-page email overview with runway, late AR, AP due, and hygiene flags.
-* **Cash Console:** Click into the app to resolve hygiene, group bills into *Must Pay* vs *Can Delay*, earmark reserves, and chase priority AR.
-* **Approve → Execute:** One approval triggers QBO-native rails to send reminders, pay bills, and schedule payments against earmarks so you never overcommit.
-* **Drift Alerts:** If reality deviates from plan, Oodaloo flags it and links to the fix.
+For our ICP, Oodaloo automates the weekly cash runway ritual through agentic orchestration:
 
-**The Win:** Owners get back 5–7 hours a week and avoid the 20–30% runway misses that sink agencies.
+* **Friday Digest (Observe):** AI-generated overview with runway, late AR, AP due, and intelligent hygiene flagging.
+* **Cash Console (Orient):** AI groups bills into *Must Pay* vs *Can Delay* by runway impact, prioritizes AR collections, stages earmark decisions.
+* **Approve → Execute (Decide/Act):** One human approval triggers batch QBO actions—reminders, payments, reserves—orchestrated by AI.
+* **Drift Alerts (Learn):** AI monitors reality vs plan, flags deviations, proposes corrections.
+
+**The Win:** 80% automation with 100% control—owners get back 5–7 hours a week, avoid the 20–30% runway misses that sink agencies, while maintaining full trust through human-in-the-loop approval.
+
+**Agentic Differentiation**: QBO agents handle task automation (categorize, reconcile). Oodaloo handles decision orchestration (compress, prioritize, optimize).
 
 ---
 
-### Planned Modules
+### Planned Modules (Agentic Feature Evolution)
 
-* **Core Ritual:** Weekly Email Digest, Cash Console, Hygiene Score, Prep Tray, Runway metric.
-* **Smart AP:** Earmarking, timeline conditional releases, vendor credit handling.
-* **Smart AR:** Priorities, custom reminder drips, auto-pause on payment, match/clean deposits.
-* **Smart Budgets:** Guardrails for essential vs discretionary spend, vacation pre-planning. Over time, these evolve into automation rules.
-* **Analytics Pack:** AR/AP aging trends, profit analysis, 2–4 week forecasts, shareable dashboards, and benchmarking (criterion vs cohort).
+* **Core Ritual (Agentic Foundation):** Weekly Email Digest, Cash Console, Hygiene Score, Prep Tray, Runway metric—already agentic through OODA loop implementation.
+* **Smart AP (Agent Rules):** Earmarking, timeline conditional releases, vendor credit handling—AI learns payment preferences and auto-stages decisions.
+* **Smart AR (Agent Collections):** Priorities, custom reminder drips, auto-pause on payment, match/clean deposits—AI optimizes collection timing by customer behavior.
+* **Smart Budgets (Agent Constraints):** Guardrails for essential vs discretionary spend, vacation pre-planning, policy engine—AI enforces spending rules and learns from deviations. **THIS IS WHERE AGENTIC INTELLIGENCE BECOMES OBVIOUS.**
+* **Analytics Pack (Agent Insights):** AR/AP aging trends, profit analysis, 2–4 week forecasts, shareable dashboards, benchmarking—AI predicts scenarios and recommends optimizations.
 
 Oodaloo is modular by design. Not every client has complex AR or AP needs that justify tools like Ramp, but every firm needs the weekly cash runway ritual. Smaller CAS-only shops can use RowCol as their core operating console; larger firms can layer it on top of existing rails, using Ritual + Analytics as the shared judgment surface even when AP/AR execution happens elsewhere.
 
@@ -130,7 +134,11 @@ Oodaloo productizes the ritual on top of QBO rails:
 
 At the nexus of cash-in, cash-out, and cash-on-hand, Oodaloo and RowCol stand where owners and accounting pros meet every week. That makes them indispensable—and gives them pricing power—while incumbents remain focused on tax and compliance.
 
-**Why now (and why it’s durable):** Even as QBO adds agents and automation for bookkeeping hygiene, those features **strengthen the inputs.** Oodaloo focuses on the **judgment moment**—compressing AR/AP timing and runway into a single **owner approval that executes.** CAS firms benefit as low-value categorization is automated; Oodaloo/RowCol elevates their weekly advisory and feeds a cleaner month-end close.
+**Why now (and why it's durable):** Even as QBO adds agents and automation for bookkeeping hygiene, those features **strengthen the inputs.** Oodaloo focuses on the **judgment moment**—compressing AR/AP timing and runway into a single **owner approval that executes.** 
+
+**Agentic positioning is defensible**: QBO agents handle task-level automation (journal-first, compliance-driven). Oodaloo's agentic console handles decision-level orchestration (runway-first, survival-driven). These are complementary layers, not competing products. QBO agents clean the pipes; Oodaloo decides what flows through.
+
+CAS firms benefit as low-value categorization is automated by QBO agents; Oodaloo/RowCol elevates their weekly advisory with agentic decision orchestration and feeds a cleaner month-end close.
 
 ---
 

@@ -5,9 +5,9 @@ Tests the core functionality without database dependencies
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from runway.core.data_orchestrators.hygiene_tray_data_orchestrator import HygieneTrayDataOrchestrator
-from runway.core.data_orchestrators.decision_console_data_orchestrator import DecisionConsoleDataOrchestrator
-from runway.core.runway_calculation_service import RunwayCalculationService
+from runway.services.0_data_orchestrators.hygiene_tray_data_orchestrator import HygieneTrayDataOrchestrator
+from runway.services.0_data_orchestrators.decision_console_data_orchestrator import DecisionConsoleDataOrchestrator
+from runway.services.1_calculators.runway_calculator import RunwayCalculator
 
 
 class TestHygieneTrayDataOrchestrator:
@@ -117,7 +117,7 @@ class TestDecisionConsoleDataOrchestrator:
                 assert result == {"decisions": []}
 
 
-class TestRunwayCalculationServicePureCalculation:
+class TestRunwayCalculatorPureCalculation:
     """Test RunwayCalculationService as pure calculation service."""
     
     @pytest.fixture
@@ -128,7 +128,7 @@ class TestRunwayCalculationServicePureCalculation:
     @pytest.fixture
     def calculator(self, mock_db):
         """Create calculator instance."""
-        return RunwayCalculationService(mock_db, "test_business")
+        return RunwayCalculator(mock_db, "test_business")
     
     def test_initialization(self, calculator):
         """Test calculator can be initialized."""
@@ -183,7 +183,7 @@ class TestDataOrchestratorIntegration:
     async def test_tray_orchestrator_with_runway_calculator(self, mock_db):
         """Test that tray orchestrator data works with RunwayCalculationService."""
         tray_orchestrator = HygieneTrayDataOrchestrator(mock_db)
-        runway_calculator = RunwayCalculationService(mock_db, "test_business")
+        runway_calculator = RunwayCalculator(mock_db, "test_business")
         
         with patch('runway.core.data_orchestrators.hygiene_tray_data_orchestrator.SmartSyncService') as mock_smart_sync_class:
             mock_smart_sync = AsyncMock()

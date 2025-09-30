@@ -53,17 +53,17 @@ class PaymentMatchingService(TenantAwareService):
             # Create payment record
             payment = PaymentModel(
                 business_id=business_id,
-            customer_id=customer_id,
-            amount=amount,
+                customer_id=customer_id,
+                amount=amount,
                 payment_date=date,
                 payment_method=method,
                 status="matched"  # AR payments use "matched" status
-        )
-        
-        self.db.add(payment)
-        self.db.commit()
+            )
+            
+            self.db.add(payment)
+            self.db.commit()
             self.db.refresh(payment)
-        return payment
+            return payment
             
         except Exception as e:
             self.db.rollback()

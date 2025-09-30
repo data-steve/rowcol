@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 
-from runway.experiences.test_drive import DemoTestDriveService
+from runway.services.2_experiences.test_drive import DemoTestDriveService
 from domains.core.models.business import Business
 # from infra.qbo.integration_models import Integration  # Replaced with Business model
 from common.exceptions import BusinessNotFoundError
@@ -121,7 +121,7 @@ class TestTestDrive:
     def test_weekly_analysis_generation(self, mock_qbo_data):
         """Test individual week analysis generation."""
         # Test the DemoTestDriveService since that's where _generate_weekly_analysis now lives after reorganization
-        from runway.experiences.test_drive import DemoTestDriveService
+        from runway.services.2_experiences.test_drive import DemoTestDriveService
         service = DemoTestDriveService(self.mock_db)
         
         week_start = datetime.now() - timedelta(weeks=2)
@@ -370,8 +370,8 @@ class TestHygieneScore:
     def test_is_overdue_helper(self):
         """Test the _is_overdue helper method."""
         # Test the DataQualityAnalyzer directly since that's where _is_overdue lives
-        from runway.core.data_quality_analyzer import DataQualityAnalyzer
-        analyzer = DataQualityAnalyzer(self.mock_db, "test-business-123")
+        from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
+        analyzer = DataQualityCalculator(self.mock_db, "test-business-123")
         
         # Test overdue invoice
         overdue_invoice = {"due_date": "2023-08-01"}
@@ -392,8 +392,8 @@ class TestHygieneScore:
     def test_hygiene_summary_generation(self):
         """Test hygiene summary statement generation."""
         # Test the DataQualityAnalyzer directly since that's where _generate_hygiene_summary lives
-        from runway.core.data_quality_analyzer import DataQualityAnalyzer
-        analyzer = DataQualityAnalyzer(self.mock_db, "test-business-123")
+        from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
+        analyzer = DataQualityCalculator(self.mock_db, "test-business-123")
         
         # High impact scenario
         summary = analyzer._generate_hygiene_summary(60, 3, 8.5)

@@ -21,9 +21,9 @@ from domains.core.models.business import Business
 # from infra.qbo.integration_models import Integration  # Replaced with Business model
 from infra.qbo.client import QBORawClient
 from infra.qbo.smart_sync import SmartSyncService
-from runway.core.runway_calculator import RunwayCalculator
-from runway.core.data_quality_analyzer import DataQualityAnalyzer
-from runway.core.reserve_runway import RunwayReserveService
+from runway.services.1_calculators.runway_calculator import RunwayCalculator
+from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
+from runway.services.1_calculators.reserve_runway import RunwayReserveService
 from runway.schemas.runway_reserve import RunwayReserveCreate, ReserveTypeEnum, ReserveAllocationCreate
 from infra.config import RunwayAnalysisSettings
 
@@ -147,7 +147,7 @@ class TestRunwayReserveE2E:
         
         with Session() as prod_session:
             smart_sync = SmartSyncService(prod_session, qbo_business.business_id)
-            data_quality_analyzer = DataQualityAnalyzer(prod_session, qbo_business.business_id)
+            data_quality_analyzer = DataQualityCalculator(prod_session, qbo_business.business_id)
             runway_calculator = RunwayCalculator(prod_session, qbo_business.business_id)
             
             # Get real QBO data
@@ -356,7 +356,7 @@ class TestRunwayReserveE2E:
                 assert runway_analysis["base_runway_days"] > 0, "Runway calculation failed"
                 
                 # Test 3: Data Quality Analysis Works
-                data_quality_analyzer = DataQualityAnalyzer(prod_session, qbo_business.business_id)
+                data_quality_analyzer = DataQualityCalculator(prod_session, qbo_business.business_id)
                 hygiene_analysis = data_quality_analyzer.calculate_hygiene_score(qbo_data)
                 assert 0 <= hygiene_analysis["hygiene_score"] <= 100, "Data quality analysis failed"
                 

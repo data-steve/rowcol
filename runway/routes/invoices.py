@@ -14,7 +14,7 @@ from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
 from domains.ar.services.collections import CollectionsService
-from runway.core.reserve_runway import RunwayReserveService
+from runway.services.1_calculators.reserve_runway import RunwayReserveService
 from common.exceptions import ValidationError
 
 router = APIRouter(tags=["AR Invoices"])

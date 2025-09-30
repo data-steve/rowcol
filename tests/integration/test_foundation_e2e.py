@@ -24,8 +24,8 @@ from domains.core.models.business import Business
 # from infra.qbo.integration_models import Integration  # Replaced with Business model
 from infra.qbo.smart_sync import SmartSyncService
 from infra.qbo.client import QBORawClient
-from runway.core.runway_calculator import RunwayCalculator
-from runway.core.data_quality_analyzer import DataQualityAnalyzer
+from runway.services.1_calculators.runway_calculator import RunwayCalculator
+from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
 from infra.config import RunwayAnalysisSettings, DataQualityThresholds
 
 @pytest.mark.integration
@@ -135,7 +135,7 @@ class TestFoundationE2E:
         Tests our data quality analysis logic with actual data format.
         """
         smart_sync = SmartSyncService(db, foundation_business.business_id)
-        data_quality_analyzer = DataQualityAnalyzer(db, foundation_business.business_id)
+        data_quality_analyzer = DataQualityCalculator(db, foundation_business.business_id)
         
         # Get QBO data
         qbo_data = await smart_sync.get_qbo_data_for_digest()
@@ -179,7 +179,7 @@ class TestFoundationE2E:
         """
         smart_sync = SmartSyncService(db, foundation_business.business_id)
         runway_calculator = RunwayCalculator(db, foundation_business.business_id)
-        data_quality_analyzer = DataQualityAnalyzer(db, foundation_business.business_id)
+        data_quality_analyzer = DataQualityCalculator(db, foundation_business.business_id)
         
         # Get QBO data
         qbo_data = await smart_sync.get_qbo_data_for_digest()
@@ -230,7 +230,7 @@ class TestFoundationE2E:
         """
         smart_sync = SmartSyncService(db, foundation_business.business_id)
         runway_calculator = RunwayCalculator(db, foundation_business.business_id)
-        data_quality_analyzer = DataQualityAnalyzer(db, foundation_business.business_id)
+        data_quality_analyzer = DataQualityCalculator(db, foundation_business.business_id)
         
         # Get QBO data
         qbo_data = await smart_sync.get_qbo_data_for_digest()
@@ -288,7 +288,7 @@ class TestFoundationE2E:
             assert "base_runway_days" in runway_analysis, "Runway calculation failed"
             
             # Test 3: Data Quality Analysis
-            data_quality_analyzer = DataQualityAnalyzer(db, foundation_business.business_id)
+            data_quality_analyzer = DataQualityCalculator(db, foundation_business.business_id)
             hygiene_analysis = data_quality_analyzer.calculate_hygiene_score(qbo_data)
             assert "hygiene_score" in hygiene_analysis, "Data quality analysis failed"
             

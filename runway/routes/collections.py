@@ -13,7 +13,7 @@ from datetime import datetime
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.ar.services.invoice import InvoiceService
-from runway.core.reserve_runway import RunwayReserveService
+from runway.services.1_calculators.reserve_runway import RunwayReserveService
 
 router = APIRouter(tags=["AR Collections"])
 

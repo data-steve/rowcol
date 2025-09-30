@@ -13,7 +13,7 @@ from datetime import datetime
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.ap.services.payment import PaymentService
-from runway.core.reserve_runway import RunwayReserveService
+from runway.services.1_calculators.reserve_runway import RunwayReserveService
 from domains.ap.schemas.payment import PaymentResponse, PaymentExecutionRequest
 from common.exceptions import BusinessRuleViolationError
 

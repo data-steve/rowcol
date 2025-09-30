@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from infra.database.session import get_db
-from runway.experiences.digest import DigestService
+from runway.services.2_experiences.digest import DigestService
 
 router = APIRouter(tags=['digest'])
 

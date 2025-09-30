@@ -1,21 +1,35 @@
 # Comprehensive Architecture Overview for Oodaloo
 
 ## Introduction
-Cash runway management tool for service agencies ($1M–$5M revenue, 10-30 staff) built atop QuickBooks Online (QBO). "Virtual Controller-in-a-box" that transforms QBO data into actionable insights for cash runway decisions.
+**Agentic cash flow console** for service agencies ($1M–$5M revenue, 10-30 staff) built atop QuickBooks Online (QBO). Domain-specific AI agent that automates the weekly cash runway ritual through intelligent decision staging and human-in-the-loop approval.
 
-**Core Value Proposition**: Single pane of glass for business finances, addressing the core problem that small business owners know their bank balance but not their cash runway or what actions to prioritize.
+**Core Value Proposition**: AI-powered weekly cash call that compresses dozens of decisions into one intelligent approval, protecting payroll and maximizing runway through automated orchestration.
+
+**Agentic Architecture**: Built on the OODA loop (Observe, Orient, Decide, Act) - the same pattern as modern AI agents:
+- **Sense**: Pull AR/AP/balance data from QBO
+- **Think**: Calculate runway impact, prioritize decisions, simulate scenarios
+- **Act**: Stage Must Pay/Can Delay, queue actions
+- **Review**: Human approval → execute to QBO
 
 ## Architectural Principles
 1. **Domains/Runway Separation** (ADR-001): QBO primitives vs product orchestration
 2. **Multi-Tenancy Strategy** (ADR-003): Business-centric tenant isolation
 3. **QBO API Strategy** (ADR-005): SmartSyncService as orchestration layer
-4. **Service Boundaries** (ADR-007): Clear dependency rules and responsibilities
+4. **Data Orchestrator Pattern** (ADR-006): Agentic loop implementation (Sense → Think → Act → Review)
+5. **Service Boundaries** (ADR-007): Clear dependency rules and responsibilities
+6. **Agentic Architecture** (ADR-008): Human-in-the-loop AI for decision orchestration (PLANNED)
 
 ## Core Architectural Patterns
 
-### **Data Orchestrator Pattern (ADR-006)**
-**Purpose**: Experience services need both data pulling AND state management
-**Pattern**: `Experience Service → Data Orchestrator + Calculation Services`
+### **Agentic Loop Pattern (ADR-006: Data Orchestrator)**
+**Purpose**: Implement the OODA loop (agentic pattern) through data orchestrators
+**Pattern**: `Experience Service → Data Orchestrator (Sense) → Calculators (Think) → Experiences (Act) → Human Review`
+
+**Agentic Flow**:
+1. **Sense** (Data Orchestrator): Pull and stage raw data from QBO
+2. **Think** (Calculators): Analyze runway impact, prioritize decisions
+3. **Act** (Experience Service): Present staged decisions for approval
+4. **Review** (Human): Approve batch → execute to QBO
 
 ```python
 # Experience Service Integration Pattern

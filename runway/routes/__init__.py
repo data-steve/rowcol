@@ -23,6 +23,7 @@ from .invoices import router as ar_invoices_router
 from .onboarding import router as onboarding_router
 from .tray import router as tray_router
 from .test_drive import router as test_drive_router
+from .console import router as console_router
 
 # Import QBO setup routes
 from .qbo_setup import router as qbo_setup_router
@@ -40,6 +41,7 @@ router.include_router(reserves_router, prefix="/runway")
 router.include_router(onboarding_router, prefix="/onboarding")
 router.include_router(tray_router, prefix="/tray")
 router.include_router(test_drive_router, prefix="/test-drive")
+router.include_router(console_router, prefix="/console")
 
 # AP routes
 router.include_router(ap_bills_router, prefix="/ap")
