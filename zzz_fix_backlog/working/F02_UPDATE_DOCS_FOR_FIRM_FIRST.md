@@ -14,6 +14,124 @@ Update all remaining docs to reflect firm-first CAS strategy instead of owner-fi
 
 ---
 
+## 🧠 RAMIFICATIONS - Understand This First
+
+### The Strategic Flip
+
+**BEFORE (Owner-First)**:
+- Target: Individual business owner managing their own QBO
+- Use Case: "I need to know if I can make payroll this Friday"
+- Distribution: QBO App Store (self-serve)
+- Pricing: $99-$299/mo per business
+- User: Business owner logs in, sees their runway
+- Value Prop: "Agentic AI automates your weekly cash call"
+
+**AFTER (Firm-First)**:
+- Target: CAS firm managing 20-100 client businesses
+- Use Case: "Which of my 50 clients are at runway risk this week?"
+- Distribution: Direct sales to CAS firms
+- Pricing: $50/mo per client ($2,500/mo for 50 clients)
+- User: Firm staff logs in, sees batch view of all clients
+- Value Prop: "Multi-client cash call automation with data quality enforcement"
+
+### What This Means for Docs
+
+**ANY mention of**:
+- "business owner" → think "CAS firm managing clients"
+- "self-serve" → think "direct sales to firms"
+- "QBO App Store" → deprioritized to Phase 7+ (future)
+- "agentic" / "AI learns" → deprioritized to Phase 7+ (nice-to-have)
+- "single business" → think "firm with 20-100 clients"
+
+**NEW priorities**:
+1. **Multi-tenant**: Firm → Clients hierarchy
+2. **Data completeness**: Bank feeds, missing bill detection
+3. **Batch workflows**: View all clients at once
+4. **RBAC**: Firm staff roles (admin/staff/view-only)
+5. **Reliability**: Data quality over AI features
+
+### Why We Pivoted
+
+**Levi Morehouse (Aiwyn.ai President) said**:
+- ✅ Problem is "10,000% right - real need"
+- ❌ BUT: "Owners won't do the work" (won't maintain data completeness)
+- ✅ Solution: CAS firms can ensure data quality
+- ✅ Pricing: $50/mo per client is realistic for firms
+
+**The killer insight**: Missing bills = wrong runway = broken trust = churned customer. Owners won't enter missing bills. CAS firms will.
+
+### How to Think About Updates
+
+**If you see owner-first language**, ask:
+1. Does this apply to firm staff managing clients? (probably yes)
+2. Should I mention "firm" or "multi-client"? (probably yes)
+3. Is this about self-serve onboarding? (deprioritize to Phase 7+)
+4. Is this about AI/agentic features? (deprioritize to Phase 7+)
+
+**Core principle**: Same product (weekly cash call ritual), different user context (firm managing many clients vs owner managing own business).
+
+### What Stays The Same
+
+✅ Weekly cash call ritual  
+✅ Must Pay vs Can Delay logic  
+✅ One approval → batch QBO actions  
+✅ Runway-first orientation  
+✅ 3-layer architecture (orchestrators → calculators → experiences)  
+✅ All the code we built  
+
+### What Changes
+
+🔄 PRIMARY user = CAS firm staff (not business owner)  
+🔄 PRIMARY view = batch dashboard (not single business console)  
+🔄 PRIMARY priority = data completeness (not agentic AI)  
+🔄 PRIMARY pricing = $50/mo per client (not $99/mo per business)  
+🔄 PRIMARY distribution = direct sales (not QBO App Store)  
+
+---
+
+## 💡 AUTO-MODE DECISION FRAMEWORK
+
+When you encounter a section, ask yourself:
+
+### 1. Is this about the USER?
+- **OLD**: "business owner"
+- **NEW**: "CAS firm staff" or "firm managing clients"
+- **ACTION**: Update or add firm-first context
+
+### 2. Is this about DISTRIBUTION?
+- **OLD**: "QBO App Store", "self-serve", "marketplace"
+- **NEW**: "direct sales to CAS firms" (primary), App Store is Phase 7+
+- **ACTION**: Mention CAS firms first, owner self-serve as future
+
+### 3. Is this about FEATURES?
+- **OLD**: "Agentic AI", "Smart Policies", "AI learns preferences"
+- **NEW**: "Data completeness", "bank feeds", "missing bill detection"
+- **ACTION**: Deprioritize AI features, emphasize reliability
+
+### 4. Is this about PRICING?
+- **OLD**: "$99-$299/mo"
+- **NEW**: "$50/mo per client" (CAS firms), $99/mo (future owners)
+- **ACTION**: Update pricing, mention per-client model
+
+### 5. Is this about ARCHITECTURE?
+- **OLD**: Single business tenant
+- **NEW**: Firm → Clients hierarchy
+- **ACTION**: Mention multi-tenant, firm_id → client_id
+
+### 6. Is this TECHNICAL (not user-facing)?
+- **EXAMPLES**: Service boundaries, OODA loop, data orchestrators
+- **ACTION**: Probably fine as-is, maybe add "firm-first context" note
+
+### When In Doubt
+
+**ASK**: "Would a CAS firm managing 50 clients care about this?"
+- **YES**: Update for firm-first context
+- **NO**: Probably about owner self-serve → mention as Phase 7+ future
+
+**DON'T OVERTHINK**: If it's a minor mention, just add "firm-first: [context]" note
+
+---
+
 ## STEP 1: Archive Old Build Plan (10 min)
 
 **ACTION**: Move old build plan to archive
