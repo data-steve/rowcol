@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "oodaloo"
+name = "rowcol"
 version = "0.1.0"
-description = "One-liner: Jobber helps make revenue. Oodaloo helps make profit.Core wedge: Weekly cash-basis job profitability + payroll runway, fixed fast by a dispatcher exceptions tray."
+description = "The Advisor Platform: Get out of your spreadsheets. Scale your practice. Complete platform for CAS advisors, bookkeepers, and vCFOs with Client List, 3-Tab View, and batch decision making."
 authors = ["data-steve <steven.troy.simpson@gmail.com>"]
 readme = "README.md"
 packages = [
