@@ -4,6 +4,35 @@
 
 ---
 
+## 🚀 **What Just Happened: The Strategic Pivot**
+
+This repository represents a **complete strategic pivot** from Oodaloo (owner-first QBO app) to RowCol (advisor-first platform). Here's the story:
+
+### **The Problem We Discovered**
+- **Original Vision**: Oodaloo as owner-centric QBO app for small business owners
+- **Market Reality**: Advisors charge $1000/month to clients but are stuck in spreadsheets
+- **Opportunity**: Build the platform advisors actually need to scale their practice
+
+### **The Strategic Pivot**
+- **From**: Owner-first QBO app (Oodaloo)
+- **To**: Advisor-first platform (RowCol) with three product lines
+- **Result**: Complete platform for CAS advisors, bookkeepers, and vCFOs
+
+### **The Three-Brand Ecosystem**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│     Oodaloo     │───▶│   Escher.cpa    │    │     RowCol      │
+│  (Lead Gen)     │    │ (Service Firm)  │    │ (Advisor Platform)│
+│                 │    │                 │    │                 │
+│ • QBO App       │    │ • Tech-first    │    │ • Client List   │
+│ • $75/month     │    │ • CPA firm      │    │ • 3-Tab View    │
+│ • Lead gen      │    │ • $500-3000/mo  │    │ • $50-1050/mo   │
+│ • Runway digest │    │ • 500+ clients  │    │ • Advisors      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+---
+
 ## What is RowCol?
 
 RowCol is the complete platform for CAS advisors, bookkeepers, and vCFOs who want to scale their practice with technology instead of spreadsheets.
@@ -87,7 +116,30 @@ RowCol is built and proven by [Escher.cpa](https://escher.cpa), our tech-first C
 
 ---
 
-## The Two-Brand Strategy
+## 🔄 **The Oodaloo Recovery Plan**
+
+### **Current State: Oodaloo Repository**
+- **Status**: Contains complete RowCol codebase (backup)
+- **Purpose**: Will be stripped down to digest-only QBO app
+- **Timeline**: After RowCol Phase 1 MVP is complete
+
+### **Future State: Oodaloo as Lead Gen**
+- **Core Feature**: Weekly cash runway digest email
+- **Target**: Small business owners who need runway visibility
+- **Pricing**: $75/month (credibility filter + lead gen)
+- **CTA**: "Need help? Contact Escher.cpa"
+- **Distribution**: QuickBooks App Marketplace
+
+### **The Recovery Steps**
+1. **Phase 1**: Complete RowCol MVP (current focus)
+2. **Phase 2**: Strip Oodaloo to digest-only
+3. **Phase 3**: Add Escher.cpa lead gen CTAs
+4. **Phase 4**: Launch on QBO Marketplace
+5. **Phase 5**: Escher.cpa becomes testbed for RowCol features
+
+---
+
+## The Three-Brand Strategy
 
 RowCol is part of a three-brand ecosystem:
 
@@ -154,11 +206,17 @@ RowCol is part of a three-brand ecosystem:
 
 ## Documentation
 
+### **Strategic Vision**
 - **[Platform Vision](docs/product/PLATFORM_VISION.md)** - The three-product platform strategy
 - **[Advisor-First Architecture](docs/product/ADVISOR_FIRST_ARCHITECTURE.md)** - Technical architecture
 - **[Build Plan Phase 1](docs/product/BUILD_PLAN_PHASE1_RUNWAY.md)** - What to build now
 - **[Two-Brand Strategy](docs/product/TWO_BRAND_STRATEGY.md)** - RowCol + Escher + Oodaloo
 - **[Repository Migration](docs/product/REPO_MIGRATION_STRATEGY.md)** - From Oodaloo to RowCol
+
+### **Context & Continuity**
+- **[Thread Port Documentation](docs/product/THREAD_PORT_DOCUMENTATION.md)** - Complete context transfer for AI assistant continuity
+- **[Development Standards](DEVELOPMENT_STANDARDS.md)** - Coding standards and patterns
+- **[Architecture Decisions](docs/architecture/)** - ADR documents for technical decisions
 
 ---
 
@@ -184,7 +242,29 @@ We're building the future where advisors can:
 
 ---
 
+## 🎯 **Next Steps**
+
+### **Immediate (Next 2-3 weeks)**
+1. **Database Migration**: `firm_id` → `advisor_id` throughout codebase
+2. **Create Advisor Layer**: New architectural layer for advisor-client interaction
+3. **Feature Gating System**: Implement subscription tier-based feature flags
+4. **Console Payment Workflow**: Implement advisor-only payment decision workflow
+
+### **Phase 1 MVP (Next 4-6 weeks)**
+1. **Client List View**: Show all clients with key metrics
+2. **3-Tab Client View**: Digest + Hygiene Tray + Decision Console
+3. **Batch Decision Making**: Pay bills, send collections
+4. **Basic Subscription Tiers**: Tier 1 ($50/client/month) features
+
+### **Phase 2 (Next 8-12 weeks)**
+1. **Uncat-style Emails**: Client communication for Tier 2+
+2. **Advanced Features**: AI insights, automation
+3. **Oodaloo Recovery**: Strip down to digest-only QBO app
+4. **Escher.cpa Integration**: Lead gen and testbed features
+
+---
+
 **Three brands. One platform. Total market domination.** 🚀
 
 *Last Updated: 2025-01-27*  
-*Status: Ready for Development*
+*Status: Ready for Development - Phase 1 MVP*
