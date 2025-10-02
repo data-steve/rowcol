@@ -1175,49 +1175,7 @@ This comprehensive testing strategy ensures that our "smart" features actually d
 ### Files to Skip Entirely
 - **`_parked/core/models/`**: Obsolete Client/Firm architecture
 
-## Critical Architectural Decisions Needed
 
-### Audit Logging Strategy (Phase 3-4)
-**Current State**: Partial audit_log.py and _decorators.py exist but need design decisions
-
-**Key Questions**:
-- **Entity Types**: Currently designed for Firm/User/Asset RBAC. Oodaloo needs Business/User/Transaction entities
-- **Cause ID**: Correlation system for cascading service calls (e.g., "payment_batch_123" traces through multiple services)
-- **RBAC Integration**: Do we need role-based permissions or simple business-owner-only access?
-- **Audit Scope**: Financial transactions only vs. all business operations
-
-**Proposed Approach**:
-```yaml
-Phase 3: Basic Financial Audit Logging
-  - Transaction-level audit trails (payments, bills, adjustments)
-  - Simple cause_id correlation for payment batches
-  - Business-owner-only access (no RBAC complexity)
-  
-Phase 4+: Enhanced Audit System  
-  - User role permissions (if multi-user needed)
-  - Advanced correlation patterns
-  - Compliance reporting features
-```
-
-**Effort**: 15-20h design + implementation
-
-### API Versioning Strategy
-**Current State**: Mixed `/api/v1/` and `/api/` prefixes
-
-**Decision Needed**: Standardize on consistent versioning approach
-- Option A: `/api/v1/` for all routes (future-proof)
-- Option B: `/api/` for simplicity (current mixed state)
-
-**Recommendation**: Standardize on `/api/v1/` (5h effort)
-
-### API Exposure Strategy
-**Current State**: `domains/` routes were previously exposed in `main.py`
-
-**Decision Made**: Only `runway/` routes should be exposed to the frontend
-- **[✅] Removed `domains/` routes from public API** in `main.py` to ensure only `runway/` endpoints are accessible.
-- **[✅] Evaluated necessity of `domains/` routes**: Determined that `domains/` can be a pure service layer without HTTP endpoints, with all interactions orchestrated through `runway/`.
-
-**Effort**: Completed
 
 ## UI/UX Playbook Integration
 
