@@ -1,107 +1,68 @@
-# RowCol Runway End-to-End Build Plan
+# RowCol Runway End-to-End Build Plan (v2.0 - Agent Ready)
 
-This document provides a detailed, end-to-end build plan for the RowCol `runway/` product, reorienting the Oodaloo cash runway ritual (`build_plan_v5.md`) for advisors managing 20-50 clients. It maps all tasks from `build_plan_v5.md` to RowCol phases, categorizing them as preserved, adapted, deferred, or excluded, while delivering a simplified Phase 1 MVP (client list, Digest, Hygiene, Console) with advisor-first scoping. Smart features (e.g., runway reserve, impact calculator, 3-stage collections) are deferred to Phase 2, preserved via feature flags (`basic_ritual_only`, `smart_features_enabled`) without `runway/parked/`. The plan aligns with `ADVISOR_FIRST_ARCHITECTURE.md`, `COMPREHENSIVE_ARCHITECTURE.md`, and the `runway/` directory tree, using Python, FastAPI, SQLAlchemy, Pydantic, SQLite (dev), PostgreSQL (prod), and Poetry. Tasks match the granularity of `build_plan_v5.md` with user stories, acceptance criteria, subtasks, effort estimates (S: <8h, M: 8-16h, L: 16-24h), dependencies, and validation steps.
+This document provides a detailed, end-to-end build plan for the RowCol `runway/` product. It has been re-engineered to be **executable by an automated agent**, with highly granular, atomic tasks. It introduces a foundational **Phase 0** to align the codebase with the `ADVISOR_FIRST_ARCHITECTURE.md` before building product features.
+
+**Core Principles for Agent Execution:**
+- **Atomicity**: Each task is a single, verifiable action (e.g., create a file, define a class, add a field).
+- **Explicitness**: File paths, model fields, and function signatures are specified exactly.
+- [ ] **Idempotency**: Tasks are defined to be safely re-runnable where possible.
+- **Dependency-Driven**: The plan follows a strict dependency graph from Phase 0 onwards.
+
+---
 
 ## Table of Contents
-- [Assumptions](#assumptions)
-- [Codebase Baseline](#codebase-baseline)
-- [Oodaloo v5 Mapping](#oodaloo-v5-mapping)
-- [Phase 1: Core Cash Runway Ritual](#phase-1-core-cash-runway-ritual)
-  - [P1-1.1: Advisor Layer Setup](#p1-11-advisor-layer-setup)
-  - [P1-1.2: Client List UI](#p1-12-client-list-ui)
-  - [P1-1.3: Digest Tab](#p1-13-digest-tab)
-  - [P1-1.4: Hygiene Tab](#p1-14-hygiene-tab)
-  - [P1-1.5: Console Tab](#p1-15-console-tab)
-  - [P1-1.6: QBO Sync Enhancements](#p1-16-qbo-sync-enhancements)
-  - [P1-1.7: Audit Trail](#p1-17-audit-trail)
-  - [P1-1.8: Email Alerts](#p1-18-email-alerts)
-  - [P1-1.9: Onboarding](#p1-19-onboarding)
-  - [P1-1.10: Testing Strategy](#p1-110-testing-strategy)
-  - [P1-1.11: Productionalization](#p1-111-productionalization)
+- [Phase 0: Foundational Alignment](#phase-0-foundational-alignment)
+  - [P0-1: Establish `advisor/` Layer](#p0-1-establish-advisor-layer)
+  - [P0-2: Implement Multi-Tenancy & Scoping](#p0-2-implement-multi-tenancy--scoping)
+  - [P0-3: Implement Feature Gating System](#p0-3-implement-feature-gating-system)
+- [Phase 1: Core Cash Runway Ritual (MVP)](#phase-1-core-cash-runway-ritual-mvp)
+  - [P1-1: Client List & Selection](#p1-1-client-list--selection)
+  - [P1-2: Digest Tab (Runway Summary)](#p1-2-digest-tab-runway-summary)
+  - [P1-3: Hygiene Tab (Data Quality)](#p1-3-hygiene-tab-data-quality)
+  - [P1-4: Console Tab (AP/AR Decisions)](#p1-4-console-tab-ap-ar-decisions)
+  - [P1-5: QBO Sync & Onboarding](#p1-5-qbo-sync--onboarding)
+  - [P1-6: Compliance & Production Readiness](#p1-6-compliance--production-readiness)
 - [Phase 2: Smart Features](#phase-2-smart-features)
-  - [P2-2.1: Earmarking / Reserved Bill Pay](#p2-21-earmarking--reserved-bill-pay)
-  - [P2-2.2: Runway Impact Calculator](#p2-22-runway-impact-calculator)
-  - [P2-2.3: 3-Stage Collection Workflows](#p2-23-3-stage-collection-workflows)
-  - [P2-2.4: Bulk Payment Matching](#p2-24-bulk-payment-matching)
-  - [P2-2.5: Vacation Mode Planning](#p2-25-vacation-mode-planning)
-  - [P2-2.6: Smart Hygiene Prioritization](#p2-26-smart-hygiene-prioritization)
-  - [P2-2.7: Variance Alerts](#p2-27-variance-alerts)
-  - [P2-2.8: Testing and Compliance](#p2-28-testing-and-compliance)
 - [Phase 3: Advisory Deliverables](#phase-3-advisory-deliverables)
-  - [P3-3.1: Latest Safe Pay Date Calculation](#p3-31-latest-safe-pay-date-calculation)
-  - [P3-3.2: Customer Payment Profiles](#p3-32-customer-payment-profiles)
-  - [P3-3.3: Data Quality Scoring](#p3-33-data-quality-scoring)
-  - [P3-3.4: Cash Flow Forecasting](#p3-34-cash-flow-forecasting)
-  - [P3-3.5: Industry Benchmarking](#p3-35-industry-benchmarking)
-  - [P3-3.6: Decision Guardrails](#p3-36-decision-guardrails)
-  - [P3-3.7: What-If Scenario Planning](#p3-37-what-if-scenario-planning)
 - [Phase 4: Automation and Practice Scale](#phase-4-automation-and-practice-scale)
-  - [P4-4.1: Budget-Based Automation Rules](#p4-41-budget-based-automation-rules)
-  - [P4-4.2: Conditional Scheduled Payments](#p4-42-conditional-scheduled-payments)
-  - [P4-4.3: Runway Protection Automation](#p4-43-runway-protection-automation)
-  - [P4-4.4: Practice Management Tools](#p4-44-practice-management-tools)
-- [Deferred Features](#deferred-features)
 
-## Assumptions
-- Phase 0 tasks from `build_plan_v5.md` (e.g., QBOConnectionManager, SmartSyncService, domain services) are complete and preserved in `infra/` and `domains/` (per `COMPREHENSIVE_ARCHITECTURE.md`).
-- Advisor layer (`advisor/`) is partially built; tasks complete it for multi-client workflows (per `ADVISOR_FIRST_ARCHITECTURE.md`).
-- Smart features from `build_plan_v5.md` (e.g., runway reserve, impact calculator) are preserved via feature flags (`basic_ritual_only`, `smart_features_enabled`) (per `2_SMART_FEATURES_REFERENCE.md` and `1_BUILD_PLAN_PHASE2_SMART_TIER.md`).
-- UI follows `ui/PLAYBOOK.md` from `build_plan_v5.md` (RunwayCoverageBar, Flowband, VarianceChip, WCAG AA).
-- Compliance (no financial advice, SOC 2, GDPR) is enforced per `build_plan_v5.md` and `PRODUCTION_READINESS_CHECKLIST.md`.
-- Effort estimates: S (<8h), M (8-16h), L (16-24h).
-- No `runway/parked/`; use feature flags to gate smart features (per user feedback).
-- TestDrive/Runway Replay excluded (per `README.md` and user feedback).
-- QBO integration leverages `infra/qbo/` (per `COMPREHENSIVE_ARCHITECTURE.md` and folder tree).
+---
 
-## Codebase Baseline
-- **infra/**: Comprehensive foundation (per `COMPREHENSIVE_ARCHITECTURE.md`, `PRODUCTION_READINESS_CHECKLIST.md`, folder tree).
-  - `infra/qbo/smart_sync.py`: Complete, handles QBO sync with rate limiting, retries.
-  - `infra/qbo/auth.py`: Complete, manages OAuth tokens.
-  - `infra/qbo/sync_manager.py`: Complete, coordinates sync operations.
-  - `infra/database/session.py`: Complete, manages DB connections.
-  - `infra/auth/auth.py`: Complete, JWT-based authentication.
-  - `infra/jobs/job_scheduler.py`: Complete, for background tasks.
-- **domains/**: Robust business logic layer (per `ADVISOR_FIRST_ARCHITECTURE.md`, folder tree).
-  - `domains/core/services/base_service.py`: Complete, TenantAwareService pattern.
-  - `domains/ap/services/bill_service.py`: Complete, bill CRUD and QBO sync.
-  - `domains/ap/models/bill.py`: Complete, bill entity.
-  - `domains/ar/services/invoice_service.py`: Complete, invoice CRUD and QBO sync.
-  - `domains/ar/models/invoice.py`: Complete, invoice entity.
-  - `domains/core/services/runway_calculator.py`: Complete, calculates runway weeks.
-  - `domains/core/services/audit_log.py`: Partial, needs expansion for SOC 2.
-- **runway/**: Product orchestration layer, built on `domains/` and `infra/` (per `COMPREHENSIVE_ARCHITECTURE.md`, folder tree).
-  - `runway/core/data_orchestrators/decision_console_data_orchestrator.py`: Partial, needs advisor_id scoping.
-  - `runway/core/data_orchestrators/hygiene_tray_data_orchestrator.py`: Partial, needs advisor_id scoping.
-  - `runway/services/2_experiences/digest.py`: Partial, needs simplification and feature flags.
-  - `runway/services/2_experiences/console.py`: Partial, needs simplification and feature flags.
-  - `runway/services/2_experiences/tray.py`: Partial, needs simplification and feature flags.
-  - `runway/models/runway_reserve.py`: Partial, deferred to Phase 2.
-  - `runway/services/0_data_orchestrators/reserve_runway.py`: Partial, deferred to Phase 2.
-  - `runway/services/1_calculators/impact_calculator.py`: Partial, deferred to Phase 2.
-  - `runway/services/1_calculators/priority_calculator.py`: Partial, deferred to Phase 2.
-  - `runway/services/1_calculators/insight_calculator.py`: Partial, deferred to Phase 2.
+## Phase 0: Foundational Alignment
+**Goal**: Retrofit the existing codebase to support the multi-product, advisor-first architecture. This phase is a prerequisite for all subsequent product development.
 
-## Oodaloo v5 Mapping
-| Oodaloo_v5 Task | RowCol Task ID | Status | Notes |
-|-----------------|----------------|--------|-------|
-| Phase 0: QBOConnectionManager | N/A | Preserved | `infra/qbo/smart_sync.py`, `infra/qbo/auth.py` |
-| Phase 0: SmartSyncService | N/A | Preserved | `infra/qbo/smart_sync.py` |
-| Phase 0: BillService | N/A | Preserved | `domains/ap/services/bill_service.py` |
-| Phase 0: InvoiceService | N/A | Preserved | `domains/ar/services/invoice_service.py` |
-| Phase 0: Runway Calculator | P1-1.3 | Adapted | Simplified for Digest tab, advisor-scoped, `domains/core/services/runway_calculator.py` |
-| Phase 0: DataQualityEngine | P1-1.4 | Preserved | `infra/qbo/data_quality_engine.py`, used in Hygiene tab |
-| Phase 0: TenantAwareService | N/A | Preserved | `domains/core/services/base_service.py`, extended for advisor_id |
-| Phase 1: Digest Experience | P1-1.3 | Adapted | Digest tab, uses RunwayCoverageBar, advisor-scoped, per `build_plan_v5.md` UI playbook |
-| Phase 1: Tray (Hygiene) | P1-1.4 | Adapted | Hygiene tab, uses Flowband, advisor-scoped |
-| Phase 1: Console | P1-1.5 | Adapted | Simplified batch actions, no smart prioritization, uses VarianceChip |
-| Phase 1: Runway Reserve | P2-2.1 | Deferred | Partial in `runway/services/0_data_orchestrators/reserve_runway.py`, gated by `smart_features_enabled` |
-| Phase 1: Impact Calculator | P2-2.2 | Deferred | Partial in `runway/services/1_calculators/impact_calculator.py`, gated by `smart_features_enabled` |
-| Phase 1: Smart Prioritization | P2-2.6 | Deferred | Partial in `runway/services/1_calculators/priority_calculator.py`, gated by `smart_features_enabled` |
-| Phase 1: Analytics (Insight Calc) | P2-2.7 | Deferred | Partial in `runway/services/1_calculators/insight_calculator.py`, gated by `smart_features_enabled` |
-| Phase 1: TestDrive | N/A | Excluded | Owner-focused, deprecated per `README.md` and user feedback |
-| Phase 1: Onboarding | P1-1.9 | Adapted | Advisor-focused QBO auth, no TestDrive/Runway Replay |
+### P0-1: Establish `advisor/` Layer
+**User Story**: "As a developer, I need a dedicated `advisor/` layer to house all cross-product advisor workflow logic, separating it from `domains/` and `runway/`."
 
-## Phase 1: Core Cash Runway Ritual
+- [ ] **P0-1.1**: Create directory `advisor/client_management/models/`.
+- [ ] **P0-1.2**: Create file `advisor/client_management/models/advisor.py`.
+- [ ] **P0-1.3**: In `advisor.py`, define the `Advisor` SQLAlchemy model with fields: `advisor_id` (String, primary_key), `email` (String, unique), `name` (String). Inherit from `Base` and `TimestampMixin`.
+- [ ] **P0-1.4**: Create file `advisor/client_management/models/client.py`.
+- [ ] **P0-1.5**: In `client.py`, define the `Client` model linking advisors to businesses: `id` (Integer, pk), `advisor_id` (String, FK to `advisors.advisor_id`), `business_id` (String, FK to `businesses.business_id`).
+- [ ] **P0-1.6**: Create directory `advisor/client_management/services/`.
+- [ ] **P0-1.7**: Create file `advisor/client_management/services/client_service.py`.
+- [ ] **P0-1.8**: In `client_service.py`, implement `ClientService` with methods: `add_client_to_advisor`, `list_clients_for_advisor`, `remove_client_from_advisor`. These methods will operate on the `Client` model.
+
+### P0-2: Implement Multi-Tenancy & Scoping
+**User Story**: "As a developer, I need to refactor core services to be `advisor_id`-aware, ensuring all data access is securely scoped."
+
+- [ ] **P0-2.1**: Modify `domains/core/services/base_service.py`. Rename `TenantAwareService` to `ScopedService`.
+- [ ] **P0-2.2**: Refactor `ScopedService` to accept an `advisor_id` in its constructor.
+- [ ] **P0-2.3**: Modify the query methods in `ScopedService` to join through the `Client` mapping table, ensuring all queries are filtered by the provided `advisor_id`.
+- [ ] **P0-2.4**: Create a new Alembic migration script to rename the database table `firms` to `advisors` and `firm_id` to `advisor_id` as planned in `ADVISOR_FIRST_ARCHITECTURE.md`.
+- [ ] **P0-2.5**: In `infra/auth/auth.py`, update JWT payload to include `advisor_id`. Create a dependency injector to provide the current `advisor_id` from the JWT to services.
+
+### P0-3: Implement Feature Gating System
+**User Story**: "As a developer, I need a feature gating system to control access to different product tiers (`basic_ritual_only`, `smart_features_enabled`)."
+
+- [ ] **P0-3.1**: Modify `advisor/client_management/models/advisor.py`. Add fields to the `Advisor` model: `runway_tier` (String, default='basic'), `feature_flags` (JSONB, default={}).
+- [ ] **P0-3.2**: Create directory `advisor/subscriptions/`.
+- [ ] **P0-3.3**: Create file `advisor/subscriptions/feature_service.py`.
+- [ ] **P0-3.4**: In `feature_service.py`, implement `FeatureService` with a method `can_use_feature(advisor: Advisor, feature_name: str) -> bool`. This service will check the advisor's `runway_tier` and `feature_flags`.
+- [ ] **P0-3.5**: Define feature constants for `"basic_ritual_only"` and `"smart_features_enabled"` and map them to the appropriate tiers.
+- [ ] **P0-3.6**: Create a FastAPI dependency that injects `FeatureService` and can be used as a route decorator to protect endpoints.
+
+## Phase 1: Core Cash Runway Ritual (MVP)
 **Goal**: Deliver simplified MVP ($50/client/month) for advisors, replacing spreadsheets with client list and 3-tab view (Digest, Hygiene, Console), scoped by advisor_id. Gate smart features with `basic_ritual_only` (per `2_SMART_FEATURES_REFERENCE.md`). Leverage `infra/qbo/` for QBO integration (per `COMPREHENSIVE_ARCHITECTURE.md`).  
 **Timeline**: 4-6 weeks (~180h, per `0_BUILD_PLAN_PHASE1_RUNWAY_DETAILED.md`).  
 **Success Criteria**:  
@@ -111,28 +72,9 @@ This document provides a detailed, end-to-end build plan for the RowCol `runway/
 - 100% test coverage on core flows, zero critical vulnerabilities (per `PRODUCTION_READINESS_CHECKLIST.md`).  
 - Onboard new client in <5 min (per `0_BUILD_PLAN_PHASE1_RUNWAY_DETAILED.md`).  
 
-### P1-1.1: Advisor Layer Setup (Task ID: P1-1.1)
+### P1-1: Client List & Selection
 **Type**: Execution-Ready  
-**User Story**: As an advisor, I want to manage clients with advisor_id scoping, so I can access their data securely.  
-**Acceptance Criteria**:  
-- [ ] Models support multi-tenancy with advisor_id, client_id/business_id (per `ADVISOR_FIRST_ARCHITECTURE.md`).  
-- [ ] `ClientService` handles CRUD with advisor_id filtering, no data leakage.  
-- [ ] Integrates with `infra/auth/` for JWT-based authentication (per `COMPREHENSIVE_ARCHITECTURE.md`).  
-**Subtasks**:  
-- [ ] P1-1.1.1: Create `Advisor` model (`advisor/client_management/models/advisor.py`, fields: advisor_id, email, name, runway_tier, feature_flags) (S, 4h)  
-  **References**: `infra/database/models.py`, `ADVISOR_FIRST_ARCHITECTURE.md`  
-- [ ] P1-1.1.2: Create `Client` model (`advisor/client_management/models/client.py`, fields: client_id, advisor_id, company_name, qbo_realm_id) (S, 4h)  
-  **References**: `infra/database/session.py`  
-- [ ] P1-1.1.3: Implement `ClientService` (`advisor/client_management/services/client_service.py`, endpoints: GET/POST/PATCH /advisor/{advisor_id}/clients, use TenantAwareService) (M, 8h)  
-  **References**: `domains/core/services/base_service.py`, `infra/auth/auth.py`  
-- [ ] P1-1.1.4: Add advisor_id to TenantAwareService (`domains/core/services/base_service.py`) (S, 4h)  
-**Dependencies**: None  
-**Validation**: Unit tests: Models and service CRUD (`tests/advisor/test_client_service.py`). Integration test: No data leakage. Manual test: Advisor accesses only their clients.  
-**Effort**: M (20h)  
-
-### P1-1.2: Client List UI (Task ID: P1-1.2)
-**Type**: Execution-Ready  
-**User Story**: As an advisor, I want a client list with key metrics, so I can select clients for the ritual.  
+**User Story**: "As an advisor, I want a client list with key metrics, so I can select clients for the ritual."
 **Acceptance Criteria**:  
 - [ ] Displays 20-50 clients (name, last_updated, runway status: red/yellow/green using RunwayCoverageBar).  
 - [ ] Loads in <2s with pagination, WCAG AA compliant.  
@@ -640,10 +582,4 @@ This document provides a detailed, end-to-end build plan for the RowCol `runway/
 **Files Created/Modified**: ~100 files across `advisor/`, `runway/`, `infra/`, `domains/`.  
 **Lines of Code**: ~15,000-20,000 (including tests).  
 
-**Document Status**: *Last Updated: 2025-10-02*  
-*Status: Complete End-to-End Build Plan*  
-*Next Review: After Phase 1 completion*
-
---- 
-
-This plan is fully grounded in the documents and our conversation: advisor-first pivot from `README.md`, feature flags from `ADVISOR_FIRST_ARCHITECTURE.md`, smart features from `2_SMART_FEATURES_REFERENCE.md` and `1_BUILD_PLAN_PHASE2_SMART_TIER.md`, compliance/production from `PRODUCTION_READINESS_CHECKLIST.md` and `build_plan_v5.md`, architecture from `COMPREHENSIVE_ARCHITECTURE.md`, ritual from `RowCol_Cash_Runway_Ritual.md`, and high-level roadmap from `BUILD_PLAN_ADVISOR_FIRST_RUNWAY.md` and `0_BUILD_PLAN_PHASE1_RUNWAY_DETAILED.md`. No TestDrive, robust QBO via `infra/qbo/`, Cursor-ready tasks. If anything is off, point it out, and I'll fix it immediately.
+*Document Status: v2.0 - Last Updated: 2025-10-02*

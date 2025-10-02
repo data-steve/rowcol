@@ -67,53 +67,7 @@ Phase 1 delivers the core cash runway ritual for advisors, replacing spreadsheet
 
 ---
 
-## Feature 1: Advisor Layer Setup (P1-1.1, 20h)
-
-### Problem Statement
-Advisors need secure multi-tenancy to manage clients without data leakage.
-
-### User Story
-"As an advisor, I want to manage clients with advisor_id scoping, so I can access their data securely."
-
-### Solution Overview
-Build `advisor/` layer with models and services for advisor-client relationships, integrating with `infra/auth/` for JWT-based RBAC. Focus on services/models first, unit tests.
-
-### Tasks
-
-#### Task P1-1.1.1: Create Advisor Model (S, 4h) - **Execution-Ready**
-- **File**: `advisor/client_management/models/advisor.py`
-- [ ] Define fields: advisor_id (UUID), email, name, runway_tier, feature_flags.
-- [ ] Use SQLAlchemy for ORM, Pydantic for validation.
-**References**: `infra/database/models.py`, `ADVISOR_FIRST_ARCHITECTURE.md`  
-**Dependencies**: None  
-**Validation**: Unit test: Model serializes/deserializes (`tests/advisor/unit/test_advisor_model.py`).  
-
-#### Task P1-1.1.2: Create Client Model (S, 4h) - **Execution-Ready**
-- **File**: `advisor/client_management/models/client.py`
-- [ ] Define fields: client_id (UUID), advisor_id (FK), company_name, qbo_realm_id.
-- [ ] Use SQLAlchemy, Pydantic.
-**References**: `infra/database/models.py`, `ADVISOR_FIRST_ARCHITECTURE.md`  
-**Dependencies**: P1-1.1.1  
-**Validation**: Unit test: Model enforces advisor_id scoping (`tests/advisor/unit/test_client_model.py`).  
-
-#### Task P1-1.1.3: Implement ClientService (M, 8h) - **Execution-Ready**
-- **File**: `advisor/client_management/services/client_service.py`
-- [ ] CRUD endpoints: GET/POST/PATCH /advisor/{advisor_id}/clients.
-- [ ] Use TenantAwareService for scoping, Pydantic schemas.
-**References**: `domains/core/services/base_service.py`, `infra/auth/auth.py`  
-**Dependencies**: P1-1.1.2  
-**Validation**: Unit test: CRUD respects advisor_id (`tests/advisor/unit/test_client_service.py`).  
-
-#### Task P1-1.1.4: Extend TenantAwareService (S, 4h) - **Execution-Ready**
-- **File**: `domains/core/services/base_service.py`
-- [ ] Add advisor_id filtering to base service.
-**References**: `ADVISOR_FIRST_ARCHITECTURE.md`  
-**Dependencies**: P1-1.1.3  
-**Validation**: Unit test: Service enforces scoping (`tests/domains/unit/core/test_base_service.py`).  
-
----
-
-## Feature 2: Client List UI (P1-1.2, 20h)
+## Feature 1: Client List UI (P1-1.2, 20h)
 
 ### Problem Statement
 Advisors need a fast, accessible dashboard to select clients.
@@ -129,9 +83,9 @@ Build a paginated UI with RunwayCoverageBar, optimized for <2s load. Services fi
 #### Task P1-1.2.1: Implement ClientListService (M, 8h) - **Execution-Ready**
 - **File**: `runway/services/2_experiences/client_list.py`
 - [ ] Fetch clients with metrics (name, last_updated, runway_status).
-- [ ] Use TenantAwareService, advisor_id scoping.
+- [ ] Inherit from `ScopedService` and use constructor-provided `advisor_id` for all queries.
 **References**: `advisor/client_management/services/client_service.py`, `domains/core/services/runway_calculator.py`  
-**Dependencies**: P1-1.1  
+**Dependencies**: P0-1, P0-2  
 **Validation**: Unit test: Returns scoped list (`tests/runway/unit/test_client_list.py`).  
 
 #### Task P1-1.2.2: Create Client List Route (S, 4h) - **Execution-Ready**
@@ -158,7 +112,7 @@ Build a paginated UI with RunwayCoverageBar, optimized for <2s load. Services fi
 
 ---
 
-## Feature 3: Digest Tab (P1-1.3, 28h)
+## Feature 2: Digest Tab (P1-1.3, 28h)
 
 ### Problem Statement
 Advisors need a concise runway summary to assess client health.
@@ -171,46 +125,46 @@ Build Digest tab with RunwayCoverageBar and VarianceChip, gated by `basic_ritual
 
 ### Tasks
 
-#### Task P1-1.3.1: Implement DigestService (M, 8h) - **Execution-Ready**
+#### Task P1-2.1: Implement DigestService (M, 8h) - **Execution-Ready**
 - **File**: `runway/services/2_experiences/digest.py`
-- [ ] Calculate balance, runway weeks, pending bills/invoices with advisor_id, client_id scoping.
+- [ ] Inherit from `ScopedService`, accepting `advisor_id`. Methods should accept `client_id` (business_id) for specific client data.
 - [ ] Use `runway_calculator.py`, Pydantic schema.
 **References**: `runway/services/0_data_orchestrators/digest_data_orchestrator.py`, `domains/core/services/runway_calculator.py`  
-**Dependencies**: P1-1.1, `infra/qbo/smart_sync.py`  
+**Dependencies**: P0-2, `infra/qbo/smart_sync.py`  
 **Validation**: Unit test: Metrics match QBO (`tests/runway/unit/test_digest.py`).  
 
-#### Task P1-1.3.2: Gate Smart Features (S, 4h) - **Execution-Ready**
+#### Task P1-2.2: Gate Smart Features (S, 4h) - **Execution-Ready**
 - **File**: `runway/services/2_experiences/digest.py`
-- [ ] Use `basic_ritual_only` to skip `insight_calculator.py`.
+- [ ] Use the `FeatureService` (from P0-3) to check for the `basic_ritual_only` flag before calling `insight_calculator.py`.
 **References**: `2_SMART_FEATURES_REFERENCE.md`  
-**Dependencies**: P1-1.3.1  
+**Dependencies**: P0-3, P1-2.1  
 **Validation**: Unit test: Flag skips smart features (`tests/runway/unit/test_feature_flags.py`).  
 
-#### Task P1-1.3.3: Create Digest Route (S, 4h) - **Execution-Ready**
+#### Task P1-2.3: Create Digest Route (S, 4h) - **Execution-Ready**
 - **File**: `runway/routes/digest.py`, `runway/schemas/digest.py`
-- [ ] GET /advisor/{advisor_id}/clients/{client_id}/digest.
+- [ ] GET /advisor/clients/{client_id}/digest. The `advisor_id` will be derived from the JWT token.
 **References**: `COMPREHENSIVE_ARCHITECTURE.md`  
-**Dependencies**: P1-1.3.2  
+**Dependencies**: P1-2.2  
 **Validation**: Unit test: Route returns valid JSON (`tests/runway/unit/test_routes.py`).  
 
-#### Task P1-1.3.4: Build Digest Template (M, 8h) - **Execution-Ready**
+#### Task P1-2.4: Build Digest Template (M, 8h) - **Execution-Ready**
 - **File**: `runway/web/templates/digest.html`
 - [ ] shadcn/ui Card, RunwayCoverageBar (5-50 weeks), VarianceChip, List Mode toggle.
 - [ ] Narrative copy: "Data shows runway of X weeks."
 **References**: `ui/PLAYBOOK.md`, `build_plan_v5.md`  
-**Dependencies**: P1-1.3.3  
+**Dependencies**: P1-2.3  
 **Validation**: Manual test: Loads <3s, WCAG AA compliant.  
 
-#### Task P1-1.3.5: Add Accessibility Tests (S, 4h) - **Execution-Ready**
+#### Task P1-2.5: Add Accessibility Tests (S, 4h) - **Execution-Ready**
 - **File**: `tests/runway/unit/test_ui.py`
-- [ ] Storybook tests for WCAG AA, keyboard navigation.
+- [ ] Storybook tests for WCAG AA.
 **References**: `build_plan_v5.md`  
-**Dependencies**: P1-1.3.4  
+**Dependencies**: P1-2.4  
 **Validation**: Run Storybook; no accessibility issues.  
 
 ---
 
-## Feature 4: Hygiene Tab (P1-1.4, 28h)
+## Feature 3: Hygiene Tab (P1-1.4, 28h)
 
 ### Problem Statement
 Advisors need to identify and prioritize data quality issues.
@@ -223,46 +177,46 @@ Build Hygiene tab with Flowband for top issues, gated by `basic_ritual_only`. Se
 
 ### Tasks
 
-#### Task P1-1.4.1: Implement HygieneService (M, 8h) - **Execution-Ready**
+#### Task P1-3.1: Implement HygieneService (M, 8h) - **Execution-Ready**
 - **File**: `runway/services/2_experiences/tray.py`
-- [ ] Calculate hygiene score, top 3 issues with advisor_id, client_id scoping.
+- [ ] Inherit from `ScopedService`. Methods should accept `client_id` for specific client data.
 - [ ] Use `data_quality_engine.py`, Pydantic schema.
 **References**: `runway/services/0_data_orchestrators/hygiene_tray_data_orchestrator.py`, `infra/qbo/data_quality_engine.py`  
-**Dependencies**: P1-1.1, `infra/qbo/smart_sync.py`  
+**Dependencies**: P0-2, `infra/qbo/smart_sync.py`  
 **Validation**: Unit test: Scores match QBO (`tests/runway/unit/test_hygiene.py`).  
 
-#### Task P1-1.4.2: Gate Smart Features (S, 4h) - **Execution-Ready**
+#### Task P1-3.2: Gate Smart Features (S, 4h) - **Execution-Ready**
 - **File**: `runway/services/2_experiences/tray.py`
-- [ ] Use `basic_ritual_only` to skip `priority_calculator.py`.
+- [ ] Use the `FeatureService` (from P0-3) to check for the `basic_ritual_only` flag before calling `priority_calculator.py`.
 **References**: `2_SMART_FEATURES_REFERENCE.md`  
-**Dependencies**: P1-1.4.1  
+**Dependencies**: P0-3, P1-3.1  
 **Validation**: Unit test: Flag skips smart features (`tests/runway/unit/test_feature_flags.py`).  
 
-#### Task P1-1.4.3: Create Hygiene Route (S, 4h) - **Execution-Ready**
+#### Task P1-3.3: Create Hygiene Route (S, 4h) - **Execution-Ready**
 - **File**: `runway/routes/tray.py`, `runway/schemas/tray.py`
-- [ ] GET /advisor/{advisor_id}/clients/{client_id}/tray.
+- [ ] GET /advisor/clients/{client_id}/tray.
 **References**: `COMPREHENSIVE_ARCHITECTURE.md`  
-**Dependencies**: P1-1.4.2  
+**Dependencies**: P1-3.2  
 **Validation**: Unit test: Route returns valid JSON (`tests/runway/unit/test_routes.py`).  
 
-#### Task P1-1.4.4: Build Hygiene Template (M, 8h) - **Execution-Ready**
+#### Task P1-3.4: Build Hygiene Template (M, 8h) - **Execution-Ready**
 - **File**: `runway/web/templates/tray.html`
 - [ ] shadcn/ui Card, Flowband (Chart.js, 8-12 events), List Mode toggle.
 - [ ] Narrative copy: "Data shows top issues to fix."
 **References**: `ui/PLAYBOOK.md`, `build_plan_v5.md`  
-**Dependencies**: P1-1.4.3  
+**Dependencies**: P1-3.3  
 **Validation**: Manual test: Shows issues, WCAG AA compliant.  
 
-#### Task P1-1.4.5: Add Accessibility Tests (S, 4h) - **Execution-Ready**
+#### Task P1-3.5: Add Accessibility Tests (S, 4h) - **Execution-Ready**
 - **File**: `tests/runway/unit/test_ui.py`
 - [ ] Storybook tests for WCAG AA.
 **References**: `build_plan_v5.md`  
-**Dependencies**: P1-1.4.4  
+**Dependencies**: P1-3.4  
 **Validation**: Run Storybook; no accessibility issues.  
 
 ---
 
-## Feature 5: Console Tab (P1-1.5, 28h)
+## Feature 4: Console Tab (P1-1.5, 28h)
 
 ### Problem Statement
 Advisors need efficient batch actions for AP/AR decisions.
@@ -275,46 +229,46 @@ Build Console tab with checkbox actions, VarianceChip, gated by `basic_ritual_on
 
 ### Tasks
 
-#### Task P1-1.5.1: Implement ConsoleService (M, 8h) - **Execution-Ready**
+#### Task P1-4.1: Implement ConsoleService (M, 8h) - **Execution-Ready**
 - **File**: `runway/services/2_experiences/console.py`
-- [ ] Handle bill approvals, invoice reminders with advisor_id, client_id scoping.
+- [ ] Inherit from `ScopedService` and ensure all actions are authorized for the given `advisor_id` and `client_id`.
 - [ ] Use `bill_service.py`, `invoice_service.py`, Pydantic schema.
 **References**: `runway/services/0_data_orchestrators/decision_console_data_orchestrator.py`, `domains/ap/services/bill_service.py`  
-**Dependencies**: P1-1.1, `domains/ar/services/invoice_service.py`  
+**Dependencies**: P0-2, `domains/ar/services/invoice_service.py`  
 **Validation**: Unit test: Actions sync to QBO (`tests/runway/unit/test_console.py`).  
 
-#### Task P1-1.5.2: Gate Smart Features (S, 4h) - **Execution-Ready**
+#### Task P1-4.2: Gate Smart Features (S, 4h) - **Execution-Ready**
 - **File**: `runway/services/2_experiences/console.py`
-- [ ] Use `basic_ritual_only` to skip `impact_calculator.py`.
+- [ ] Use the `FeatureService` (from P0-3) to check for the `basic_ritual_only` flag before calling `impact_calculator.py`.
 **References**: `2_SMART_FEATURES_REFERENCE.md`  
-**Dependencies**: P1-1.5.1  
+**Dependencies**: P0-3, P1-4.1  
 **Validation**: Unit test: Flag skips smart features (`tests/runway/unit/test_feature_flags.py`).  
 
-#### Task P1-1.5.3: Create Console Route (S, 4h) - **Execution-Ready**
+#### Task P1-4.3: Create Console Route (S, 4h) - **Execution-Ready**
 - **File**: `runway/routes/console.py`, `runway/schemas/console.py`
-- [ ] POST /advisor/{advisor_id}/clients/{client_id}/console.
+- [ ] POST /advisor/clients/{client_id}/console.
 **References**: `COMPREHENSIVE_ARCHITECTURE.md`  
-**Dependencies**: P1-1.5.2  
+**Dependencies**: P1-4.2  
 **Validation**: Unit test: Route processes actions (`tests/runway/unit/test_routes.py`).  
 
-#### Task P1-1.5.4: Build Console Template (M, 8h) - **Execution-Ready**
+#### Task P1-4.4: Build Console Template (M, 8h) - **Execution-Ready**
 - **File**: `runway/web/templates/console.html`
 - [ ] shadcn/ui Table, VarianceChip, List Mode toggle, "Pay now"/"Send reminder" buttons.
 - [ ] Narrative copy: "Data shows impact of actions."
 **References**: `ui/PLAYBOOK.md`, `build_plan_v5.md`  
-**Dependencies**: P1-1.5.3  
+**Dependencies**: P1-4.3  
 **Validation**: Manual test: Batch actions <2s, WCAG AA compliant.  
 
-#### Task P1-1.5.5: Add Accessibility Tests (S, 4h) - **Execution-Ready**
+#### Task P1-4.5: Add Accessibility Tests (S, 4h) - **Execution-Ready**
 - **File**: `tests/runway/unit/test_ui.py`
 - [ ] Storybook tests for WCAG AA.
 **References**: `build_plan_v5.md`  
-**Dependencies**: P1-1.5.4  
+**Dependencies**: P1-4.4  
 **Validation**: Run Storybook; no accessibility issues.  
 
 ---
 
-## Feature 6: QBO Sync Enhancements (P1-1.6, 14h)
+## Feature 5: QBO Sync Enhancements (P1-1.6, 14h)
 
 ### Problem Statement
 Advisors need reliable QBO sync for accurate data.
@@ -327,30 +281,30 @@ Enhance `infra/qbo/` for advisor_id scoping, retries, and webhooks. Services fir
 
 ### Tasks
 
-#### Task P1-1.6.1: Extend SmartSyncService (M, 6h) - **Execution-Ready**
+#### Task P1-5.1: Extend SmartSyncService (M, 6h) - **Execution-Ready**
 - **File**: `infra/qbo/smart_sync.py`
-- [ ] Add advisor_id, client_id scoping for bill/invoice sync.
+- [ ] Refactor sync methods to operate on a specific `client_id` (business_id). Authorization checks should happen at the service layer calling the sync.
 **References**: `COMPREHENSIVE_ARCHITECTURE.md`, `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: None  
+**Dependencies**: P0-2  
 **Validation**: Unit test: Sync respects scoping (`tests/infra/unit/test_smart_sync.py`).  
 
-#### Task P1-1.6.2: Add Retry Logic (S, 4h) - **Execution-Ready**
+#### Task P1-5.2: Add Retry Logic (S, 4h) - **Execution-Ready**
 - **File**: `infra/qbo/sync_manager.py`
 - [ ] Handle rate limits, errors with exponential backoff.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.6.1  
+**Dependencies**: P1-5.1  
 **Validation**: Unit test: Retries succeed (`tests/infra/unit/test_sync_manager.py`).  
 
-#### Task P1-1.6.3: Implement Webhook Handling (S, 4h) - **Execution-Ready**
+#### Task P1-5.3: Implement Webhook Handling (S, 4h) - **Execution-Ready**
 - **File**: `infra/qbo/utils.py`, `domains/webhooks/routes.py`
 - [ ] Handle QBO webhooks for real-time updates.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.6.2  
+**Dependencies**: P1-5.2  
 **Validation**: Integration test: Webhooks trigger sync (`tests/integration/test_qbo_webhooks.py`).  
 
 ---
 
-## Feature 7: Audit Trail (P1-1.7, 18h)
+## Feature 6: Audit Trail (P1-1.7, 18h)
 
 ### Problem Statement
 Advisors need logging for SOC 2 compliance and review.
@@ -363,37 +317,37 @@ Expand `audit_log.py` for AP/AR actions, add UI. Services first, unit tests.
 
 ### Tasks
 
-#### Task P1-1.7.1: Implement AuditService (M, 6h) - **Execution-Ready**
+#### Task P1-6.1: Implement AuditService (M, 6h) - **Execution-Ready**
 - **File**: `domains/core/services/audit_log.py`
-- [ ] Log bill approvals, payments, reminders with advisor_id, client_id.
+- [ ] Ensure all log entries include `advisor_id` and the target `client_id` (business_id).
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.1  
+**Dependencies**: P0-2  
 **Validation**: Unit test: Logs capture actions (`tests/domains/unit/test_audit_log.py`).  
 
-#### Task P1-1.7.2: Add Logging to Services (S, 4h) - **Execution-Ready**
+#### Task P1-6.2: Add Logging to Services (S, 4h) - **Execution-Ready**
 - **File**: `domains/ap/services/bill_service.py`, `domains/ar/services/invoice_service.py`
 - [ ] Hook audit logging into mutating methods.
 **References**: `COMPREHENSIVE_ARCHITECTURE.md`  
-**Dependencies**: P1-1.7.1  
+**Dependencies**: P1-6.1  
 **Validation**: Unit test: Actions logged (`tests/domains/unit/test_bill_service.py`).  
 
-#### Task P1-1.7.3: Create Audit Route (S, 4h) - **Execution-Ready**
+#### Task P1-6.3: Create Audit Route (S, 4h) - **Execution-Ready**
 - **File**: `runway/routes/audit.py`, `runway/schemas/audit.py`
-- [ ] GET /advisor/{advisor_id}/clients/{client_id}/audit.
+- [ ] GET /advisor/clients/{client_id}/audit.
 **References**: `build_plan_v5.md`  
-**Dependencies**: P1-1.7.2  
+**Dependencies**: P1-6.2  
 **Validation**: Unit test: Route returns logs (`tests/runway/unit/test_routes.py`).  
 
-#### Task P1-1.7.4: Build Audit Template (S, 4h) - **Execution-Ready**
+#### Task P1-6.4: Build Audit Template (S, 4h) - **Execution-Ready**
 - **File**: `runway/web/templates/audit.html`
 - [ ] shadcn/ui Table for log display.
 **References**: `ui/PLAYBOOK.md`  
-**Dependencies**: P1-1.7.3  
+**Dependencies**: P1-6.3  
 **Validation**: Manual test: UI shows logs, WCAG AA compliant.  
 
 ---
 
-## Feature 8: Email Alerts (P1-1.8, 14h)
+## Feature 7: Email Alerts (P1-1.8, 14h)
 
 ### Problem Statement
 Advisors need weekly notifications to stay informed.
@@ -406,30 +360,30 @@ Build email service with SendGrid for digests. Services first, unit tests.
 
 ### Tasks
 
-#### Task P1-1.8.1: Implement EmailService (M, 6h) - **Execution-Ready**
+#### Task P1-7.1: Implement EmailService (M, 6h) - **Execution-Ready**
 - **File**: `infra/api/routes/sync.py`
 - [ ] Integrate SendGrid, configure SPF/DKIM.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.3  
+**Dependencies**: P1-2  
 **Validation**: Unit test: Emails sent (`tests/infra/unit/test_email.py`).  
 
-#### Task P1-1.8.2: Create Digest Email Template (S, 4h) - **Execution-Ready**
+#### Task P1-7.2: Create Digest Email Template (S, 4h) - **Execution-Ready**
 - **File**: `runway/web/templates/digest_email.html`
 - [ ] Runway summary, compliant language ("Data shows...").
 **References**: `build_plan_v5.md`  
-**Dependencies**: P1-1.8.1  
+**Dependencies**: P1-7.1  
 **Validation**: Manual test: Template renders, compliant.  
 
-#### Task P1-1.8.3: Schedule Email Job (S, 4h) - **Execution-Ready**
+#### Task P1-7.3: Schedule Email Job (S, 4h) - **Execution-Ready**
 - **File**: `infra/jobs/job_scheduler.py`
 - [ ] Schedule weekly digests for advisors.
 **References**: `COMPREHENSIVE_ARCHITECTURE.md`  
-**Dependencies**: P1-1.8.2  
+**Dependencies**: P1-7.2  
 **Validation**: Integration test: Job sends emails (`tests/integration/test_email_jobs.py`).  
 
 ---
 
-## Feature 9: Onboarding (P1-1.9, 28h)
+## Feature 8: Onboarding (P1-1.9, 28h)
 
 ### Problem Statement
 Advisors need fast, secure QBO client onboarding.
@@ -442,44 +396,44 @@ Build onboarding service with QBO auth, error handling, and UI. Services first, 
 
 ### Tasks
 
-#### Task P1-1.9.1: Implement OnboardingService (M, 8h) - **Execution-Ready**
+#### Task P1-8.1: Implement OnboardingService (M, 8h) - **Execution-Ready**
 - **File**: `advisor/onboarding/services/onboarding_service.py`
-- [ ] Handle QBO OAuth flow, store tokens.
+- [ ] Handle QBO OAuth flow, store tokens on the `Business` model, and create a `Client` mapping to the current advisor.
 **References**: `infra/qbo/auth.py`, `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.1  
+**Dependencies**: P0-1, P0-2  
 **Validation**: Unit test: Auth completes (`tests/advisor/unit/test_onboarding.py`).  
 
-#### Task P1-1.9.2: Add OAuth Error Handling (S, 4h) - **Execution-Ready**
+#### Task P1-8.2: Add OAuth Error Handling (S, 4h) - **Execution-Ready**
 - **File**: `infra/qbo/client.py`
 - [ ] Handle 401, MFA errors with user feedback.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.9.1  
+**Dependencies**: P1-8.1  
 **Validation**: Unit test: Errors handled (`tests/infra/unit/test_qbo_auth.py`).  
 
-#### Task P1-1.9.3: Create Onboarding Route (S, 4h) - **Execution-Ready**
+#### Task P1-8.3: Create Onboarding Route (S, 4h) - **Execution-Ready**
 - **File**: `runway/routes/onboarding.py`, `runway/schemas/onboarding.py`
-- [ ] POST /advisor/{advisor_id}/onboarding.
+- [ ] POST /advisor/onboarding.
 **References**: `build_plan_v5.md`  
-**Dependencies**: P1-1.9.2  
+**Dependencies**: P1-8.2  
 **Validation**: Unit test: Route processes auth (`tests/runway/unit/test_routes.py`).  
 
-#### Task P1-1.9.4: Build Onboarding Wizard Template (M, 8h) - **Execution-Ready**
+#### Task P1-8.4: Build Onboarding Wizard Template (M, 8h) - **Execution-Ready**
 - **File**: `runway/web/templates/onboarding.html`
 - [ ] shadcn/ui Form, tooltips, WCAG AA.
 **References**: `ui/PLAYBOOK.md`  
-**Dependencies**: P1-1.9.3  
+**Dependencies**: P1-8.3  
 **Validation**: Manual test: Onboarding <5 min, accessible.  
 
-#### Task P1-1.9.5: Secure Token Storage (S, 4h) - **Execution-Ready**
+#### Task P1-8.5: Secure Token Storage (S, 4h) - **Execution-Ready**
 - **File**: `infra/database/session.py`
 - [ ] Store QBO tokens securely in database.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.9.4  
+**Dependencies**: P1-8.4  
 **Validation**: Integration test: Tokens stored securely (`tests/integration/test_onboarding.py`).  
 
 ---
 
-## Feature 10: Testing Strategy (P1-1.10, 28h)
+## Feature 9: Testing Strategy (P1-1.10, 28h)
 
 ### Problem Statement
 Developers need comprehensive tests for reliability.
@@ -492,44 +446,44 @@ Achieve 80%+ coverage with unit and selective integration tests, unified sandbox
 
 ### Tasks
 
-#### Task P1-1.10.1: Build Unified Sandbox Data (M, 8h) - **Execution-Ready**
+#### Task P1-9.1: Build Unified Sandbox Data (M, 8h) - **Execution-Ready**
 - **File**: `tests/conftest.py`, `tests/create_sandbox_data.py`
 - [ ] Generate realistic QBO data for 50 clients.
 **References**: `build_plan_v5.md`, `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.1–P1-1.9  
+**Dependencies**: P0-1, P1-1 to P1-8  
 **Validation**: Run sandbox; generates consistent data.  
 
-#### Task P1-1.10.2: Write Unit Tests for Services (M, 8h) - **Execution-Ready**
+#### Task P1-9.2: Write Unit Tests for Services (M, 8h) - **Execution-Ready**
 - **File**: `tests/runway/unit/test_digest.py`, `tests/advisor/unit/test_client_service.py`
 - [ ] Test DigestService, ClientService with sandbox data.
 **References**: `0_BUILD_PLAN_PHASE1_RUNWAY_DETAILED.md`  
-**Dependencies**: P1-1.10.1  
+**Dependencies**: P1-9.1  
 **Validation**: Run pytest; 80%+ coverage (`tests/coverage.py`).  
 
-#### Task P1-1.10.3: Write Integration Tests (S, 4h) - **Execution-Ready**
+#### Task P1-9.3: Write Integration Tests (S, 4h) - **Execution-Ready**
 - **File**: `tests/integration/test_qbo_integration.py`
 - [ ] Test QBO sync, onboarding (no mocks).
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.10.2  
+**Dependencies**: P1-9.2  
 **Validation**: Integration test: Syncs match QBO data.  
 
-#### Task P1-1.10.4: Add Accessibility Tests (S, 4h) - **Execution-Ready**
+#### Task P1-9.4: Add Accessibility Tests (S, 4h) - **Execution-Ready**
 - **File**: `tests/runway/unit/test_ui.py`
 - [ ] Storybook tests for WCAG AA.
 **References**: `build_plan_v5.md`  
-**Dependencies**: P1-1.10.3  
+**Dependencies**: P1-9.3  
 **Validation**: Run Storybook; no accessibility issues.  
 
-#### Task P1-1.10.5: Validate Runway Accuracy (S, 4h) - **Execution-Ready**
+#### Task P1-9.5: Validate Runway Accuracy (S, 4h) - **Execution-Ready**
 - **File**: `tests/runway/unit/test_runway_calculator.py`
 - [ ] Ensure ≥95% accuracy vs. QBO.
 **References**: `README.md`  
-**Dependencies**: P1-1.10.4  
+**Dependencies**: P1-9.4  
 **Validation**: Unit test: Accuracy meets threshold.  
 
 ---
 
-## Feature 11: Productionalization (P1-1.11, 28h)
+## Feature 10: Productionalization (P1-1.11, 28h)
 
 ### Problem Statement
 MVP needs to be production-ready for advisors.
@@ -542,46 +496,46 @@ Implement SOC 2/GDPR compliance, monitoring, and performance optimizations. Serv
 
 ### Tasks
 
-#### Task P1-1.11.1: Implement Audit Logging (M, 8h) - **Execution-Ready**
+#### Task P1-10.1: Implement Audit Logging (M, 8h) - **Execution-Ready**
 - **File**: `domains/core/services/audit_log.py`
 - [ ] Log all state-mutating actions (bill approvals, etc.).
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.7  
+**Dependencies**: P1-6  
 **Validation**: Integration test: Logs capture changes (`tests/domains/integration/test_audit_log.py`).  
 
-#### Task P1-1.11.2: Set Up Monitoring (S, 4h) - **Execution-Ready**
+#### Task P1-10.2: Set Up Monitoring (S, 4h) - **Execution-Ready**
 - **File**: `infra/monitoring/datadog.py`
 - [ ] Configure Datadog for APM, health checks.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.11.1  
+**Dependencies**: P1-10.1  
 **Validation**: Manual test: Alerts on errors.  
 
-#### Task P1-1.11.3: Rotate Secrets (S, 4h) - **Execution-Ready**
+#### Task P1-10.3: Rotate Secrets (S, 4h) - **Execution-Ready**
 - **File**: `infra/auth/auth.py`
 - [ ] Use AWS Secrets Manager for JWT keys, QBO tokens.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.9  
+**Dependencies**: P1-8  
 **Validation**: Manual test: Secrets loaded securely.  
 
-#### Task P1-1.11.4: Configure Docker and DB (S, 4h) - **Execution-Ready**
+#### Task P1-10.4: Configure Docker and DB (S, 4h) - **Execution-Ready**
 - **File**: `infra/docker/Dockerfile`, `infra/database/session.py`
 - [ ] Dockerize app, set up PostgreSQL with Alembic migrations.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.11.3  
+**Dependencies**: P1-10.3  
 **Validation**: Integration test: Deployment succeeds (`tests/integration/test_deployment.py`).  
 
-#### Task P1-1.11.5: Audit Compliance Copy (S, 4h) - **Execution-Ready**
+#### Task P1-10.5: Audit Compliance Copy (S, 4h) - **Execution-Ready**
 - **File**: `runway/web/templates/*`
 - [ ] Ensure no financial advice ("data shows" vs. "recommend").
 **References**: `build_plan_v5.md`  
-**Dependencies**: P1-1.11.4  
+**Dependencies**: P1-10.4  
 **Validation**: Manual review: Templates compliant.  
 
-#### Task P1-1.11.6: Optimize Performance (S, 4h) - **Execution-Ready**
+#### Task P1-10.6: Optimize Performance (S, 4h) - **Execution-Ready**
 - **File**: `infra/database/session.py`, `infra/queue/job_storage.py`
 - [ ] Add connection pooling, Redis caching for queries.
 **References**: `PRODUCTION_READINESS_CHECKLIST.md`  
-**Dependencies**: P1-1.11.5  
+**Dependencies**: P1-10.5  
 **Validation**: Load test: Dashboard <2s (`tests/integration/test_performance.py`).  
 
 ---
@@ -611,11 +565,11 @@ Implement SOC 2/GDPR compliance, monitoring, and performance optimizations. Serv
 
 ### Risks & Mitigations
 - **Risk**: QBO rate limits disrupt sync
-  - **Mitigation**: Retries, webhooks, caching (P1-1.6)
+  - **Mitigation**: Retries, webhooks, caching (P1-5.3)
 - **Risk**: UI inaccessible
-  - **Mitigation**: Storybook tests, WCAG AA (P1-1.3.5, P1-1.4.5, P1-1.5.5)
+  - **Mitigation**: Storybook tests, WCAG AA (P1-2.5, P1-3.5, P1-4.5)
 - **Risk**: Data leakage between advisors
-  - **Mitigation**: advisor_id scoping, RBAC (P1-1.1)
+  - **Mitigation**: `advisor_id` scoping via `ScopedService`, RBAC (Phase 0)
 
 ---
 
