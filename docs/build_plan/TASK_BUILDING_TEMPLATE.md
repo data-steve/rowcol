@@ -1,22 +1,42 @@
-# Task Building Template
+# Task Building Template - RowCol QBO MVP
 
-*Template for curating tasks by complexity into Executable, Needs Solving, and Blocked categories*
+*Streamlined template for creating executable and solutioning tasks with self-healing discovery*
 
-## **Required Context Documentation**
+## **Quick Start**
 
-Every task document MUST include a "Read These Files First" section with these specific files:
+1. **Read Architecture Context** (below) - understand system patterns
+2. **Navigate**: `cd ~/projects/rowcol`
+3. **Activate**: `poetry shell` (one-time)
+4. **Create Branch**: `git checkout -b feature/[task-name]`
+5. **Start App**: `uvicorn main:app --reload` (keep running)
+6. **Execute**: Follow the task-specific process
 
-### **Architecture Context (Required for All Tasks):**
-- `docs/architecture/COMPREHENSIVE_ARCHITECTURE.md` - Complete system architecture
-- `docs/build_plan_v5.md` - Current build plan and phase context
-- `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
-- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
-- `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
-- `DEVELOPMENT_STANDARDS.md` - Development standards and anti-patterns
+## **Architecture Context (Required for All Tasks)**
+
+### **Core System Architecture:**
+- `docs/architecture/comprehensive_architecture_multi_rail.md` - Complete system architecture
+- `docs/build_plan/rowcol_financial_control_plane_e2e.md` - E2E build plan and phase context
+- `docs/build_plan/QBO_MVP_ROADMAP.md` - QBO MVP focus and current phase
+- `infra/config/feature_gates.py` - Feature gating system
+- `infra/config/rail_configs.py` - Rail-specific configurations
+
+### **Current Phase Context (QBO MVP Focus):**
+- **Phase 0.5**: QBO-only MVP (current focus)
+- **Feature Gating**: QBO-only mode enabled, Ramp/Plaid/Stripe disabled
+- **Payment Execution**: QBO sync-only (no execution), Ramp execution gated
+- **Reserve Management**: Disabled in QBO-only mode
+- **Multi-rail Architecture**: Ready for future phases
+
+### **Core System Patterns:**
+- **Domain Services** (`domains/*/services/`): Business logic + CRUD operations
+- **Runway Services** (`runway/`): Product orchestration and user experiences
+- **Infrastructure Services** (`infra/`): Cross-cutting concerns (auth, database, external APIs)
+- **Two-Layer Architecture**: `domains/` for business primitives, `runway/` for product features
+- **Tenant Awareness**: All services filter by `business_id` for multi-tenancy
 
 ## **Task Categories**
 
-### **CRITICAL: Task Naming Convention**
+### **Task Naming Convention**
 
 **Executable Tasks**: `E01_[MEANINGFUL_NAME].md`
 - **E** = Executable (ready for hands-free execution)
@@ -28,271 +48,84 @@ Every task document MUST include a "Read These Files First" section with these s
 - **01** = Sequence number (S01, S02, S03...)
 - **MEANINGFUL_NAME** = Key identifier (visible in Cursor @ attachment)
 
-**Examples**:
-- `E01_TESTDRIVE_ORCHESTRATOR.md` - "Create TestDriveDataOrchestrator following established pattern"
-- `E02_QBOMAPPER_IMPLEMENTATION.md` - "Implement QBOMapper for bill data mapping"
-- `S01_CONSOLE_PAYMENT_WORKFLOW.md` - "Design Console Payment Decision Workflow"
-- `S02_BULK_DIGEST_PROCESSING.md` - "Architect bulk digest processing for 1000+ businesses"
-
-**Benefits**:
-- **Prefix visible** in Cursor's @ attachment (E01_, S01_)
-- **Key identifier visible** immediately after prefix
-- **Sequence number** for ordering
-- **Short enough** to be readable in file explorers
-
-### **CRITICAL: Task Granularity Guidelines**
+### **Task Granularity Guidelines**
 
 **Executable Tasks (E01_, E02_, E03_...)**:
 - **Size**: 2-4 hours of focused work
 - **Scope**: One service, one pattern, one feature
 - **Dependencies**: Minimal external context needed
-- **Thread Assignment**: 3-5 executable tasks per thread
+- **Ready for**: Hands-free execution with clear patterns
 
 **Solutioning Tasks (S01_, S02_, S03_...)**:
 - **Size**: One major architectural problem
 - **Scope**: One complex system or integration
 - **Dependencies**: Extensive discovery and analysis needed
-- **Thread Assignment**: One solutioning task per thread
+- **Ready for**: Discovery → Analysis → Design → Documentation
 
-**Granularity Decision Tree**:
-When curating tasks, ask:
-1. **Can this be completed in 2-4 hours?** → Executable Task (E prefix)
-2. **Does this need extensive discovery?** → Solutioning Task (S prefix)
-3. **Is this too big for one thread?** → Break into smaller tasks
+**Decision Tree**:
+1. **Can this be completed in 2-4 hours with clear patterns?** → Executable Task (E prefix)
+2. **Does this need extensive discovery and analysis?** → Solutioning Task (S prefix)
+3. **Is this too big for one task?** → Break into smaller tasks
 4. **Is this too small to be meaningful?** → Combine with related tasks
 
-### **CRITICAL: Solutioning Task Lifecycle Management**
+## **Self-Healing Process (MANDATORY)**
 
-**Solutioning Task Status Tracking**:
-```markdown
-## **Status**: [ ] Discovery | [ ] Analysis | [ ] Design | [ ] Executable Tasks | [ ] Complete
+### **The Core Problem:**
+Build plans and task descriptions are idealized but codebase reality changes as we work. Static audits become stale quickly.
 
-## **Dependencies**
-- **Depends on**: [List of prerequisite solutioning tasks]
-- **Blocks**: [List of tasks this blocks]
+### **The Self-Healing Solution:**
+Each task discovers its own reality, heals gaps dynamically, and updates documentation as it works.
 
-## **Thread Assignment**
-- **Assigned to**: [Thread name/date]
-- **Started**: [Date]
-- **Completed**: [Date]
-```
+### **Key Principles:**
+- **Discovery First**: Always understand what actually exists before assuming
+- **Gap Healing**: Fix discovered gaps as part of task execution
+- **Documentation Updates**: Update build plans based on discovered reality
+- **Iterative Refinement**: Each task improves the accuracy of subsequent tasks
 
-**Solutioning Coordination**:
-- **One solutioning task per thread** (keep focused)
-- **Update status** when starting/completing tasks
-- **Convert to executable tasks** when design is complete
-- **Archive completed tasks** to `archive/` folder
+### **Self-Healing Process:**
 
-**File Organization**:
-```
-zzz_fix_backlogs/working/
-├── E01_TESTDRIVE_ORCHESTRATOR.md
-├── E02_QBOMAPPER_IMPLEMENTATION.md
-├── S01_CONSOLE_PAYMENT_WORKFLOW.md
-├── S02_BULK_DIGEST_PROCESSING.md
-├── SOLUTIONING_COORDINATION.md
-└── archive/
-    ├── S01_CONSOLE_PAYMENT_WORKFLOW.md
-    └── [other completed tasks]
-```
+**Phase 1: Discovery & Reality Check (MANDATORY)**
+1. **Read Task Description** - Understand what the build plan thinks needs to be done
+2. **Discover Current Reality** - Find what actually exists in the codebase
+3. **Identify Gaps** - Compare build plan assumptions vs. reality
+4. **Heal Gaps** - Fix discovered issues as part of task execution
+5. **Update Documentation** - Update build plan based on discovered reality
 
-### **CRITICAL: Thread Porting Templates**
+**Phase 2: Implementation**
+1. **Implement the actual task** - Use discovered reality, not assumptions
+2. **Heal discovered gaps** - Fix issues found during discovery
+3. **Test thoroughly** - Verify everything works
+4. **Update documentation** - Keep build plans accurate
 
-**Use these templates with `@` commands to generate consistent porting requirements:**
-
-#### **THREAD_PORTING_SUMMARY_TEMPLATE.md**
-```markdown
-# Thread Porting Summary - [FEATURE_AREA]
-
-*Thread: [BRANCH_NAME] - [BRIEF_DESCRIPTION]*
-
-## **✅ COMPLETED WORK**
-
-### **1. Core Architecture Foundation**
-- **Architecture**: [What patterns were established]
-- **Critical Issues**: [What problems were solved]
-- **Services**: [What services were created/refactored]
-
-### **2. Critical Issues Resolved**
-- **Issue 1**: [Brief description] - ✅ **ELIMINATED**
-- **Issue 2**: [Brief description] - ✅ **CLARIFIED**
-- **Issue 3**: [Brief description] - ✅ **ARCHITECTED**
-
-## **🔄 READY FOR EXECUTION**
-
-### **Task [E01_NAME]**: [Brief Description] (P[1-3] [Priority])
-**Status**: Added to `001_EXECUTABLE_TASKS.md` as Task [E01_NAME]
-
-**Key Requirements**:
-- [Requirement 1]
-- [Requirement 2]
-- [Requirement 3]
-
-**Implementation**: [Service/Pattern] with [method] method
-
-### **Task [E02_NAME]**: [Brief Description] (P[1-3] [Priority])
-**Status**: Added to `001_EXECUTABLE_TASKS.md` as Task [E02_NAME]
-
-**Key Requirements**:
-- [Requirement 1]
-- [Requirement 2]
-- [Requirement 3]
-
-**Implementation**: [Service/Pattern] with [method] method
-
-## **📋 NEXT THREAD PRIORITIES**
-
-### **Immediate Execution Tasks** (Ready for hands-free execution):
-1. **Task [E01_NAME]** - [Brief description] ([X] hours)
-2. **Task [E02_NAME]** - [Brief description] ([X] hours)
-3. **Task [E03_NAME]** - [Brief description] ([X] hours)
-
-### **Solutioning Required** (In `002_NEEDS_SOLVING_TASKS.md`):
-- **Task [S01_NAME]** - [Brief description] (complex, needs analysis)
-
-## **🎯 KEY SUCCESS PATTERNS ESTABLISHED**
-
-1. **Pattern Name**: [Brief description]
-2. **Pattern Name**: [Brief description]
-3. **Pattern Name**: [Brief description]
-
-## **📁 FILE STATUS**
-
-### **Ready for Archive** (Move to archive folder):
-- `[FILE_NAME].md` - [Brief description] (completed)
-- `[FILE_NAME].md` - [Brief description] (completed)
-
-### **Keep Active** (Long-term documentation):
-- `001_EXECUTABLE_TASKS.md` - Updated with Tasks [E01_NAME], [E02_NAME], [E03_NAME]
-- `002_NEEDS_SOLVING_TASKS.md` - Contains Task [S01_NAME] for [brief description]
-- `ARCHITECTURAL_FOUNDATION_SUMMARY.md` - Key architectural decisions
-
-## **🚀 THREAD STATUS: READY FOR CLOSE**
-
-**All critical architectural work completed:**
-- ✅ Core architecture foundation solid
-- ✅ Critical issues resolved
-- ✅ Remaining work properly documented as executable tasks
-- ✅ Next thread has clear priorities and implementation details
-
-**The codebase is architecturally sound and ready for the next phase of development.**
-```
-
-#### **NEXT_THREAD_EXECUTION_GUIDE_TEMPLATE.md**
-```markdown
-# Next Thread Execution Guide - [FEATURE_AREA]
-
-*Ready for immediate execution - [DATE]*
-
-## **🎯 IMMEDIATE EXECUTION TASKS**
-
-### **Task [E01_NAME]**: [Brief Description]
-- **Status**: `[ ]` Ready for execution
-- **Priority**: P[1-3] [Priority]
-- **Pattern**: [Pattern description]
-- **Files**: 
-  - Create: `[FILE_PATH]`
-  - Update: `[FILE_PATH]`
-- **Key Pattern**: [Key implementation pattern]
-
-### **Task [E02_NAME]**: [Brief Description]
-- **Status**: `[ ]` Ready for execution
-- **Priority**: P[1-3] [Priority]
-- **Pattern**: [Pattern description]
-- **Files**:
-  - Create: `[FILE_PATH]`
-  - Update: `[FILE_PATH]`
-- **Key Pattern**: [Key implementation pattern]
-
-## **📋 CRITICAL SUCCESS PATTERNS**
-
-### **Pattern Name (MANDATORY)**
-```python
-# Code example showing the pattern
-class ExampleService:
-    def __init__(self, db: Session, business_id: str):
-        # Pattern implementation
-        pass
-```
-
-**Key Principles**:
-1. **Principle 1**: [Description]
-2. **Principle 2**: [Description]
-3. **Principle 3**: [Description]
-
-## **📁 REFERENCE FILES**
-
-### **Architecture Context**
-- `ARCHITECTURAL_FOUNDATION_SUMMARY.md` - Complete architectural decisions and patterns
-- `001_EXECUTABLE_TASKS.md` - Updated with corrected Tasks [E01_NAME] and [E02_NAME]
-- `002_NEEDS_SOLVING_TASKS.md` - Remaining solutioning work
-
-### **Implementation Examples**
-- `[FILE_PATH]` - Example of correct pattern implementation
-- `[FILE_PATH]` - Example of correct pattern implementation
-
-## **🚀 EXECUTION ORDER**
-
-1. **Start with Task [E01_NAME]** - [Brief description]
-   - Follows established pattern
-   - Clear implementation examples
-   - Straightforward execution
-
-2. **Then Task [E02_NAME]** - [Brief description]
-   - Follows established pattern
-   - Clear implementation examples
-   - Straightforward execution
-
-## **⚠️ CRITICAL WARNINGS**
-
-1. **DO NOT** [Common mistake to avoid]
-2. **DO NOT** [Common mistake to avoid]
-3. **DO NOT** [Common mistake to avoid]
-
-## **✅ VERIFICATION COMMANDS**
-
-After each task completion:
-
+### **Discovery Commands Pattern:**
 ```bash
-# Check for correct pattern usage
-grep -r "PatternName" [DIRECTORY]/
-grep -r "ServiceName" [DIRECTORY]/
+# 1. Find all references to understand current patterns
+grep -r "pattern_name" . --include="*.py"
 
-# Check for no old patterns
-grep -r "OldPattern" [DIRECTORY]/
+# 2. Understand file relationships and dependencies
+find . -name "*.py" -exec grep -l "pattern_name" {} \;
 
-# Check server status
-# Check uvicorn in Cursor terminal - should be running without errors
+# 3. Check current imports and usage
+grep -r "import.*pattern_name" . --include="*.py"
+
+# 4. Test current state
+uvicorn main:app --reload
+pytest -k "test_pattern_name"
+
+# 5. Check for specific patterns mentioned in build plan
+grep -r "advisor_id" . --include="*.py"
+grep -r "business_id" . --include="*.py"
+grep -r "firm_id" . --include="*.py"
+grep -r "client_id" . --include="*.py"
 ```
 
-## **📊 SUCCESS METRICS**
-
-- All services follow the established pattern
-- No circular dependencies between services
-- Server runs without errors
-- All tests pass
-
-**Ready for execution!** 🚀
-```
-
-#### **Usage Instructions**
-
-**To generate porting requirements:**
-1. **Copy the template** you need (THREAD_PORTING_SUMMARY_TEMPLATE.md or NEXT_THREAD_EXECUTION_GUIDE_TEMPLATE.md)
-2. **Replace placeholders** with actual values:
-   - `[FEATURE_AREA]` → Actual feature area
-   - `[BRANCH_NAME]` → Actual branch name
-   - `[E01_NAME]` → Actual task names
-   - `[S01_NAME]` → Actual solutioning task names
-   - `[DATE]` → Current date
-3. **Paste into thread** or create new file
-4. **Use `@` command** to reference the template
-
-**Template Benefits**:
-- **Consistent format** across all threads
-- **No missing sections** - template ensures completeness
-- **Easy to customize** - just replace placeholders
-- **Professional appearance** - standardized structure
+### **Gap Healing Process:**
+**When Gaps Are Discovered:**
+1. **Document the Gap** - What build plan assumed vs. what exists
+2. **Assess Impact** - Does this affect the task or future tasks?
+3. **Heal Immediately** - Fix the gap as part of current task
+4. **Update Build Plan** - Mark assumptions as corrected
+5. **Propagate Changes** - Update related tasks that depend on this
 
 ### **0_EXECUTABLE_TASKS.md** - Ready for Hands-Free Execution
 **Characteristics:**
@@ -539,10 +372,10 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - Maintain all context and justification
 
 ### **Step 5: Create Curated Files**
-1. Create `0_EXECUTABLE_TASKS.md` with fully-solved tasks
-2. Create `1_NEEDS_SOLVING_TASKS.md` with analysis tasks
-3. Create `2_BLOCKED_TASKS.md` with blocked tasks
-4. Archive original files
+1. Create `docs/build_plan/working/0_EXECUTABLE_TASKS.md` with fully-solved tasks
+2. Create `docs/build_plan/working/1_NEEDS_SOLVING_TASKS.md` with analysis tasks
+3. Create `docs/build_plan/working/2_BLOCKED_TASKS.md` with blocked tasks
+4. Archive original files to `docs/build_plan/archive/`
 
 ### **Step 6: Clean Up**
 - Remove "spec" and "agent" references
@@ -754,10 +587,10 @@ grep -r "get_.*_for_digest" . --include="*.py"
 
 ## **File Naming Convention**
 
-- `0_EXECUTABLE_TASKS.md` - Ready for execution
-- `1_NEEDS_SOLVING_TASKS.md` - Need analysis work
-- `2_BLOCKED_TASKS.md` - Blocked by dependencies
-- `backlog/` - Original backlogs for future curation
+- `docs/build_plan/working/0_EXECUTABLE_TASKS.md` - Ready for execution
+- `docs/build_plan/working/1_NEEDS_SOLVING_TASKS.md` - Need analysis work
+- `docs/build_plan/working/2_BLOCKED_TASKS.md` - Blocked by dependencies
+- `docs/build_plan/archive/` - Original backlogs for future curation
 
 ## **Git Workflow**
 
