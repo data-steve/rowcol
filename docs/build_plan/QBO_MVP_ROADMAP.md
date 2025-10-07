@@ -30,7 +30,12 @@
    - Show QBO data only (feature gated)
    - Mobile-friendly for advisor use
 
-3. **Test with real QBO data** (3-5 days)
+3. **Fix Business ID dependency injection** (2-3 days)
+   - Replace get_services() pattern with direct business_id injection
+   - Update all route files to use new pattern
+   - Clean up over-engineered dependency containers
+
+4. **Test with real QBO data** (3-5 days)
    - Connect to actual QBO sandbox
    - Validate all services work
    - Fix any remaining issues
