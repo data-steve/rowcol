@@ -13,6 +13,7 @@ from runway.services.1_calculators.runway_calculator import RunwayCalculator
 from runway.services.1_calculators.impact_calculator import ImpactCalculator
 from runway.services.1_calculators.insight_calculator import InsightCalculator
 from common.exceptions import BusinessNotFoundError
+from infra.config import feature_gates
 from datetime import datetime
 import logging
 
@@ -36,7 +37,7 @@ class DecisionConsoleService:
     
     async def get_console_data(self, business_id: str) -> Dict[str, Any]:
         """
-        Get all data needed for the Decision Console experience.
+        Get all data needed for the Decision Console experience with feature gating.
         
         Args:
             business_id: The business to get data for
@@ -47,6 +48,14 @@ class DecisionConsoleService:
         try:
             # Get console data from orchestrator
             console_data = await self.data_orchestrator.get_console_data(business_id)
+            
+            # Apply feature gating to control functionality
+            if feature_gates.can_use_feature("qbo_only_mode"):
+                # QBO-only mode: Show bill approval workflow, hide execution
+                console_data = self._filter_qbo_only_console_data(console_data)
+            elif not feature_gates.can_use_feature("multi_rail_decisions"):
+                # Limited mode: Show available decision options only
+                console_data = self._filter_available_console_features(console_data)
             
             # Add runway context for decision-making
             runway_context = self.runway_calculator.calculate_current_runway(console_data)
@@ -185,3 +194,58 @@ class DecisionConsoleService:
         except Exception as e:
             logger.error(f"Error analyzing decision impact for business {business_id}: {e}")
             raise
+    
+    def _filter_qbo_only_console_data(self, console_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter console data for QBO-only mode."""
+        filtered_data = console_data.copy()
+        
+        # Always include QBO bill approval workflow
+        if "bills" in filtered_data:
+            # Keep only QBO bills for approval
+            qbo_bills = []
+            for bill in filtered_data["bills"]:
+                if bill.get("source") == "qbo" or "qbo" in bill.get("source", "").lower():
+                    qbo_bills.append(bill)
+            filtered_data["bills"] = qbo_bills
+        
+        # Remove execution options (requires Ramp)
+        if "execution_options" in filtered_data:
+            filtered_data["execution_options"] = []
+        
+        if "payment_methods" in filtered_data:
+            # Only show QBO sync as available
+            filtered_data["payment_methods"] = ["qbo_sync"]
+        
+        # Remove multi-rail decision features
+        if "multi_rail_decisions" in filtered_data:
+            del filtered_data["multi_rail_decisions"]
+        
+        # Add QBO-only mode indicator
+        filtered_data["mode"] = "qbo_only"
+        filtered_data["limitations"] = [
+            "Payment execution requires external processing",
+            "Multi-rail decision orchestration not available",
+            "Limited to QBO bill approval workflow"
+        ]
+        
+        return filtered_data
+    
+    def _filter_available_console_features(self, console_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter console data based on available features."""
+        filtered_data = console_data.copy()
+        
+        # Get available payment methods from feature gates
+        available_methods = feature_gates.get_available_payment_methods()
+        
+        if "payment_methods" in filtered_data:
+            filtered_data["payment_methods"] = available_methods
+        
+        # Filter execution options based on available features
+        if "execution_options" in filtered_data:
+            filtered_options = []
+            for option in filtered_data["execution_options"]:
+                if feature_gates.can_use_feature(option.get("feature", "")):
+                    filtered_options.append(option)
+            filtered_data["execution_options"] = filtered_options
+        
+        return filtered_data

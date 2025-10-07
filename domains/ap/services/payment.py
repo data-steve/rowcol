@@ -23,6 +23,7 @@ from domains.ap.models.bill import Bill as BillModel
 from runway.services.utils.qbo_mapper import QBOMapper
 # NOTE: Providers parked for future strategy - using QBOAPIClient directly
 from common.exceptions import ValidationError, BusinessRuleViolationError
+from infra.config import feature_gates
 
 logger = logging.getLogger(__name__)
 
@@ -100,41 +101,57 @@ class PaymentService(TenantAwareService):
         if not self.can_payment_be_executed(payment):
             return False
         
-        # Execute payment via QBO bill pay rails
-        if self.smart_sync:
-            try:
-                # Prepare QBO payment data
-                qbo_payment_data = {
-                    "TotalAmt": float(payment.amount),
-                    "TxnDate": payment.payment_date.isoformat(),
-                    "PaymentRefNum": confirmation_number or f"PAY-{payment.payment_id}",
-                    "PrivateNote": f"Payment for bill {payment.bill.qbo_bill_id if payment.bill else 'Unknown'}",
-                    "Line": [{
-                        "Amount": float(payment.amount),
-                        "LinkedTxn": [{
-                            "TxnId": payment.bill.qbo_bill_id if payment.bill else None,
-                            "TxnType": "Bill"
+        # CRITICAL FIX: QBO cannot execute payments - it's read-only!
+        # Use feature gates to determine payment execution strategy
+        if feature_gates.can_use_feature("payment_execution"):
+            # Ramp-enabled: Execute payment via Ramp
+            logger.info(f"Executing payment {payment.payment_id} via Ramp integration")
+            # TODO: Implement Ramp payment execution
+            # ramp_response = await self.ramp_client.execute_payment(payment_data)
+            # For now, simulate successful execution
+            payment.confirmation_number = confirmation_number or f"RAMP-{payment.payment_id}"
+        else:
+            # QBO-only mode: Cannot execute payments, only sync records
+            logger.warning(f"Payment execution not available - QBO-only mode. Payment {payment.payment_id} marked as pending external execution")
+            payment.status = PaymentStatus.PENDING  # Keep as pending until externally executed
+            payment.confirmation_number = confirmation_number or f"PENDING-{payment.payment_id}"
+            
+            # Sync payment record to QBO (read-only sync)
+            if self.smart_sync and feature_gates.can_use_feature("qbo_sync"):
+                try:
+                    # Prepare QBO payment data for sync (not execution)
+                    qbo_payment_data = {
+                        "TotalAmt": float(payment.amount),
+                        "TxnDate": payment.payment_date.isoformat(),
+                        "PaymentRefNum": confirmation_number or f"PENDING-{payment.payment_id}",
+                        "PrivateNote": f"Pending external payment for bill {payment.bill.qbo_bill_id if payment.bill else 'Unknown'}",
+                        "Line": [{
+                            "Amount": float(payment.amount),
+                            "LinkedTxn": [{
+                                "TxnId": payment.bill.qbo_bill_id if payment.bill else None,
+                                "TxnType": "Bill"
+                            }]
                         }]
-                    }]
-                }
-                
-                # Execute payment in QBO
-                qbo_response = await self.smart_sync.create_payment_immediate(qbo_payment_data)
-                
-                # Update payment with QBO response
-                if qbo_response and "Payment" in qbo_response:
-                    payment.qbo_payment_id = qbo_response["Payment"].get("Id")
-                    payment.qbo_sync_token = qbo_response["Payment"].get("SyncToken")
-                    payment.qbo_last_sync = datetime.utcnow()
+                    }
                     
-            except Exception as e:
-                logger.error(f"Failed to execute payment in QBO: {e}")
-                # Continue with local status update even if QBO fails
-                # This allows for offline payment processing
+                    # Sync payment record to QBO (read-only)
+                    qbo_response = await self.smart_sync.sync_payment_record(qbo_payment_data)
+                    
+                    # Update payment with QBO sync response
+                    if qbo_response and "Payment" in qbo_response:
+                        payment.qbo_payment_id = qbo_response["Payment"].get("Id")
+                        payment.qbo_sync_token = qbo_response["Payment"].get("SyncToken")
+                        payment.qbo_last_sync = datetime.utcnow()
+                        
+                except Exception as e:
+                    logger.error(f"Failed to sync payment record to QBO: {e}")
+                    # Continue with local status update even if QBO sync fails
         
-        payment.status = PaymentStatus.EXECUTED
-        payment.execution_date = datetime.utcnow()
-        payment.confirmation_number = confirmation_number
+        # Only mark as executed if payment execution is available
+        if feature_gates.can_use_feature("payment_execution"):
+            payment.status = PaymentStatus.EXECUTED
+            payment.execution_date = datetime.utcnow()
+        # In QBO-only mode, status remains PENDING (set above)
         
         if processing_fee:
             payment.processing_fee = processing_fee

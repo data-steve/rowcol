@@ -34,12 +34,7 @@ class EmailSettings:
     RETRY_DELAY_SECONDS = 5
     TIMEOUT_SECONDS = 30
     
-class QBOSettings:
-    """QuickBooks Online integration settings."""
-    TOKEN_REFRESH_BUFFER_MINUTES = 5     # Refresh token 5 minutes before expiry
-    MAX_API_RETRIES = 3
-    API_TIMEOUT_SECONDS = 30
-    RATE_LIMIT_DELAY_SECONDS = 1
+# QBOSettings moved to rail_configs.py for better separation of concerns
     
 class OnboardingSettings:
     """Onboarding process settings."""

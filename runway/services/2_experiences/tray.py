@@ -23,7 +23,7 @@ from runway.services.1_calculators.priority_calculator import PriorityCalculator
 from runway.services.1_calculators.impact_calculator import ImpactCalculator
 from runway.services.1_calculators.reserve_runway import RunwayReserveService
 from common.exceptions import TrayItemNotFoundError
-from infra.config import TrayPriorities, TrayItemStatuses
+from infra.config import TrayPriorities, TrayItemStatuses, feature_gates
 from datetime import datetime
 import os
 import logging
@@ -70,10 +70,18 @@ class TrayService:
         return int(priority_analysis.get('priority_score', 50))
 
     async def get_tray_items(self, business_id: str) -> List[Dict[str, Any]]:
-        """Get tray items using data orchestrator and calculation services."""
+        """Get tray items using data orchestrator and calculation services with feature gating."""
         try:
             # Get data from orchestrator
             tray_data = await self.data_orchestrator.get_tray_data(business_id)
+            
+            # Apply feature gating to control data sources
+            if feature_gates.can_use_feature("qbo_only_mode"):
+                # QBO-only mode: Show only QBO data, hide multi-rail features
+                tray_data = self._filter_qbo_only_tray_data(tray_data)
+            elif not feature_gates.can_use_feature("multi_rail_hygiene"):
+                # Limited mode: Show available data sources only
+                tray_data = self._filter_available_tray_data_sources(tray_data)
             
             # Get runway context for impact calculations
             runway_context = None
@@ -496,4 +504,60 @@ class TrayService:
                 "message": f"Reminder sending error: {str(e)}",
                 "error": "system_error"
             }
+    
+    def _filter_qbo_only_tray_data(self, tray_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter tray data to show only QBO data sources."""
+        filtered_data = tray_data.copy()
+        
+        # Remove Ramp-specific hygiene data
+        if "ramp_bills" in filtered_data:
+            del filtered_data["ramp_bills"]
+        
+        if "ramp_transactions" in filtered_data:
+            del filtered_data["ramp_transactions"]
+        
+        # Remove multi-rail specific hygiene issues
+        if "hygiene_issues" in filtered_data:
+            filtered_issues = []
+            for issue in filtered_data["hygiene_issues"]:
+                # Keep only QBO-related issues
+                if issue.get("source") == "qbo" or "qbo" in issue.get("source", "").lower():
+                    filtered_issues.append(issue)
+            filtered_data["hygiene_issues"] = filtered_issues
+        
+        # Add QBO-only mode indicator
+        filtered_data["mode"] = "qbo_only"
+        filtered_data["limitations"] = [
+            "Ramp bill hygiene not available",
+            "Multi-rail data sources disabled",
+            "Limited to QBO data quality analysis"
+        ]
+        
+        return filtered_data
+    
+    def _filter_available_tray_data_sources(self, tray_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter tray data based on available data sources."""
+        filtered_data = tray_data.copy()
+        
+        # Get available data sources from feature gates
+        available_sources = feature_gates.get_available_data_sources()
+        
+        # Filter hygiene issues by available sources
+        if "hygiene_issues" in filtered_data:
+            filtered_issues = []
+            for issue in filtered_data["hygiene_issues"]:
+                issue_source = issue.get("source", "").lower()
+                if any(source in issue_source for source in available_sources):
+                    filtered_issues.append(issue)
+            filtered_data["hygiene_issues"] = filtered_issues
+        
+        # Filter data by available sources
+        for source in ["ramp", "plaid", "stripe"]:
+            if source not in available_sources and f"{source}_" in str(filtered_data):
+                # Remove data from unavailable sources
+                keys_to_remove = [key for key in filtered_data.keys() if key.startswith(f"{source}_")]
+                for key in keys_to_remove:
+                    del filtered_data[key]
+        
+        return filtered_data
 

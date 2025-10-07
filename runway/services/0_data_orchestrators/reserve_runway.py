@@ -25,7 +25,7 @@ from infra.database.transaction import db_transaction
 from common.exceptions import (
     BusinessNotFoundError, ValidationError, RunwayCalculationError
 )
-from infra.config import RunwayThresholds
+from infra.config import RunwayThresholds, feature_gates
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,10 @@ class RunwayReserveService:
     
     def create_reserve(self, reserve_data: RunwayReserveCreate, created_by: str = None) -> RunwayReserve:
         """Create a new runway reserve."""
+        # CRITICAL: Reserve management requires Ramp integration
+        if not feature_gates.can_use_feature("reserve_management"):
+            raise ValidationError("Reserve management requires Ramp integration. QBO-only mode does not support reserve management.")
+        
         try:
             with db_transaction(self.db):
                 # Create the reserve
@@ -128,6 +132,9 @@ class RunwayReserveService:
     def fund_reserve(self, reserve_id: str, amount: Decimal, description: str = None,
                     qbo_transaction_id: str = None, created_by: str = None) -> ReserveTransaction:
         """Add funding to a reserve."""
+        # CRITICAL: Reserve management requires Ramp integration
+        if not feature_gates.can_use_feature("reserve_management"):
+            raise ValidationError("Reserve management requires Ramp integration. QBO-only mode does not support reserve management.")
         reserve = self.get_reserve(reserve_id)
         
         if amount <= 0:
@@ -162,6 +169,9 @@ class RunwayReserveService:
     def allocate_reserve(self, allocation_data: ReserveAllocationCreate, 
                         created_by: str = None) -> ReserveAllocation:
         """Allocate reserve funds for specific purpose."""
+        # CRITICAL: Reserve management requires Ramp integration
+        if not feature_gates.can_use_feature("reserve_management"):
+            raise ValidationError("Reserve management requires Ramp integration. QBO-only mode does not support reserve management.")
         reserve = self.get_reserve(allocation_data.reserve_id)
         
         if not reserve.can_allocate(allocation_data.allocated_amount):
@@ -197,6 +207,9 @@ class RunwayReserveService:
     def utilize_reserve(self, reserve_id: str, amount: Decimal, purpose: str,
                        qbo_transaction_id: str = None, created_by: str = None) -> ReserveTransaction:
         """Utilize reserve funds for their intended purpose."""
+        # CRITICAL: Reserve management requires Ramp integration
+        if not feature_gates.can_use_feature("reserve_management"):
+            raise ValidationError("Reserve management requires Ramp integration. QBO-only mode does not support reserve management.")
         reserve = self.get_reserve(reserve_id)
         
         if not reserve.utilize(amount):

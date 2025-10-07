@@ -18,7 +18,6 @@ from .core_thresholds import (
     TrayPriorities,
     DigestSettings,
     EmailSettings,
-    QBOSettings,
     OnboardingSettings,
     TrayItemTypes,
     TrayItemStatuses,
@@ -33,6 +32,15 @@ from .collections_rules import CollectionsRules
 from .payment_rules import PaymentRules  
 from .risk_assessment_rules import RiskAssessmentRules
 from .communication_rules import CommunicationRules
+
+# Feature gating
+from .feature_gates import FeatureGateSettings, feature_gates, IntegrationRail
+
+# Rail-specific configurations
+from .rail_configs import (
+    QBOSettings, RampSettings, PlaidSettings, StripeSettings,
+    qbo_settings, ramp_settings, plaid_settings, stripe_settings
+)
 
 __all__ = [
     # Core thresholds
@@ -51,12 +59,26 @@ __all__ = [
     "TrayPriorities",
     "DigestSettings",
     "EmailSettings",
-    "QBOSettings",
     "OnboardingSettings",
     "TrayItemTypes",
     "TrayItemStatuses",
     "BusinessStatuses",
     "IntegrationStatuses",
     "DocumentSettings",
-    "AdjustmentSettings"
+    "AdjustmentSettings",
+    
+    # Feature gating
+    "FeatureGateSettings",
+    "feature_gates",
+    "IntegrationRail",
+    
+    # Rail-specific configurations
+    "QBOSettings",
+    "RampSettings", 
+    "PlaidSettings",
+    "StripeSettings",
+    "qbo_settings",
+    "ramp_settings",
+    "plaid_settings",
+    "stripe_settings"
 ]

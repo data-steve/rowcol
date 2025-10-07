@@ -211,6 +211,15 @@ class SmartSyncService:
             priority=SyncPriority.HIGH
         )
     
+    async def sync_payment_record(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Sync payment record to QBO (read-only sync, no execution)."""
+        return await self.execute_qbo_call(
+            "sync_payment_record",
+            payment_data=payment_data,
+            strategy=SyncStrategy.DATA_SYNC,
+            priority=SyncPriority.MEDIUM
+        )
+    
     async def get_bills(self, since_date: datetime = None) -> Dict[str, Any]:
         """Get bills with optional date filter."""
         return await self.execute_qbo_call(

@@ -11,7 +11,7 @@
 
 This checklist ensures the RowCol platform is production-ready with real integrations, scalable infrastructure, security hardening, and operational monitoring. Complete these tasks after Phase 1 MVP is built and before deploying to paying advisors.
 
-**Estimated Total Effort**: 122 hours (~3 weeks)
+**Estimated Total Effort**: 140 hours (~3.5 weeks)
 
 ---
 
@@ -91,13 +91,24 @@ This checklist ensures the RowCol platform is production-ready with real integra
 
 ---
 
-## Stage 6: Security Hardening (12h)
+## Stage 6: Security Hardening (30h)
 
 ### **Application Security**
 - [ ] **Security headers and HTTPS enforcement** *Effort: 3h*
 - [ ] **API rate limiting and DDoS protection** *Effort: 3h*
 - [ ] **Secrets management and environment security** *Effort: 2h*
 - [ ] **Security scanning** (OWASP, Snyk, or equivalent) *Effort: 4h*
+
+### **API Safety & HTTP Edge Cases** ⚠️ **CRITICAL API VALIDATION**
+- [ ] **Range Header Handling** - Verify APIs properly handle Range headers to prevent resource exhaustion *Effort: 2h*
+- [ ] **Content-Type Enforcement** - Strict enforcement of Content-Type headers to avoid parser vulnerabilities *Effort: 2h*
+- [ ] **Accept Header Negotiation** - Validate proper content type negotiation and fallback behavior *Effort: 2h*
+- [ ] **Method Not Allowed Responses** - Ensure 405 responses include Allow header with supported methods *Effort: 1h*
+- [ ] **Compression Configuration** - Review compression settings to prevent encoding-related issues *Effort: 2h*
+- [ ] **Character Encoding** - Verify consistent UTF-8 encoding specification and handling *Effort: 2h*
+- [ ] **Path Traversal Protection** - Test and validate protection against directory traversal attacks *Effort: 3h*
+- [ ] **Request Size Limits** - Implement and test request size limits to prevent memory exhaustion *Effort: 2h*
+- [ ] **Transfer-Encoding Handling** - Review Transfer-Encoding header handling to prevent request smuggling *Effort: 2h*
 
 ---
 

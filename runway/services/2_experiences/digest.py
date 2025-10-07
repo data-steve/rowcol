@@ -6,7 +6,7 @@ from runway.services.0_data_orchestrators.digest_data_orchestrator import Digest
 from runway.services.1_calculators.runway_calculator import RunwayCalculator
 from runway.services.1_calculators.insight_calculator import InsightCalculator
 from common.exceptions import BusinessNotFoundError, EmailDeliveryError
-from infra.config import DigestSettings
+from infra.config import DigestSettings, feature_gates
 from datetime import datetime, timedelta
 from typing import Dict, Any
 import logging
@@ -43,11 +43,21 @@ class DigestService:
         }
     
     async def get_digest_data(self, business_id: str) -> Dict[str, Any]:
-        """Get digest data using DigestDataOrchestrator."""
+        """Get digest data using DigestDataOrchestrator with feature gating."""
         try:
             # Use weekly digest configuration
             config = DigestConfig.for_weekly()
-            return await self.data_orchestrator.get_digest_data(business_id, config)
+            digest_data = await self.data_orchestrator.get_digest_data(business_id, config)
+            
+            # Apply feature gating to control data sources
+            if feature_gates.can_use_feature("qbo_only_mode"):
+                # QBO-only mode: Show only QBO data, hide multi-rail features
+                digest_data = self._filter_qbo_only_data(digest_data)
+            elif not feature_gates.can_use_feature("multi_rail_data_sources"):
+                # Limited mode: Show available data sources only
+                digest_data = self._filter_available_data_sources(digest_data)
+            
+            return digest_data
             
         except Exception as e:
             logger.error(f"Error getting digest data for business {business_id}: {e}")
@@ -146,3 +156,48 @@ class DigestService:
         except Exception as e:
             logger.error(f"Error generating digest preview: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
+    
+    def _filter_qbo_only_data(self, digest_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter digest data to show only QBO data sources."""
+        filtered_data = digest_data.copy()
+        
+        # Remove multi-rail specific data
+        if "data_sources" in filtered_data:
+            filtered_data["data_sources"] = {
+                "qbo": filtered_data["data_sources"].get("qbo", {}),
+                "available_rails": ["qbo"]
+            }
+        
+        # Remove Ramp-specific features
+        if "reserve_management" in filtered_data:
+            del filtered_data["reserve_management"]
+        
+        if "payment_execution" in filtered_data:
+            del filtered_data["payment_execution"]
+        
+        # Add QBO-only mode indicator
+        filtered_data["mode"] = "qbo_only"
+        filtered_data["limitations"] = [
+            "Payment execution requires external processing",
+            "Reserve management not available",
+            "Multi-rail data sources disabled"
+        ]
+        
+        return filtered_data
+    
+    def _filter_available_data_sources(self, digest_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Filter digest data based on available data sources."""
+        filtered_data = digest_data.copy()
+        
+        # Get available data sources from feature gates
+        available_sources = feature_gates.get_available_data_sources()
+        
+        if "data_sources" in filtered_data:
+            filtered_sources = {}
+            for source in available_sources:
+                if source in filtered_data["data_sources"]:
+                    filtered_sources[source] = filtered_data["data_sources"][source]
+            filtered_data["data_sources"] = filtered_sources
+            filtered_data["data_sources"]["available_rails"] = available_sources
+        
+        return filtered_data

@@ -98,6 +98,13 @@ RowCol delivers multi-client cash discipline, unifying rails for scalable adviso
 - **Clarity**: Simple, branded summaries.
 - **Reliability**: Essentials (payroll, rent) always clear.
 
+### Advisor and Client Experience (Backstage → Front stage)
+RowCol supports advisors “backstage” to reduce surprises and speeds decisions, and presents clear stewardship “front stage” to clients.
+
+- Backstage (Advisor): Pre‑flight readiness (cross‑rail hygiene), variance watchlist, guardrail‑enforced decisions, and WWW (Who/What/When) capture; forecast freshness/confidence to extend decision distance.
+- Front stage (Client): Weekly Digest or equivalent deliverable with a Pre‑flight badge, top variances, updated runway, and WWW next‑steps; short, branded, and audit‑linked.
+- Modes: Active (live cash call), Managed (as‑needed), Silent (auto digest) all use the same four surfaces (Digest, Hygiene, Console, Forecast) without new modules.
+
 **Competitive Landscape**:
 
 | Tool | Multi-Client View | Cash Discipline | A/P Governance | A/R Insights | Client Deliverables |

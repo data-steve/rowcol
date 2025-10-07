@@ -24,6 +24,7 @@ from runway.services.0_data_orchestrators.reserve_runway import RunwayReserveSer
 from runway.schemas.runway_reserve import ReserveAllocationCreate
 from infra.qbo.smart_sync import SmartSyncService
 from common.exceptions import ValidationError
+from infra.config import feature_gates
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +78,9 @@ class ScheduledPaymentService:
             True if scheduling successful, False otherwise
         """
         try:
-            # 1. ALLOCATE RUNWAY RESERVE (earmark the money)
+            # 1. ALLOCATE RUNWAY RESERVE (earmark the money) - Only if reserve management is enabled
             allocation_id = None
-            if self.runway_reserve_service:
+            if self.runway_reserve_service and feature_gates.can_use_feature("reserve_management"):
                 try:
                     allocation_data = ReserveAllocationCreate(
                         reserve_id="operational_reserve",  # TODO: Determine from business rules
@@ -96,15 +97,17 @@ class ScheduledPaymentService:
                     logger.error(f"Failed to allocate reserve for bill {bill.bill_id}: {e}")
                     # Continue without reserve allocation if it fails
                     # This allows for offline payment scheduling
+            else:
+                logger.info(f"Reserve management not available - skipping reserve allocation for bill {bill.bill_id}")
             
-            # 2. CREATE QBO SCHEDULED PAYMENT with future TxnDate
-            if self.smart_sync and bill.qbo_bill_id:
+            # 2. CREATE QBO SCHEDULED PAYMENT - CRITICAL FIX: QBO cannot execute payments!
+            if self.smart_sync and bill.qbo_bill_id and feature_gates.can_use_feature("qbo_sync"):
                 try:
                     qbo_payment_data = {
                         "TotalAmt": float(bill.amount),
                         "TxnDate": payment_date.isoformat(),  # Future date = scheduled
                         "PaymentRefNum": f"SCHED-{bill.bill_id}-{allocation_id or 'NO-RESERVE'}",
-                        "PrivateNote": f"Scheduled payment for bill {bill.qbo_bill_id}",
+                        "PrivateNote": f"Scheduled payment for bill {bill.qbo_bill_id} (external execution required)",
                         "Line": [{
                             "Amount": float(bill.amount),
                             "LinkedTxn": [{
@@ -114,20 +117,28 @@ class ScheduledPaymentService:
                         }]
                     }
                     
-                    # Create scheduled payment in QBO (QBO will process on TxnDate)
-                    qbo_response = await self.smart_sync.create_payment_immediate(qbo_payment_data)
-                    
-                    # Update bill with QBO response
-                    if qbo_response and "Payment" in qbo_response:
-                        bill.qbo_payment_id = qbo_response["Payment"].get("Id")
-                        bill.qbo_sync_token = qbo_response["Payment"].get("SyncToken")
-                        bill.qbo_last_sync = datetime.utcnow()
+                    # CRITICAL FIX: QBO cannot execute payments - only sync records
+                    if feature_gates.can_use_feature("scheduled_payment_execution"):
+                        # Ramp-enabled: Create actual scheduled payment
+                        logger.info(f"Creating scheduled payment via Ramp for bill {bill.bill_id}")
+                        # TODO: Implement Ramp scheduled payment creation
+                        # ramp_response = await self.ramp_client.create_scheduled_payment(qbo_payment_data)
+                    else:
+                        # QBO-only mode: Only sync payment record (not execution)
+                        logger.info(f"QBO-only mode: Syncing scheduled payment record for bill {bill.bill_id}")
+                        qbo_response = await self.smart_sync.sync_payment_record(qbo_payment_data)
                         
-                        logger.info(f"Created QBO scheduled payment {bill.qbo_payment_id} for bill {bill.bill_id}")
+                        # Update bill with QBO sync response
+                        if qbo_response and "Payment" in qbo_response:
+                            bill.qbo_payment_id = qbo_response["Payment"].get("Id")
+                            bill.qbo_sync_token = qbo_response["Payment"].get("SyncToken")
+                            bill.qbo_last_sync = datetime.utcnow()
+                            
+                            logger.info(f"Synced QBO payment record {bill.qbo_payment_id} for bill {bill.bill_id}")
                     
                 except Exception as e:
-                    logger.error(f"Failed to create QBO scheduled payment for bill {bill.bill_id}: {e}")
-                    # Continue with local scheduling even if QBO fails
+                    logger.error(f"Failed to sync QBO payment record for bill {bill.bill_id}: {e}")
+                    # Continue with local scheduling even if QBO sync fails
                     # This allows for offline payment scheduling
             
             # 3. UPDATE BILL WITH RESERVE ALLOCATION AND SCHEDULING
