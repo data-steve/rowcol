@@ -11,6 +11,9 @@
 ---
 
 ## Table of Contents
+- [Phase 0.5: QBO-Only MVP](#phase-05-qbo-only-mvp)
+  - [P0.5-1: QBO Execution Audit & Feature Gating](#p05-1-qbo-execution-audit--feature-gating)
+  - [P0.5-2: Technical Debt Protection Strategy](#p05-2-technical-debt-protection-strategy)
 - [Phase 0: Foundational Alignment](#phase-0-foundational-alignment)
   - [P0-1: Establish `advisor/` Layer](#p0-1-establish-advisor-layer)
   - [P0-2: Implement Multi-Tenancy & Scoping](#p0-2-implement-multi-tenancy--scoping)
@@ -42,6 +45,55 @@
   - [P2-2: Early Collection Workflows](#p2-2-early-collection-workflows)
   - [P2-3: Proactive Bill Scheduling](#p2-3-proactive-bill-scheduling)
 - [Phase 3+: Advanced Orchestration](#phase-3-advanced-orchestration)
+
+---
+
+## Phase 0.5: QBO-Only MVP
+**Goal**: Deliver a working QBO-only MVP using existing codebase with strategic feature gating. This phase focuses on getting a working product quickly while protecting technical debt for future phases.
+
+### P0.5-1: QBO Execution Audit & Feature Gating
+**Status**: ✅ COMPLETE  
+**Effort**: 40h  
+**Dependencies**: None  
+
+**Tasks:**
+- [x] Audit PaymentService for QBO execution assumptions (lines 104-133)
+- [x] Fix QBO execution assumptions in ScheduledPaymentService
+- [x] Create comprehensive feature gating system (infra/config/feature_gates.py)
+- [x] Add feature gating to all core services (digest, tray, console, reserve)
+- [x] Extract rail-specific configs from core_thresholds.py to rail_configs.py
+- [x] Implement strategic test gating with pytest markers
+- [x] Add clear error messages for unavailable features
+
+**Key Deliverables:**
+- QBO-only MVP working without execution assumptions
+- Feature gating controls all multi-rail functionality
+- Clear upgrade path to Ramp integration
+- All tests pass with strategic gating
+
+### P0.5-2: Technical Debt Protection Strategy
+**Status**: ✅ COMPLETE  
+**Effort**: 5h  
+**Dependencies**: P0.5-1  
+
+**Tasks:**
+- [x] Document technical debt items for future phases
+- [x] Create Phase 1 technical debt backlog
+- [x] Implement protection mechanisms (feature gating, error messages)
+- [x] Document upgrade path from QBO-only to multi-rail
+
+**Key Deliverables:**
+- Technical debt properly protected, not fixed
+- Clear phase-specific resolution plan
+- Protection mechanisms prevent blocking MVP
+- Clean upgrade path to future phases
+
+**Technical Debt Items Protected:**
+- **TD-001**: Scheduled Payment + Reserve Integration (Phase 1)
+- **TD-002**: Reserve Management Architecture (Phase 1)  
+- **TD-003**: Payment Execution Strategy (Phase 1)
+- **TD-004**: Data Orchestrator Consolidation (Phase 2)
+- **TD-005**: Service Boundary Refactoring (Phase 2)
 
 ---
 
