@@ -1,6 +1,8 @@
-# RowCol Master Roadmap
+# QBO MVP Roadmap
 
 ## **🎯 Current Status: QBO MVP Foundation Complete**
+
+**Note:** This is the QBO-only MVP roadmap (2-3 weeks). For the full multi-rail platform plan, see `rowcol_financial_control_plane_e2e.md`.
 
 **What's Done:**
 - ✅ QBO execution assumptions fixed

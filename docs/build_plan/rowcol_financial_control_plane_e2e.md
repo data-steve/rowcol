@@ -2,6 +2,13 @@
 
 *Complete build plan for the Financial Control Plane - Multi-rail orchestration platform for CAS 2.0 firms*
 
+## **📋 Document Relationship**
+
+- **`QBO_MVP_ROADMAP.md`** - QBO-only MVP (2-3 weeks) - **START HERE**
+- **`rowcol_financial_control_plane_e2e.md`** - Full multi-rail platform (this document)
+
+**Current Focus:** Complete QBO MVP first, then proceed with this full platform plan.
+
 **Core Principles for Agent Execution:**
 - **Atomicity**: Each task is a single, verifiable action (e.g., create a file, define a class, add a field).
 - **Explicitness**: File paths, model fields, and function signatures are specified exactly.
