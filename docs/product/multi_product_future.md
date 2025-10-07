@@ -6,7 +6,7 @@
 
 ## **The Architecture Principle**
 
-Oodaloo is built with **four layers** that support **three product lines**:
+RowCol is built with **four layers** that support **three product lines**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

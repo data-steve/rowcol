@@ -207,46 +207,6 @@ Scale your practice with smart automation and oversight.
 
 ---
 
-## Getting Started
-
-### **Start with Tier 1** ($50/client/month)
-Perfect for testing with 5-10 clients. Get out of spreadsheets, prove the ritual works.
-
-### **Upgrade to Tier 2** ($150/client/month) when you're ready for:
-* Earmarking / vacation mode planning
-* Smart collections (automated follow-ups)
-* Runway impact on every decision
-
-### **Move to Tier 3** ($250/client/month) when your clients need:
-* Strategic insights (benchmarking, forecasting)
-* Advisory deliverables for client meetings
-* Advanced reserve planning
-
-### **Scale with Tier 4** ($500-1050/client/month) when you're managing 40-50+ clients:
-* Smart automation with oversight
-* Bulk operations across clients
-* White-label reporting
-
----
-
-## Pricing Examples
-
-**Solo Advisor (15 clients):**
-- Tier 1: $750/month (spreadsheet replacement)
-- Tier 2: $2,250/month (smart controls)
-
-**Established Practice (35 clients):**
-- Tier 2: $5,250/month (smart controls)
-- Tier 3: $8,750/month (advisory deliverables)
-
-**Growing Practice (50 clients):**
-- Tier 2: $7,500/month (smart controls)
-- Tier 3: $12,500/month (advisory deliverables)
-- Tier 4: $25,000-52,500/month (practice automation)
-
-**ROI**: At Tier 2, saving 2 hours per client per week = 70 hours/month for 35 clients. Your time is worth far more than $75/client/month.
-
----
 
 ## Why Now
 
@@ -257,41 +217,4 @@ But QBO will always be journal-first (bookkeeping compliance). **RowCol is runwa
 As bookkeeping becomes more automated, **your value shifts to advisory**. RowCol positions you as the strategic advisor who keeps clients out of cash crunches, not just the bookkeeper who categorizes transactions.
 
 **The weekly runway ritual is your competitive moat.**
-
----
-
-## Questions?
-
-**"Can I try it with just a few clients first?"**
-Yes! Start with Tier 1 for 5-10 clients at $50/month each. Prove the ritual works, then expand.
-
-**"Does this replace QuickBooks?"**
-No—RowCol sits on top of QBO. We pull data from QBO (bills, invoices, bank balances), calculate runway, and sync decisions back to QBO (approve bills, schedule payments).
-
-**"What if my clients have complex multi-entity structures?"**
-Tier 1-2 handles single-entity clients. Tier 3-4 adds multi-entity consolidation and advanced reporting.
-
-**"Can I white-label this for my clients?"**
-Yes—Tier 4 includes white-label branding, custom domains, and branded client reports.
-
-**"What about data security?"**
-Bank-level encryption, SOC 2 compliance roadmap, role-based access control. Your clients' data is safe.
-
----
-
-## Get Started
-
-**Ready to ditch spreadsheets?**
-
-1. Sign up for Tier 1 trial (14 days free)
-2. Connect 5-10 client QBO accounts
-3. Run your first batch runway review
-4. See the difference—decide if you want to expand
-
-**Contact**: [Your contact info]
-
----
-
-**RowCol: Get out of spreadsheets. Scale your practice. Keep clients out of cash crunches.**
-
 
