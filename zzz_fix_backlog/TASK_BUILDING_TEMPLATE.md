@@ -184,6 +184,19 @@ grep -r "client_id" . --include="*.py"
   - **Solution Required** (what needs to be figured out)
 - **Todo List Integration** - Cursor todo list management requirements
 
+### **2_BLOCKED_TASKS.md** - Blocked by Solution Tasks
+**Characteristics:**
+- Ready for hands-free execution (same complexity as executable tasks)
+- Blocked by solution tasks that need to be completed first
+- Will become executable once dependencies are resolved
+
+**Status Format:** `[ ]` Not started
+
+**Required Sections:**
+- Context for Blocked Tasks
+- Blocking Analysis
+- Resolution Path
+- Summary
 
 ## **Curation Process**
 
@@ -220,6 +233,12 @@ For each task, ask:
 
 **If ANY answer is YES → Needs Solving**
 
+#### **Blocked Task Gatekeeping Questions:**
+- **Is this ready for execution?** (Same complexity as executable tasks)
+- **Is it blocked by solution tasks?** (Dependencies need to be resolved first)
+- **Will it become executable once unblocked?** (No additional analysis needed)
+
+**If ALL answers are YES → Blocked**
 
 #### **Document Creation Gatekeeping Questions:**
 When you discover a new issue during task curation, ask:
@@ -239,6 +258,46 @@ When you discover a new issue during task curation, ask:
 
 **If YES to any → Add to existing executable task, NO new docs**
 
+### **CRITICAL: Architectural Decision Promotion**
+
+**When to Promote Working Docs to ADRs:**
+- **Architectural decisions are stable** - no more changes expected
+- **Patterns are proven** - have been implemented and tested
+- **Hard won wisdom** - decisions that required significant iteration
+- **Reusable patterns** - other developers need to follow these patterns
+- **Verification commands exist** - can be automatically checked
+
+**ADR Promotion Process:**
+1. **Working doc contains stable architectural decision**
+2. **Create ADR-XXX in `docs/architecture/`**
+3. **Use ADR template** - status, decision, implementation, examples, verification
+4. **Archive working doc** - move to `archive/` folder
+5. **Update references** - point to new ADR location
+
+**ADR Template:**
+```markdown
+# ADR-XXX: [Decision Title]
+
+## Status
+- **Date**: YYYY-MM-DD
+- **Status**: Proposed/Accepted/Deprecated
+- **Context**: [What problem this solves]
+
+## Decision
+[What was decided]
+
+## Implementation
+[How to implement this pattern]
+
+## Examples
+[Code examples showing the pattern]
+
+## Verification
+[How to verify this pattern is being followed]
+
+## Related ADRs
+- ADR-XXX: [Related decision]
+```
 
 ### **CRITICAL: Assumption Validation Before Task Curation**
 
@@ -315,7 +374,8 @@ grep -r "get_.*_for_digest" . --include="*.py"
 ### **Step 5: Create Curated Files**
 1. Create `docs/build_plan/working/0_EXECUTABLE_TASKS.md` with fully-solved tasks
 2. Create `docs/build_plan/working/1_NEEDS_SOLVING_TASKS.md` with analysis tasks
-3. Archive original files to `docs/build_plan/archive/`
+3. Create `docs/build_plan/working/2_BLOCKED_TASKS.md` with blocked tasks
+4. Archive original files to `docs/build_plan/archive/`
 
 ### **Step 6: Clean Up**
 - Remove "spec" and "agent" references
@@ -351,6 +411,10 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - [ ] **Todo list integration included**
 - [ ] **Scratch notes document requirement included**
 
+### **Blocked Tasks**
+- [ ] Ready for execution once unblocked
+- [ ] Blocking dependencies clearly identified
+- [ ] Resolution path outlined
 
 ## **Common Patterns**
 
@@ -360,16 +424,6 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Status:** `[ ]` Not started
 - **Priority:** P0 Critical / P1 High / P2 Medium
 - **Justification:** [Why this task is needed]
-- **Execution Status:** **Execution-Ready** / **Needs-Solutioning**
-
-### **Problem Statement**
-[What's broken and why - specific technical issue]
-
-### **User Story**
-"As a [role], I need [functionality] so that [business value]"
-
-### **Solution Overview**
-[High-level approach - what we're building and how]
 
 - **Initial Files to Fix:** (Starting point - NOT comprehensive)
   - `file1.py` - [specific change needed]
@@ -382,16 +436,6 @@ grep -r "get_.*_for_digest" . --include="*.py"
   grep -r "related_pattern" . --include="*.py"
   grep -r "import.*pattern" . --include="*.py"
   find . -name "*.py" -exec grep -l "pattern" {} \;
-  
-  # Check current state and patterns
-  grep -r "advisor_id" . --include="*.py"
-  grep -r "business_id" . --include="*.py"
-  grep -r "firm_id" . --include="*.py"
-  grep -r "client_id" . --include="*.py"
-  
-  # Test current state
-  uvicorn main:app --reload
-  pytest -k "test_pattern_name"
   ```
 
 - **MANDATORY: Recursive Triage Process:**
@@ -413,13 +457,7 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Pattern to Implement:**
   ```python
   # Code example here - WHAT you're building
-  # Follow existing patterns in similar files
   ```
-
-- **File Examples to Follow:**
-  - `domains/ap/services/payment.py` - Example of service pattern
-  - `runway/services/2_experiences/digest.py` - Example of experience service
-  - `infra/config/feature_gates.py` - Example of configuration pattern
 
 - **Required Imports/Changes:**
   - Remove: `old_import`
@@ -484,16 +522,6 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Status:** `[ ]` Not started
 - **Priority:** P1 High / P2 Medium
 - **Justification:** [Why this task is needed]
-- **Execution Status:** **Needs-Solutioning**
-
-### **Problem Statement**
-[What's broken and why - specific technical issue]
-
-### **User Story**
-"As a [role], I need [functionality] so that [business value]"
-
-### **Solution Overview**
-[High-level approach - what we're building and how]
 
 - **Code Pointers:**
   - `file1.py` - [what to look at]
@@ -505,16 +533,6 @@ grep -r "get_.*_for_digest" . --include="*.py"
   grep -r "related_pattern" . --include="*.py"
   grep -r "import.*related" . --include="*.py"
   find . -name "*.py" -exec grep -l "pattern" {} \;
-  
-  # Check current state and patterns
-  grep -r "advisor_id" . --include="*.py"
-  grep -r "business_id" . --include="*.py"
-  grep -r "firm_id" . --include="*.py"
-  grep -r "client_id" . --include="*.py"
-  
-  # Test current state
-  uvicorn main:app --reload
-  pytest -k "test_pattern_name"
   ```
 
 - **Current Issues to Resolve:**
@@ -533,11 +551,6 @@ grep -r "get_.*_for_digest" . --include="*.py"
   - [How this fits with existing patterns]
   - [What ADRs apply to this problem]
   - [What services/patterns should be used]
-
-- **File Examples to Follow:**
-  - `domains/ap/services/payment.py` - Example of service pattern
-  - `runway/services/2_experiences/digest.py` - Example of experience service
-  - `infra/config/feature_gates.py` - Example of configuration pattern
 
 - **Solution Design Process:**
   1. [Step 1: Discovery phase]
@@ -576,12 +589,13 @@ grep -r "get_.*_for_digest" . --include="*.py"
 
 - `docs/build_plan/working/0_EXECUTABLE_TASKS.md` - Ready for execution
 - `docs/build_plan/working/1_NEEDS_SOLVING_TASKS.md` - Need analysis work
+- `docs/build_plan/working/2_BLOCKED_TASKS.md` - Blocked by dependencies
 - `docs/build_plan/archive/` - Original backlogs for future curation
 
 ## **Git Workflow**
 
 1. **Create branch:** `git checkout -b curate/[backlog-name]`
-2. **Curate tasks:** Create the 2 curated files
+2. **Curate tasks:** Create the 3 curated files
 3. **Clean up:** Remove spec/agent references
 4. **Archive:** Move original files to archive/
 5. **Commit:** `git add . && git commit -m "Curate [backlog-name] tasks by complexity"`
@@ -591,6 +605,7 @@ grep -r "get_.*_for_digest" . --include="*.py"
 
 - **Executable Tasks:** Can be executed by any developer without additional context
 - **Needs Solving Tasks:** Clear what analysis work is needed
+- **Blocked Tasks:** Clear what dependencies need to be resolved
 - **No Information Loss:** All detail preserved from original backlogs
 - **Clean Formatting:** No spec/agent references, consistent status format
 - **Git Workflow:** Clear surgical commit instructions for each task
@@ -632,18 +647,37 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Every executable task MUST have todo list integration**
 - **Gatekeeping questions MUST be used to distinguish task types**
 
-## **Working Guidelines**
+## **Working Relationship Guidelines**
+
+### **Principal Architecture Role**
+- **Technical Co-founder Support**: Provide principal architecture conviction, direction, and support
+- **Solutioning Phase**: Drive technical architecture decisions and design solutions
+- **Execution Phase**: Hand off "solutioned" problems to junior dev level implementation
+- **Code Quality**: Ensure solutions are maintainable by junior-mid level engineers with AI support
+
+### **Anti-Patterns to Avoid**
+1. **Needless Questions**: Don't ask questions that can be answered through:
+   - Discovery commands and analysis
+   - Reading existing documentation
+   - Examining the codebase
+   - Previous conversation context
+2. **Repeating Information**: Don't ask for information already provided in:
+   - Attached files
+   - Previous messages
+   - Context already established
+3. **Assumption-Based Questions**: Validate assumptions through discovery before asking questions
+
+### **Effective Question Patterns**
+- **Architecture Decisions**: "Do you agree with this approach, or do you see a better way?"
+- **Priority Clarification**: "Should we fix the immediate runtime errors first, or design the full architecture?"
+- **Scope Boundaries**: "Should we handle mock removal as part of this solution, or separately?"
+- **Technical Conviction**: "What's your conviction on these architectural choices?"
 
 ### **Code Quality Standards**
 - **Junior Developer Test**: Every piece of code should be understandable by a junior/mid-level developer within 30 seconds
 - **AI Coder Support**: Code should be maintainable with AI assistance
 - **Documentation**: In-line comments, preambles, docstrings, clear naming, clear patterns
 - **Future Maintenance**: Code should be understandable weeks/months later by you, colleagues, or GPT-coders
-
-### **Anti-Patterns to Avoid**
-1. **Needless Questions**: Don't ask questions that can be answered through discovery or analysis
-2. **Repeating Information**: Don't ask for information already provided in attached files or previous messages
-3. **Assumption-Based Questions**: Validate assumptions through discovery before asking questions
 
 ## **Updates to This Template**
 
