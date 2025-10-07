@@ -424,6 +424,16 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Status:** `[ ]` Not started
 - **Priority:** P0 Critical / P1 High / P2 Medium
 - **Justification:** [Why this task is needed]
+- **Execution Status:** **Execution-Ready** / **Needs-Solutioning**
+
+### **Problem Statement**
+[What's broken and why - specific technical issue]
+
+### **User Story**
+"As a [role], I need [functionality] so that [business value]"
+
+### **Solution Overview**
+[High-level approach - what we're building and how]
 
 - **Initial Files to Fix:** (Starting point - NOT comprehensive)
   - `file1.py` - [specific change needed]
@@ -436,6 +446,16 @@ grep -r "get_.*_for_digest" . --include="*.py"
   grep -r "related_pattern" . --include="*.py"
   grep -r "import.*pattern" . --include="*.py"
   find . -name "*.py" -exec grep -l "pattern" {} \;
+  
+  # Check current state and patterns
+  grep -r "advisor_id" . --include="*.py"
+  grep -r "business_id" . --include="*.py"
+  grep -r "firm_id" . --include="*.py"
+  grep -r "client_id" . --include="*.py"
+  
+  # Test current state
+  uvicorn main:app --reload
+  pytest -k "test_pattern_name"
   ```
 
 - **MANDATORY: Recursive Triage Process:**
@@ -457,7 +477,13 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Pattern to Implement:**
   ```python
   # Code example here - WHAT you're building
+  # Follow existing patterns in similar files
   ```
+
+- **File Examples to Follow:**
+  - `domains/ap/services/payment.py` - Example of service pattern
+  - `runway/services/2_experiences/digest.py` - Example of experience service
+  - `infra/config/feature_gates.py` - Example of configuration pattern
 
 - **Required Imports/Changes:**
   - Remove: `old_import`
@@ -522,6 +548,16 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Status:** `[ ]` Not started
 - **Priority:** P1 High / P2 Medium
 - **Justification:** [Why this task is needed]
+- **Execution Status:** **Needs-Solutioning**
+
+### **Problem Statement**
+[What's broken and why - specific technical issue]
+
+### **User Story**
+"As a [role], I need [functionality] so that [business value]"
+
+### **Solution Overview**
+[High-level approach - what we're building and how]
 
 - **Code Pointers:**
   - `file1.py` - [what to look at]
@@ -533,6 +569,16 @@ grep -r "get_.*_for_digest" . --include="*.py"
   grep -r "related_pattern" . --include="*.py"
   grep -r "import.*related" . --include="*.py"
   find . -name "*.py" -exec grep -l "pattern" {} \;
+  
+  # Check current state and patterns
+  grep -r "advisor_id" . --include="*.py"
+  grep -r "business_id" . --include="*.py"
+  grep -r "firm_id" . --include="*.py"
+  grep -r "client_id" . --include="*.py"
+  
+  # Test current state
+  uvicorn main:app --reload
+  pytest -k "test_pattern_name"
   ```
 
 - **Current Issues to Resolve:**
@@ -551,6 +597,11 @@ grep -r "get_.*_for_digest" . --include="*.py"
   - [How this fits with existing patterns]
   - [What ADRs apply to this problem]
   - [What services/patterns should be used]
+
+- **File Examples to Follow:**
+  - `domains/ap/services/payment.py` - Example of service pattern
+  - `runway/services/2_experiences/digest.py` - Example of experience service
+  - `infra/config/feature_gates.py` - Example of configuration pattern
 
 - **Solution Design Process:**
   1. [Step 1: Discovery phase]
