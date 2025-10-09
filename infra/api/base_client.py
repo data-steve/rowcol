@@ -26,7 +26,7 @@ from enum import Enum
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from common.exceptions import IntegrationError
+from infra.config.exceptions import IntegrationError
 
 logger = logging.getLogger(__name__)
 

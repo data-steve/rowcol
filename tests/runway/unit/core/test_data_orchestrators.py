@@ -5,9 +5,9 @@ Tests the core functionality without database dependencies
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from runway.services.0_data_orchestrators.hygiene_tray_data_orchestrator import HygieneTrayDataOrchestrator
-from runway.services.0_data_orchestrators.decision_console_data_orchestrator import DecisionConsoleDataOrchestrator
-from runway.services.1_calculators.runway_calculator import RunwayCalculator
+from runway.services.data_orchestrators.hygiene_tray_data_orchestrator import HygieneTrayDataOrchestrator
+from runway.services.data_orchestrators.decision_console_data_orchestrator import DecisionConsoleDataOrchestrator
+from runway.services.calculators.runway_calculator import RunwayCalculator
 
 
 class TestHygieneTrayDataOrchestrator:

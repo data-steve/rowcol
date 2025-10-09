@@ -9,7 +9,7 @@ from typing import TypeVar, Type, Optional, List
 from sqlalchemy.orm import Session, Query
 
 from domains.core.models.business import Business
-from common.exceptions import ValidationError, TenantAccessError
+from infra.config.exceptions import ValidationError, TenantAccessError
 
 T = TypeVar('T')
 

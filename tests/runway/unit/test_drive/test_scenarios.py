@@ -21,8 +21,8 @@ import os
 from typing import Dict, Any, List
 from unittest.mock import patch
 
-from runway.services.2_experiences.digest import DigestService
-from runway.services.2_experiences.tray import TrayService
+from runway.services.experiences.digest import DigestService
+from runway.services.experiences.tray import TrayService
 from sandbox.scenario_data import BusinessScenarioProvider
 from infra.database.session import SessionLocal
 

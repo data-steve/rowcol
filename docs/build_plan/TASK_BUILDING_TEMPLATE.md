@@ -1,15 +1,84 @@
 # Task Building Template - RowCol QBO MVP
 
-*Streamlined template for creating executable and solutioning tasks with self-healing discovery*
+*Streamlined template for creating executable and solutioning tasks with comprehensive discovery*
 
 ## **Quick Start**
 
 1. **Read Architecture Context** (below) - understand system patterns
-2. **Navigate**: `cd ~/projects/rowcol`
-3. **Activate**: `poetry shell` (one-time)
-4. **Create Branch**: `git checkout -b feature/[task-name]`
-5. **Start App**: `uvicorn main:app --reload` (keep running)
-6. **Execute**: Follow the task-specific process
+2. **Read Launch Doc** - Use appropriate launch doc for task type:
+   - **Executable Tasks**: `docs/build_plan/LAUNCH_EXECUTABLE_TASKS.md`
+   - **Solutioning Tasks**: `docs/build_plan/LAUNCH_SOLUTIONING_TASKS.md`
+3. **Navigate**: `cd ~/projects/rowcol`
+4. **Activate**: `poetry shell` (one-time)
+5. **Create Branch**: `git checkout -b feature/[task-name]`
+6. **Start App**: `uvicorn main:app --reload` (keep running)
+7. **Execute**: Follow the task-specific process with launch doc guidance
+
+## **CRITICAL: Context File Selection Process (MANDATORY)**
+
+### **Step 1: Select Most Relevant Architecture Files**
+**Choose 2-3 most relevant ADRs based on task focus:**
+
+**For Data/Sync Tasks:**
+- `docs/architecture/DATA_ARCHITECTURE_SPECIFICATION.md` - Foundational data architecture patterns
+- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
+- `docs/architecture/ADR-006-data-orchestrator-pattern.md` - Data orchestrator patterns
+
+**For Service Boundary Tasks:**
+- `docs/architecture/ADR-001-domains-runway-separation.md` - Domain separation principles
+- `docs/architecture/DATA_ARCHITECTURE_SPECIFICATION.md` - Service boundaries
+- `docs/architecture/ADR-003-multi-tenancy-strategy.md` - Multi-tenancy patterns
+
+**For Infrastructure Tasks:**
+- `docs/architecture/ADR-005-qbo-api-strategy.md` - QBO integration strategy
+- `infra/qbo/README.md` - QBO infrastructure module documentation
+- `docs/architecture/DATA_ARCHITECTURE_SPECIFICATION.md` - Data patterns
+
+### **Step 2: Select Most Relevant Product Files**
+**Choose 1-2 most relevant product files based on task scope:**
+
+**For MVP Tasks:**
+- `docs/build_plan/QBO_MVP_ROADMAP.md` - QBO MVP focus and current phase
+- `docs/build_plan/MVP_DATA_ARCHITECTURE_PLAN.md` - MVP implementation plan
+
+**For Vision/Strategy Tasks:**
+- `docs/product/RowCol_Financial_Control_Plane.markdown` - Product vision and value proposition
+- `docs/build_plan/QBO_MVP_ROADMAP.md` - Current phase context
+
+### **Step 3: Add Task-Specific Context Files**
+**Include 1-3 task-specific files that directly relate to the implementation:**
+
+**Examples:**
+- `infra/qbo/smart_sync.py` - For sync infrastructure tasks
+- `domains/ap/services/bill_ingestion.py` - For bill-related tasks
+- `runway/services/data_orchestrators/` - For orchestrator tasks
+- `docs/build_plan/working/S02_DATA_ORCHESTRATOR_ARCHITECTURE_FIX.md` - For orchestrator issues
+
+### **Step 4: Include Current Phase Context**
+**Always include current phase constraints:**
+- **Phase 0.5**: QBO-only MVP (current focus)
+- **Feature Gating**: QBO-only mode enabled, Ramp/Plaid/Stripe disabled
+- **Payment Execution**: QBO sync-only (no execution), Ramp execution gated
+- **Data Architecture**: Local mirroring + SmartSyncService for live data
+
+## **Context File Curation Guidelines**
+
+### **Quality Over Quantity:**
+- **Maximum 6 context files total** (2-3 architecture + 1-2 product + 1-3 task-specific)
+- **Choose the MOST relevant** files that directly relate to the task
+- **Avoid information overload** - too many files confuse rather than help
+
+### **Task Type Guidelines:**
+- **Data/Sync Tasks**: Focus on data architecture, QBO strategy, orchestrator patterns
+- **Service Boundary Tasks**: Focus on domain separation, service boundaries, multi-tenancy
+- **Infrastructure Tasks**: Focus on QBO strategy, infrastructure patterns, SmartSyncService
+- **Product Tasks**: Focus on product vision, MVP roadmap, user experience
+
+### **Validation Questions:**
+- **Does this file directly relate to what the task needs to implement?**
+- **Will reading this file help the developer understand the task better?**
+- **Is this file referenced in the task's discovery commands or implementation patterns?**
+- **Would a developer need this context to avoid making wrong assumptions?**
 
 ## **Architecture Context (Required for All Tasks)**
 
@@ -33,6 +102,36 @@
 - **Infrastructure Services** (`infra/`): Cross-cutting concerns (auth, database, external APIs)
 - **Two-Layer Architecture**: `domains/` for business primitives, `runway/` for product features
 - **Tenant Awareness**: All services filter by `business_id` for multi-tenancy
+
+## **CRITICAL: Launch Doc Integration (MANDATORY)**
+
+### **Every Task MUST Include Launch Doc Context**
+
+**Executable Tasks** must include guidance from `LAUNCH_EXECUTABLE_TASKS.md`:
+- **CRITICAL: Assumption Validation Before Execution** - MANDATORY discovery process
+- **CRITICAL: Recursive Discovery/Triage Pattern** - Never do blind search-and-replace
+- **Comprehensive Cleanup (MANDATORY)** - Handle all edge cases and dependencies
+- **Progress Tracking & Todo Management** - Clear status updates and Cursor todo integration
+- **Git Workflow** - Surgical commit instructions for each task
+- **Verification Strategy** - One-time startup, after each change, after each task
+
+**Solutioning Tasks** must include guidance from `LAUNCH_SOLUTIONING_TASKS.md`:
+- **Solutioning Mindset** - Don't rush to solutions, follow discovery → analysis → design → document
+- **Discovery Phase Checklist (MANDATORY)** - All discovery commands run, all files read, all assumptions validated
+- **Analysis Phase Checklist** - Current state mapped, gaps identified, patterns found
+- **Design Phase Checklist** - Solution designed, dependencies mapped, verification planned
+- **Documentation Phase Checklist** - Executable tasks created, specific patterns provided
+- **Working Relationship Guidelines** - Self-sufficient analysis, validate assumptions through discovery
+
+### **Why This Integration is Critical:**
+The launch docs contain the hard-won lessons from painful failures. They provide:
+- **Mandatory discovery processes** that prevent assumption-based mistakes
+- **Recursive triage patterns** that prevent blind search-and-replace errors
+- **Comprehensive cleanup requirements** that handle all edge cases
+- **Progress tracking systems** that ensure nothing is missed
+- **Working relationship guidelines** that prevent needless questions
+
+**Without this integration, tasks will fail with the same mistakes we've already learned to avoid.**
 
 ## **Task Categories**
 
@@ -68,32 +167,102 @@
 3. **Is this too big for one task?** → Break into smaller tasks
 4. **Is this too small to be meaningful?** → Combine with related tasks
 
-## **Self-Healing Process (MANDATORY)**
+## **Comprehensive Discovery Process (MANDATORY)**
 
 ### **The Core Problem:**
 Build plans and task descriptions are idealized but codebase reality changes as we work. Static audits become stale quickly.
 
-### **The Self-Healing Solution:**
-Each task discovers its own reality, heals gaps dynamically, and updates documentation as it works.
+### **The Discovery Solution:**
+Each task discovers its own reality, validates assumptions against actual code, and updates documentation as it works.
 
 ### **Key Principles:**
 - **Discovery First**: Always understand what actually exists before assuming
-- **Gap Healing**: Fix discovered gaps as part of task execution
-- **Documentation Updates**: Update build plans based on discovered reality
-- **Iterative Refinement**: Each task improves the accuracy of subsequent tasks
+- **Assumption Validation**: Test every assumption against reality before implementing
+- **Recursive Triage**: Understand context before making changes
+- **Comprehensive Cleanup**: Handle all edge cases and dependencies
 
-### **Self-Healing Process:**
+### **CRITICAL: Mandatory Discovery Process (From Launch Docs)**
+
+**NEVER execute tasks without validating assumptions against reality.**
+
+#### **Required Validation Steps:**
+1. **Run Discovery Commands** - Find all occurrences of patterns mentioned in tasks
+2. **Read Actual Code** - Don't assume task descriptions are accurate
+3. **Compare Assumptions vs Reality** - Document mismatches
+4. **Identify Architecture Gaps** - Understand current vs intended state
+5. **Question Task Scope** - Are tasks solving the right problems?
+
+#### **Discovery Documentation Template:**
+```
+### What Actually Exists:
+- [List what you found that exists]
+
+### What the Task Assumed:
+- [List what the task assumed exists]
+
+### Assumptions That Were Wrong:
+- [List assumptions that don't match reality]
+
+### Architecture Mismatches:
+- [List where current implementation differs from intended architecture]
+
+### Task Scope Issues:
+- [List where tasks may be solving wrong problems or have unclear scope]
+```
+
+#### **Validation Process:**
+1. **From a basic grep, search recursively outward** in that file until you understand what that code was intended to help with
+2. **Then you will understand what the fix actually needs to be** beyond simplistic search and replace
+3. **With that understanding you can compare it** to your understanding of broader task and ADRs, building plan etc
+4. **Document mismatches** between task assumptions and code reality
+5. **Plan fixes based on reality** not assumptions
+
+### **CRITICAL: Recursive Discovery/Triage Pattern (From Launch Docs)**
+
+**NEVER do blind search-and-replace!** This pattern prevents costly mistakes:
+
+1. **Search for all occurrences** of the pattern you need to fix
+2. **Read the broader context** around each occurrence to understand what the method, service, route, or file is doing
+3. **Triage each occurrence** - determine if it needs:
+   - Simple replacement (exact match)
+   - Contextual update (needs broader changes)
+   - Complete overhaul (needs significant refactoring)
+   - No change (false positive or already correct)
+4. **Plan comprehensive updates** - ensure your fixes cover all cases and edge cases
+5. **Handle dependencies** - update related imports, method calls, and references
+6. **Verify the fix** - test that the change works in context
+
+**Example Pattern:**
+```bash
+# Step 1: Find all occurrences
+grep -r "get_.*_for_digest" . --include="*.py"
+
+# Step 2: For each file found, read the broader context
+# - What is this method doing?
+# - What are the dependencies?
+# - What needs to be updated beyond just the method name?
+
+# Step 3: Plan comprehensive updates
+# - Update method name
+# - Update all calls to the method
+# - Update imports if needed
+# - Update related logic if needed
+
+# Step 4: Implement with full context understanding
+```
+
+### **Discovery Process:**
 
 **Phase 1: Discovery & Reality Check (MANDATORY)**
 1. **Read Task Description** - Understand what the build plan thinks needs to be done
 2. **Discover Current Reality** - Find what actually exists in the codebase
-3. **Identify Gaps** - Compare build plan assumptions vs. reality
-4. **Heal Gaps** - Fix discovered issues as part of task execution
+3. **Validate Assumptions** - Compare build plan assumptions vs. reality
+4. **Plan Comprehensive Updates** - Fix discovered issues as part of task execution
 5. **Update Documentation** - Update build plan based on discovered reality
 
 **Phase 2: Implementation**
 1. **Implement the actual task** - Use discovered reality, not assumptions
-2. **Heal discovered gaps** - Fix issues found during discovery
+2. **Handle discovered gaps** - Fix issues found during discovery
 3. **Test thoroughly** - Verify everything works
 4. **Update documentation** - Keep build plans accurate
 
@@ -138,10 +307,14 @@ grep -r "client_id" . --include="*.py"
 **Status Format:** `[ ]` Not started
 
 **Required Sections:**
-- Context for All Tasks
-- Critical Warnings from Painful Lessons
+- **Context for All Tasks** - Architecture context and current phase
+- **Critical Warnings from Painful Lessons** - What NOT to do
+- **CRITICAL: Assumption Validation Before Execution** - MANDATORY discovery process
 - **CRITICAL: Recursive Discovery/Triage Pattern** - Built into every task
 - **Progress Tracking Instructions** - Clear steps for updating task status as work progresses
+- **Comprehensive Cleanup (MANDATORY)** - Cleanup requirements and verification
+- **Git Workflow Instructions** - Surgical commit steps for each task
+- **Todo List Integration** - Cursor todo list management requirements
 - Task details with:
   - Status, Priority, Justification
   - **Initial Files to Fix** (starting point, not comprehensive)
@@ -153,8 +326,6 @@ grep -r "client_id" . --include="*.py"
   - **MANDATORY: Comprehensive Cleanup Requirements** (handle all edge cases) - CLEANUP after implementation
   - Verification Commands
   - Definition of Done
-- **Git Workflow Instructions** - Surgical commit steps for each task
-- **Todo List Integration** - Cursor todo list management requirements
 
 ### **1_NEEDS_SOLVING_TASKS.md** - Needs Analysis and Solution Work
 **Characteristics:**
@@ -167,8 +338,14 @@ grep -r "client_id" . --include="*.py"
 **Status Format:** `[ ]` Not started
 
 **Required Sections:**
-- Context for All Tasks
+- **Context for All Tasks** - Architecture context and current phase
+- **Solutioning Mindset** - Don't rush to solutions, follow discovery → analysis → design → document
+- **Discovery Phase Checklist (MANDATORY)** - All discovery commands run, all files read, all assumptions validated
+- **Analysis Phase Checklist** - Current state mapped, gaps identified, patterns found
+- **Design Phase Checklist** - Solution designed, dependencies mapped, verification planned
+- **Documentation Phase Checklist** - Executable tasks created, specific patterns provided
 - **Progress Tracking Instructions** - Clear steps for updating task status as analysis progresses
+- **Working Relationship Guidelines** - Self-sufficient analysis, validate assumptions through discovery
 - Task details with:
   - Status, Priority, Justification
   - **Code Pointers** (where to look)
@@ -361,6 +538,22 @@ grep -r "get_.*_for_digest" . --include="*.py"
 - **Priority:** P0 Critical / P1 High / P2 Medium
 - **Justification:** [Why this task is needed]
 - **Execution Status:** **Execution-Ready** / **Needs-Solutioning**
+- **Launch Doc:** Use `docs/build_plan/LAUNCH_EXECUTABLE_TASKS.md` for execution guidance
+
+## CRITICAL: Read These Files First (MANDATORY)
+
+### **Architecture Context (2-3 most relevant):**
+- [Select from: DATA_ARCHITECTURE_SPECIFICATION.md, ADR-001, ADR-003, ADR-005, ADR-006, infra/qbo/README.md]
+- [Task-specific architecture files]
+
+### **Product Context (1-2 most relevant):**
+- [Select from: RowCol_Financial_Control_Plane.markdown, QBO_MVP_ROADMAP.md, MVP_DATA_ARCHITECTURE_PLAN.md]
+
+### **Current Phase Context:**
+- **Phase 0.5**: QBO-only MVP (current focus)
+- **Feature Gating**: QBO-only mode enabled, Ramp/Plaid/Stripe disabled
+- **Payment Execution**: QBO sync-only (no execution), Ramp execution gated
+- **Data Architecture**: Local mirroring + SmartSyncService for live data
 
 ### **Problem Statement**
 [What's broken and why - specific technical issue]
@@ -370,6 +563,48 @@ grep -r "get_.*_for_digest" . --include="*.py"
 
 ### **Solution Overview**
 [High-level approach - what we're building and how]
+
+### **CRITICAL: Assumption Validation Before Execution (MANDATORY)**
+**NEVER execute tasks without validating assumptions against reality.**
+
+#### **Required Validation Steps:**
+1. **Run Discovery Commands** - Find all occurrences of patterns mentioned in tasks
+2. **Read Actual Code** - Don't assume task descriptions are accurate
+3. **Compare Assumptions vs Reality** - Document mismatches
+4. **Identify Architecture Gaps** - Understand current vs intended state
+5. **Question Task Scope** - Are tasks solving the right problems?
+
+#### **Discovery Documentation Template:**
+```
+### What Actually Exists:
+- [List what you found that exists]
+
+### What the Task Assumed:
+- [List what the task assumed exists]
+
+### Assumptions That Were Wrong:
+- [List assumptions that don't match reality]
+
+### Architecture Mismatches:
+- [List where current implementation differs from intended architecture]
+
+### Task Scope Issues:
+- [List where tasks may be solving wrong problems or have unclear scope]
+```
+
+### **CRITICAL: Recursive Discovery/Triage Pattern (MANDATORY)**
+**NEVER do blind search-and-replace!** This pattern prevents costly mistakes:
+
+1. **Search for all occurrences** of the pattern you need to fix
+2. **Read the broader context** around each occurrence to understand what the method, service, route, or file is doing
+3. **Triage each occurrence** - determine if it needs:
+   - Simple replacement (exact match)
+   - Contextual update (needs broader changes)
+   - Complete overhaul (needs significant refactoring)
+   - No change (false positive or already correct)
+4. **Plan comprehensive updates** - ensure your fixes cover all cases and edge cases
+5. **Handle dependencies** - update related imports, method calls, and references
+6. **Verify the fix** - test that the change works in context
 
 - **Initial Files to Fix:** (Starting point - NOT comprehensive)
   - `file1.py` - [specific change needed]
@@ -478,7 +713,7 @@ grep -r "get_.*_for_digest" . --include="*.py"
   - **Verification Cleanup:** Run cleanup verification commands
 ```
 
-### **Needs Solving Task Pattern**
+### **Solutioning Task Pattern**
 ```markdown
 #### **Task: [Task Name]**
 - **Status:** `[ ]` Not started
@@ -494,6 +729,43 @@ grep -r "get_.*_for_digest" . --include="*.py"
 
 ### **Solution Overview**
 [High-level approach - what we're building and how]
+
+### **Solutioning Mindset (MANDATORY)**
+**Don't rush to solutions. Follow discovery → analysis → design → document process.**
+
+#### **Discovery Phase Checklist (MANDATORY):**
+- [ ] **All discovery commands run** - no shortcuts, no assumptions
+- [ ] **All files read** - understand what actually exists
+- [ ] **All analysis questions answered** - don't skip any
+- [ ] **Assumptions validated** - test every assumption against reality
+- [ ] **Current state documented** - write down what you found
+
+#### **Analysis Phase Checklist:**
+- [ ] **Current state mapped** - understand how things work
+- [ ] **Gaps identified** - what's missing or unclear
+- [ ] **Patterns found** - look at similar solutions
+- [ ] **Relationships understood** - how parts connect
+- [ ] **Findings documented** - write down what you learned
+
+#### **Design Phase Checklist:**
+- [ ] **Solution designed** - clear implementation approach
+- [ ] **Dependencies mapped** - what needs to be done first
+- [ ] **Patterns created** - reusable approaches
+- [ ] **Verification planned** - how to test success
+- [ ] **Solution documented** - complete approach written down
+
+#### **Documentation Phase Checklist:**
+- [ ] **Executable tasks created** - hands-free implementation tasks
+- [ ] **Specific patterns provided** - code examples and patterns
+- [ ] **Verification steps defined** - specific commands to test
+- [ ] **Dependencies mapped** - clear execution order
+- [ ] **Task status updated** - marked as complete
+
+### **Working Relationship Guidelines:**
+- **Self-Sufficient Analysis**: Answer questions through discovery before asking for help
+- **Validate Assumptions**: Test every assumption through discovery before asking questions
+- **Don't Rush**: Follow the discovery → analysis → design → document process religiously
+- **One Problem Per Doc**: Keep complexity contained in one solutioning document
 
 - **Code Pointers:**
   - `file1.py` - [what to look at]

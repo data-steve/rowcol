@@ -23,10 +23,11 @@ from sqlalchemy.orm import Session
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from infra.qbo.smart_sync import SmartSyncService
-from runway.services.utils.qbo_mapper import QBOMapper
+from domains.qbo.services.sync_service import QBOSyncService
+from domains.ar.models.invoice import Invoice as InvoiceModel
+from infra.qbo.qbo_mapper import QBOMapper
 from domains.core.services.base_service import TenantAwareService
-from common.exceptions import ValidationError
+from infra.config.exceptions import ValidationError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,16 @@ class CollectionsService(TenantAwareService):
     
     def __init__(self, db: Session, business_id: str = None):
         super().__init__(db, business_id)
-        self.smart_sync = SmartSyncService(business_id, "", db) if business_id else None
+        # Use QBOSyncService for QBO operations (Pattern 2: Domain Service → Infrastructure Service)
+        self.qbo_sync = QBOSyncService(business_id, "", self.db)
+    
+    async def sync_invoices_from_qbo(self) -> Dict[str, Any]:
+        """Sync invoices from QBO - Pattern 2: Domain Service → Infrastructure Service."""
+        return await self.qbo_sync.get_invoices()
+    
+    async def sync_invoice_from_qbo(self, qbo_invoice_id: str) -> Dict[str, Any]:
+        """Sync single invoice from QBO - Pattern 2: Domain Service → Infrastructure Service."""
+        return await self.qbo_sync.get_payment_history("invoice", qbo_invoice_id)
     
     async def get_overdue_invoices(self, days_overdue_min: int = 1, priority: Optional[str] = None) -> List[Dict[str, Any]]:
         """
@@ -50,19 +60,13 @@ class CollectionsService(TenantAwareService):
             List of overdue invoice dictionaries with collection metadata
         """
         try:
-            if not self.smart_sync:
-                raise ValidationError("SmartSyncService not available - business_id required")
-            
-            # Use SmartSyncService for data retrieval
-            # QBOClient import removed - using SmartSyncService directly
-            
-            # Get invoices using SmartSyncService
-            invoices = await self.smart_sync.get_invoices()
+            # Get live data from QBO (Pattern 2: Domain Service → Infrastructure Service)
+            invoices_data = await self.qbo_sync.get_invoices()
             
             today = datetime.utcnow()
             overdue_invoices = []
             
-            for invoice_data in invoices:
+            for invoice_data in invoices_data.get('invoices', []):
                 # Map QBO data to standardized format
                 mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
                 
@@ -171,11 +175,9 @@ class CollectionsService(TenantAwareService):
                 "See build_plan_v5.md Phase 2: Smart AR & Collections for implementation plan."
             )
             
-            # Record activity for smart sync
-            if self.smart_sync:
-                self.smart_sync.record_user_activity("collection_reminder_sent")
+            # SmartSyncService handles activity recording internally
             
-            return reminder_result
+            return {"status": "not_implemented", "message": "Collections reminder sending is not yet implemented"}
             
         except Exception as e:
             logger.error(f"Failed to send reminder for invoice {invoice_id}: {str(e)}")
@@ -189,14 +191,8 @@ class CollectionsService(TenantAwareService):
             Dictionary with aging buckets and summary statistics
         """
         try:
-            if not self.smart_sync:
-                raise ValidationError("SmartSyncService not available - business_id required")
-            
-            # Use SmartSyncService for data retrieval
-            # QBOClient import removed - using SmartSyncService directly
-            
-            # Get invoices using SmartSyncService
-            invoices = await self.smart_sync.get_invoices()
+            # Get live data from QBO (Pattern 2: Domain Service → Infrastructure Service)
+            invoices_data = await self.qbo_sync.get_invoices()
             
             today = datetime.utcnow()
             aging_buckets = {
@@ -209,7 +205,7 @@ class CollectionsService(TenantAwareService):
             
             total_outstanding = 0
             
-            for invoice_data in invoices:
+            for invoice_data in invoices_data.get('invoices', []):
                 # Map QBO data to standardized format
                 mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
                 
@@ -281,21 +277,15 @@ class CollectionsService(TenantAwareService):
             Dictionary with payment history and reliability metrics
         """
         try:
-            if not self.smart_sync:
-                raise ValidationError("SmartSyncService not available - business_id required")
-            
-            # Use SmartSyncService for data retrieval
-            # QBOClient import removed - using SmartSyncService directly
-            
-            # Get invoices using SmartSyncService
-            invoices = await self.smart_sync.get_invoices()
+            # Get live data from QBO (Pattern 2: Domain Service → Infrastructure Service)
+            invoices_data = await self.qbo_sync.get_invoices()
             
             customer_invoices = []
             total_invoiced = 0
             total_paid = 0
             payment_days = []
             
-            for invoice_data in invoices:
+            for invoice_data in invoices_data.get('invoices', []):
                 # Map QBO data to standardized format
                 mapped_invoice = QBOMapper.map_invoice_data(invoice_data)
                 

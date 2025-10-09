@@ -15,7 +15,7 @@ import logging
 
 from domains.core.services.base_service import TenantAwareService
 from domains.core.models.document import Document as DocumentModel
-from common.exceptions import ValidationError
+from infra.config.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 

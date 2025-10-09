@@ -18,7 +18,7 @@ import logging
 
 from domains.core.services.base_service import TenantAwareService
 from domains.ap.models.vendor import Vendor, PaymentMethod
-from common.exceptions import ValidationError
+from infra.config.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 

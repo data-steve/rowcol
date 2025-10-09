@@ -84,6 +84,7 @@ class Payment(Base, TimestampMixin, TenantMixin):
     approved_by_user = relationship("User", foreign_keys=[approved_by])
     reconciled_by_user = relationship("User", foreign_keys=[reconciled_by])
     created_by_user = relationship("User", foreign_keys=[created_by])
+    transaction_logs = relationship("PaymentTransactionLog", back_populates="payment")
     
     # Hybrid properties for decimal conversion (essential for financial precision)
     @hybrid_property

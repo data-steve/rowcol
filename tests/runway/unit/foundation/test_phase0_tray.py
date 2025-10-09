@@ -49,7 +49,7 @@ def test_tray_item_creation_basic(db: Session, test_business: Business):
 def test_tray_service_import():
     """Test that TrayService can be imported without errors"""
     try:
-        from runway.services.2_experiences.tray import TrayService
+        from runway.services.experiences.tray import TrayService
         assert TrayService is not None
     except ImportError as e:
         pytest.skip(f"TrayService not available in Phase 0: {e}")

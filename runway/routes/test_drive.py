@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 from infra.database.session import get_db
-from runway.services.2_experiences.test_drive import TestDriveService, DemoTestDriveService
+from runway.services.experiences.test_drive import TestDriveService, DemoTestDriveService
 
 router = APIRouter(prefix="/test-drive", tags=["test-drive"])
 

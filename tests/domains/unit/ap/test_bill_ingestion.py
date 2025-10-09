@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from decimal import Decimal
 from datetime import datetime, timedelta
 from main import app
-from domains.ap.services.bill_ingestion import BillService
+from domains.ap.services.bill import BillService
 from domains.ap.models.bill import Bill as BillModel, BillStatus, BillPriority
 from domains.ap.models.vendor import Vendor
 

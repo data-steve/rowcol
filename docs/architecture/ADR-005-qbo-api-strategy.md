@@ -13,6 +13,8 @@ QBO API has well-documented fragility that can disrupt the cash runway ritual:
 - **Lost Actions**: QBO's async processing can make actions appear to fail when they succeeded
 - **Data Inconsistencies**: QBO data may not reflect real-time changes
 
+**Note**: Current implementation is QBO-specific. Future multi-rail architecture will use rail-specific SmartSyncService variants rather than a generic service, as each integration rail has fundamentally different orchestration requirements.
+
 ## Decision
 
 **SmartSyncService as Orchestration Layer**: Domain services handle business logic and CRUD operations, SmartSyncService provides orchestration (retry, dedup, rate limiting, caching), QBORawClient makes raw HTTP calls to QBO endpoints.
@@ -83,8 +85,8 @@ class RunwayCalculator(TenantAwareService):
     
     async def _get_qbo_data_for_digest(self) -> Dict[str, Any]:
         # SmartSyncService handles caching, rate limiting, retry logic
-        bills = await self.smart_sync.get_bills_for_digest()
-        invoices = await self.smart_sync.get_invoices_for_digest()
+        bills = await self.smart_sync.get_bills_by_due_days()
+        invoices = await self.smart_sync.get_invoices_by_aging_days()
         company_info = await self.smart_sync.get_company_info()
         
         return {"bills": bills, "invoices": invoices, "company_info": company_info}
@@ -124,11 +126,20 @@ class SmartSyncService:
     
     # QBO orchestration methods
     async def execute_qbo_call(self, operation: str, *args, **kwargs) -> Any
-    async def get_bills_for_digest(self) -> List[Dict[str, Any]]
-    async def get_invoices_for_digest(self) -> List[Dict[str, Any]]
+    async def get_bills_by_due_days(self, due_days: int = 30) -> Dict[str, Any]
+    async def get_bills_by_date(self, since_date: datetime = None) -> Dict[str, Any]
+    async def get_invoices_by_aging_days(self, aging_days: int = 30) -> Dict[str, Any]
+    async def get_invoices_by_date(self, since_date: datetime = None) -> Dict[str, Any]
+    async def get_customers(self) -> Dict[str, Any]
+    async def get_vendors(self) -> Dict[str, Any]
+    async def get_accounts(self) -> Dict[str, Any]
     async def get_company_info(self) -> Dict[str, Any]
     async def create_payment_immediate(self, payment_data: Dict) -> Dict[str, Any]
-    async def record_payment(self, payment_data: Dict) -> Dict[str, Any]
+    async def sync_payment_record(self, payment_data: Dict) -> Dict[str, Any]
+    
+    # Backward compatibility methods
+    async def get_bills(self) -> Dict[str, Any]
+    async def get_invoices(self) -> Dict[str, Any]
     
     # Caching methods
     def get_cache(self, platform: str, key: Optional[str] = None) -> Optional[Dict]
@@ -247,6 +258,46 @@ Domain Services ← Update Models ← Process Results ← Infrastructure Service
 grep -r "from domains\." infra/
 grep -r "import domains\." infra/
 ```
+
+## Multi-Rail Architecture
+
+This ADR establishes the pattern for QBO-specific orchestration. For multi-rail support, each integration rail will have its own SmartSyncService variant:
+
+### Rail-Specific Orchestration Design
+
+**Decision**: Each integration rail (QBO, Ramp, Plaid, Stripe) will have its own SmartSyncService variant rather than a generic service.
+
+**Rationale**: Different APIs have fundamentally different orchestration requirements:
+
+| Rail | Rate Limiting | Retry Logic | Caching | Activity Tracking |
+|------|---------------|-------------|---------|-------------------|
+| **QBO** | 500 req/min, 100 req/sec | Exponential backoff | 240min TTL | User action patterns |
+| **Ramp** | Different limits | Ramp-specific errors | Card-specific patterns | Ramp user activity |
+| **Plaid** | Plaid limits | Webhook-based | Account-specific | Plaid sync patterns |
+| **Stripe** | Stripe limits | Stripe error handling | Payment-specific | Stripe activity |
+
+### Implementation Pattern
+
+```python
+# Each rail has its own orchestration service
+class SmartSyncService:           # QBO-specific
+class RampSmartSyncService:       # Ramp-specific  
+class PlaidSmartSyncService:      # Plaid-specific
+class StripeSmartSyncService:     # Stripe-specific
+
+# Domain services use the appropriate rail service
+await qbo_smart_sync.get_bills()      # QBO orchestration
+await ramp_smart_sync.get_cards()     # Ramp orchestration
+await plaid_smart_sync.get_accounts() # Plaid orchestration
+await stripe_smart_sync.get_payments() # Stripe orchestration
+```
+
+### Benefits
+
+1. **Rail-Specific Optimization**: Each service optimized for its API characteristics
+2. **Independent Evolution**: Rails can evolve independently without affecting others
+3. **Clear Separation**: Each rail's orchestration logic is self-contained
+4. **Consistent Interface**: All rails provide similar high-level methods to domain services
 
 ## References
 

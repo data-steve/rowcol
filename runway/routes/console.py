@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
-from runway.services.2_experiences.console import DecisionConsoleService
+from runway.services.experiences.console import DecisionConsoleService
 
 router = APIRouter(prefix="/console", tags=["decision-console"])
 

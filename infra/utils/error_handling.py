@@ -17,7 +17,7 @@ from typing import Callable, Any, Optional, Type, Union, List
 from datetime import datetime, timedelta
 from enum import Enum
 
-from common.exceptions import IntegrationError, ValidationError, BusinessNotFoundError
+from infra.config.exceptions import IntegrationError, ValidationError, BusinessNotFoundError
 
 logger = logging.getLogger(__name__)
 

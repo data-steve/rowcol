@@ -288,10 +288,10 @@ def verify_critical_imports():
     """Verify that all critical imports are working correctly after refactoring."""
     critical_imports = [
         ("domains.integrations.qbo", ["QBOAPIClient", "get_qbo_client"], "QBO Integration"),
-        ("runway.experiences.tray", ["TrayService"], "Tray Service"),
-        ("runway.experiences.test_drive", ["DemoTestDriveService"], "Test Drive Service"),
+        ("runway.services.experiences.tray", ["TrayService"], "Tray Service"),
+        ("runway.services.experiences.test_drive", ["DemoTestDriveService"], "Test Drive Service"),
         ("domains.ap.services.payment", ["PaymentService"], "Payment Service"),
-        ("domains.ap.services.bill_ingestion", ["BillService"], "Bill Service"),
+        ("domains.ap.services.bill", ["BillService"], "Bill Service"),
         ("runway.core.runway_calculator", ["RunwayCalculator"], "Runway Calculator"),
         ("runway.core.data_quality_analyzer", ["DataQualityAnalyzer"], "Data Quality Analyzer"),
         ("domains.integrations", ["SmartSyncService"], "Smart Sync Service"),
@@ -307,7 +307,7 @@ def verify_comprehensive_imports():
         ("domains.core.models", ["Business", "User"], "Core Models"),
         
         # Domains - AP (Accounts Payable)
-        ("domains.ap.services.bill_ingestion", ["BillService"], "Bill Service"),
+        ("domains.ap.services.bill", ["BillService"], "Bill Service"),
         ("domains.ap.services.payment", ["PaymentService"], "Payment Service"),
         ("domains.ap.services.vendor", ["VendorService"], "Vendor Service"),
         ("domains.ap.models", ["Bill", "Payment", "Vendor"], "AP Models"),
@@ -329,9 +329,9 @@ def verify_comprehensive_imports():
         ("runway.core.reserve_runway", ["RunwayReserveService"], "Reserve Runway"),
         
         # Runway - Experiences
-        ("runway.experiences.onboarding", ["OnboardingService"], "Onboarding Service"),
-        ("runway.experiences.tray", ["TrayService", "QBOTrayDataProvider"], "Tray Service"),
-        ("runway.experiences.test_drive", ["DemoTestDriveService"], "Test Drive Service"),
+        ("runway.services.experiences.onboarding", ["OnboardingService"], "Onboarding Service"),
+        ("runway.services.experiences.tray", ["TrayService", "QBOTrayDataProvider"], "Tray Service"),
+        ("runway.services.experiences.test_drive", ["DemoTestDriveService"], "Test Drive Service"),
         
         # Runway - Routes
         ("runway.routes.bills", ["router"], "Bills Routes"),

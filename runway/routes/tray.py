@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
-from runway.services.2_experiences.tray import TrayService
+from runway.services.experiences.tray import TrayService
 
 router = APIRouter(tags=["Tray"])
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from infra.database.session import get_db
-from domains.ap.services.bill_ingestion import BillService
+from domains.ap.services.bill import BillService
 from domains.ap.services.payment import PaymentService
 from domains.ap.services.statement_reconciliation import StatementReconciliationService
 from datetime import date

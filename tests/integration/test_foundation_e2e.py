@@ -22,10 +22,10 @@ from unittest.mock import patch, AsyncMock
 from sqlalchemy.orm import Session
 from domains.core.models.business import Business
 # from infra.qbo.integration_models import Integration  # Replaced with Business model
-from infra.qbo.smart_sync import SmartSyncService
+from domains.qbo.services.sync_service import QBOSyncService
 from infra.qbo.client import QBORawClient
-from runway.services.1_calculators.runway_calculator import RunwayCalculator
-from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
+from runway.services.calculators.runway_calculator import RunwayCalculator
+from runway.services.calculators.data_quality_calculator import DataQualityCalculator
 from infra.config import RunwayAnalysisSettings, DataQualityThresholds
 
 @pytest.mark.integration
@@ -51,7 +51,7 @@ class TestFoundationE2E:
         
         This is the foundation of everything - if this fails, nothing else works.
         """
-        smart_sync = SmartSyncService(db, foundation_business.business_id)
+        smart_sync = QBOSyncService(foundation_business.business_id, "", db)
         
         try:
             # This would make real QBO API calls in a proper test environment
@@ -88,7 +88,7 @@ class TestFoundationE2E:
         
         Tests our core runway calculation logic with actual data format.
         """
-        smart_sync = SmartSyncService(db, foundation_business.business_id)
+        smart_sync = QBOSyncService(foundation_business.business_id, "", db)
         runway_calculator = RunwayCalculator(db, foundation_business.business_id)
         
         # Get QBO data
@@ -134,7 +134,7 @@ class TestFoundationE2E:
         
         Tests our data quality analysis logic with actual data format.
         """
-        smart_sync = SmartSyncService(db, foundation_business.business_id)
+        smart_sync = QBOSyncService(foundation_business.business_id, "", db)
         data_quality_analyzer = DataQualityCalculator(db, foundation_business.business_id)
         
         # Get QBO data
@@ -177,7 +177,7 @@ class TestFoundationE2E:
         
         Tests the generic formatting methods we added for different contexts.
         """
-        smart_sync = SmartSyncService(db, foundation_business.business_id)
+        smart_sync = QBOSyncService(foundation_business.business_id, "", db)
         runway_calculator = RunwayCalculator(db, foundation_business.business_id)
         data_quality_analyzer = DataQualityCalculator(db, foundation_business.business_id)
         
@@ -228,7 +228,7 @@ class TestFoundationE2E:
         
         Tests that our centralized business rules are actually being used.
         """
-        smart_sync = SmartSyncService(db, foundation_business.business_id)
+        smart_sync = QBOSyncService(foundation_business.business_id, "", db)
         runway_calculator = RunwayCalculator(db, foundation_business.business_id)
         data_quality_analyzer = DataQualityCalculator(db, foundation_business.business_id)
         
@@ -278,7 +278,7 @@ class TestFoundationE2E:
         """
         try:
             # Test 1: QBO Integration
-            smart_sync = SmartSyncService(db, foundation_business.business_id)
+            smart_sync = QBOSyncService(foundation_business.business_id, "", db)
             qbo_data = await smart_sync.get_qbo_data_for_digest()
             assert qbo_data is not None, "QBO integration failed"
             

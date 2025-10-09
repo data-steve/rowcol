@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy.orm import Session
-from runway.services.2_experiences.onboarding import OnboardingService
+from runway.services.experiences.onboarding import OnboardingService
 from domains.core.models.business import Business
 from domains.core.models.audit_log import AuditLog
 

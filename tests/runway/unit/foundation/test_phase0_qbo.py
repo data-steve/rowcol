@@ -14,28 +14,28 @@ from infra.qbo.client import QBORawClient
 
 def test_qbo_provider_import():
     """Test that QBORawClient can be imported"""
-    from infra.qbo.smart_sync import SmartSyncService
+    from domains.qbo.services.sync_service import QBOSyncService
     assert QBORawClient is not None
     assert SmartSyncService is not None
 
 
 def test_qbo_provider_factory_real(db: Session, test_business: Business):
     """Test SmartSyncService can be created with business"""
-    from infra.qbo.smart_sync import SmartSyncService
-    smart_sync = SmartSyncService(test_business.business_id)
+    from domains.qbo.services.sync_service import QBOSyncService
+    smart_sync = QBOSyncService(test_business.business_id, "", None)
     assert smart_sync is not None
     assert smart_sync.business_id == test_business.business_id
 
 
 def test_qbo_provider_factory_auto_realm_lookup(db: Session, test_business: Business):
     """Test SmartSyncService can be created with business QBO fields"""
-    from infra.qbo.smart_sync import SmartSyncService
+    from domains.qbo.services.sync_service import QBOSyncService
     # Update business with QBO fields for testing
     test_business.qbo_realm_id = "test_realm_123"
     test_business.qbo_status = "connected"
     db.commit()
     
-    smart_sync = SmartSyncService(test_business.business_id)
+    smart_sync = QBOSyncService(test_business.business_id, "", None)
     assert smart_sync is not None
     assert smart_sync.business_id == test_business.business_id
 
@@ -86,8 +86,8 @@ async def test_qbo_provider_get_bills_real(qbo_connected_business):
         pytest.skip("SKIPPING: QBO business missing required tokens.")
 
     # Test with real SmartSyncService
-    from infra.qbo.smart_sync import SmartSyncService
-    smart_sync = SmartSyncService(business.business_id)
+    from domains.qbo.services.sync_service import QBOSyncService
+    smart_sync = QBOSyncService(business.business_id, "", None)
     
     # Test that SmartSyncService can get bills (should work with valid tokens)
     try:
@@ -108,8 +108,8 @@ async def test_qbo_provider_get_invoices_real(qbo_connected_business):
         pytest.skip("SKIPPING: QBO business missing required tokens.")
 
     # Test with real SmartSyncService
-    from infra.qbo.smart_sync import SmartSyncService
-    smart_sync = SmartSyncService(business.business_id)
+    from domains.qbo.services.sync_service import QBOSyncService
+    smart_sync = QBOSyncService(business.business_id, "", None)
     
     # Test that SmartSyncService can get invoices (should work with valid tokens)
     try:
@@ -123,16 +123,16 @@ async def test_qbo_provider_get_invoices_real(qbo_connected_business):
 
 def test_qbo_provider_business_relationship(db: Session, test_business: Business):
     """Test that SmartSyncService properly references business"""
-    from infra.qbo.smart_sync import SmartSyncService
-    smart_sync = SmartSyncService(test_business.business_id)
+    from domains.qbo.services.sync_service import QBOSyncService
+    smart_sync = QBOSyncService(test_business.business_id, "", None)
     
     assert smart_sync.business_id == test_business.business_id
 
 
 def test_qbo_provider_factory_function(db: Session, test_business: Business):
     """Test SmartSyncService factory function"""
-    from infra.qbo.smart_sync import SmartSyncService
-    smart_sync = SmartSyncService(test_business.business_id)
+    from domains.qbo.services.sync_service import QBOSyncService
+    smart_sync = QBOSyncService(test_business.business_id, "", None)
     
     assert smart_sync is not None
     assert smart_sync.business_id == test_business.business_id
@@ -153,7 +153,7 @@ def test_qbo_provider_phase0_scope():
     
     try:
         from infra.qbo.client import QBORawClient
-        from infra.qbo.smart_sync import SmartSyncService
+        from domains.qbo.services.sync_service import QBOSyncService
         assert SmartSyncService is not None
         
         # Basic provider should be importable

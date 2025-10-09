@@ -20,10 +20,10 @@ from sqlalchemy.orm import Session as SQLAlchemySession
 from domains.core.models.business import Business
 # from infra.qbo.integration_models import Integration  # Replaced with Business model
 from infra.qbo.client import QBORawClient
-from infra.qbo.smart_sync import SmartSyncService
-from runway.services.1_calculators.runway_calculator import RunwayCalculator
-from runway.services.1_calculators.data_quality_calculator import DataQualityCalculator
-from runway.services.1_calculators.reserve_runway import RunwayReserveService
+from domains.qbo.services.sync_service import QBOSyncService
+from runway.services.calculators.runway_calculator import RunwayCalculator
+from runway.services.calculators.data_quality_calculator import DataQualityCalculator
+from runway.services.calculators.reserve_runway import RunwayReserveService
 from runway.schemas.runway_reserve import RunwayReserveCreate, ReserveTypeEnum, ReserveAllocationCreate
 from infra.config import RunwayAnalysisSettings
 
@@ -87,7 +87,7 @@ class TestRunwayReserveE2E:
         business, realm_id, prod_session = real_qbo_business_with_prod_session
         
         # Get real QBO data (no mocks) using production database
-        smart_sync = SmartSyncService(prod_session, business.business_id)
+        smart_sync = QBOSyncService(business.business_id, "", prod_session)
         runway_calculator = RunwayCalculator(prod_session, business.business_id)
         
         # Fetch actual QBO data
@@ -146,7 +146,7 @@ class TestRunwayReserveE2E:
         Session = sessionmaker(bind=engine)
         
         with Session() as prod_session:
-            smart_sync = SmartSyncService(prod_session, qbo_business.business_id)
+            smart_sync = QBOSyncService(qbo_business.business_id, "", prod_session)
             data_quality_analyzer = DataQualityCalculator(prod_session, qbo_business.business_id)
             runway_calculator = RunwayCalculator(prod_session, qbo_business.business_id)
             
@@ -205,7 +205,7 @@ class TestRunwayReserveE2E:
         Session = sessionmaker(bind=engine)
         
         with Session() as prod_session:
-            smart_sync = SmartSyncService(prod_session, qbo_business.business_id)
+            smart_sync = QBOSyncService(qbo_business.business_id, "", prod_session)
             runway_calculator = RunwayCalculator(prod_session, qbo_business.business_id)
             reserve_service = RunwayReserveService(prod_session, qbo_business.business_id)
             
@@ -275,7 +275,7 @@ class TestRunwayReserveE2E:
         Session = sessionmaker(bind=engine)
         
         with Session() as prod_session:
-            smart_sync = SmartSyncService(qbo_business.business_id)
+            smart_sync = QBOSyncService(qbo_business.business_id, "", None)
             
             # Test multiple rapid API calls (simulating Smart AP usage)
             api_calls = []
@@ -346,7 +346,7 @@ class TestRunwayReserveE2E:
         try:
             with Session() as prod_session:
                 # Test 1: QBO Integration Works
-                smart_sync = SmartSyncService(prod_session, qbo_business.business_id)
+                smart_sync = QBOSyncService(qbo_business.business_id, "", prod_session)
                 qbo_data = await smart_sync.get_qbo_data_for_digest()
                 assert qbo_data is not None, "QBO integration failed"
                 

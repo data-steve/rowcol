@@ -11,9 +11,9 @@ from sqlalchemy.orm import Session
 from .auth import QBOAuthService
 from .client import QBORawClient
 from .config import qbo_config
-from runway.experiences.test_drive import DemoTestDriveService
+from runway.services.experiences.test_drive import DemoTestDriveService
 # Removed domains dependency - using DTOs instead
-from common.exceptions import IntegrationError
+from infra.config.exceptions import IntegrationError
 from typing import Dict, Any
 import logging
 

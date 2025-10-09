@@ -11,13 +11,13 @@ from typing import List, Dict, Optional
 
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id, get_current_user
-from domains.ap.services.bill_ingestion import BillService
+from domains.ap.services.bill import BillService
 from domains.ap.services.payment import PaymentService
 # SmartSyncService is now handled by domain services
-from runway.services.1_calculators.reserve_runway import RunwayReserveService
+from runway.services.data_orchestrators.reserve_runway import RunwayReserveService
 from domains.ap.schemas.bill import BillResponse, BillApprovalRequest
 from domains.ap.schemas.payment import PaymentScheduleRequest
-from common.exceptions import ValidationError
+from infra.config.exceptions import ValidationError
 
 router = APIRouter(prefix="/bills", tags=["AP Bills"])
 
@@ -94,8 +94,7 @@ async def upload_bill(
         result = await bill_service.process_bill(file, vendor_id)
         
         # Trigger smart QBO sync to get latest vendor data
-        sync_timing = services["sync_timing"]
-        sync_timing.record_user_activity("bill_upload")
+        # Note: User activity recording is handled by domain services
         
         return {
             "message": "Bill uploaded and processed successfully",
@@ -145,149 +144,13 @@ async def get_bill(
             detail=f"Failed to get bill: {str(e)}"
         )
 
-@router.put("/{bill_id}/approve")
-async def approve_bill(
-    bill_id: int,
-    approval_data: BillApprovalRequest,
-    services: Dict = Depends(get_services),
-    current_user: dict = Depends(get_current_user)
-):
-    """
-    Approve a bill for payment.
-    
-    Orchestrates bill approval with runway reserve allocation
-    and automatic payment scheduling based on business rules.
-    """
-    try:
-        bill_service = services["bill_service"]
-        payment_service = services["payment_service"]
-        reserve_service = services["reserve_service"]
-        
-        # Get the bill
-        bill = bill_service._get_bill_or_raise(bill_id)
-        
-        # Approve the bill
-        success = bill_service.approve_bill_entity(
-            bill=bill,
-            approved_by_user_id=current_user["user_id"],
-            notes=approval_data.notes
-        )
-        
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bill cannot be approved in current status"
-            )
-        
-        # Create runway reserve allocation if needed
-        if approval_data.allocate_reserve:
-            reserve_service.allocate_reserve_for_bill(
-                bill_id=bill_id,
-                amount=bill.amount
-            )
-        
-        # Schedule payment if requested
-        if approval_data.schedule_payment:
-            payment = payment_service.create_payment(
-                bill_id=bill_id,
-                payment_date=approval_data.payment_date or bill.due_date,
-                payment_method=approval_data.payment_method or "ach"
-            )
-            
-            return {
-                "message": "Bill approved and payment scheduled",
-                "bill_id": bill_id,
-                "payment_id": payment.payment_id,
-                "scheduled_date": payment.payment_date
-            }
-        
-        return {
-            "message": "Bill approved successfully",
-            "bill_id": bill_id,
-            "status": bill.status
-        }
-        
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to approve bill: {str(e)}"
-        )
+# REMOVED: approve_bill endpoint - moved to _parked/runway/routes/bill_execution.py
+# QBO is only a ledger rail - it cannot execute approvals
+# Bill approval moved to _parked/ for future Ramp implementation
 
-@router.post("/{bill_id}/schedule-payment")
-async def schedule_bill_payment(
-    bill_id: int,
-    payment_data: PaymentScheduleRequest,
-    services: Dict = Depends(get_services),
-    current_user: dict = Depends(get_current_user)
-):
-    """
-    Schedule payment for an approved bill.
-    
-    Orchestrates payment creation with runway impact analysis,
-    reserve allocation, and smart QBO sync coordination.
-    """
-    try:
-        bill_service = services["bill_service"]
-        payment_service = services["payment_service"]
-        smart_sync = services["smart_sync"]
-        business_id = services["smart_sync"].business_id
-        
-        # Get the bill
-        bill = bill_service._get_bill_or_raise(bill_id)
-        
-        if bill.status != "approved":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bill must be approved before scheduling payment"
-            )
-        
-        # Create the payment locally first
-        payment = payment_service.create_payment(
-            bill_id=bill_id,
-            payment_date=payment_data.payment_date,
-            payment_method=payment_data.payment_method,
-            payment_account=payment_data.payment_account,
-            created_by_user_id=current_user["user_id"]
-        )
-        
-        # Execute payment workflow through domain service (handles QBO integration)
-        payment = await payment_service.execute_payment_workflow(
-            payment.payment_id,
-            confirmation_number=f"PAY_{bill_id}_{int(payment.payment_date.timestamp())}"
-        )
-        
-        # Calculate runway impact
-        reserve_service = services["reserve_service"]
-        runway_calc = reserve_service.calculate_runway_with_reserves()
-        daily_burn = runway_calc.get("daily_burn", 1)
-        runway_impact_days = float(payment.amount) / daily_burn if daily_burn > 0 else 0
-        
-        return {
-            "message": "Payment scheduled successfully",
-            "payment_id": payment.payment_id,
-            "bill_id": bill_id,
-            "scheduled_date": payment.payment_date,
-            "amount": float(payment.amount),
-            "method": payment.payment_method,
-            "qbo_payment_id": qbo_payment.get("Id"),
-            "runway_impact": f"+{runway_impact_days:.1f} days"
-        }
-        
-    except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to schedule payment: {str(e)}"
-        )
+# REMOVED: schedule_bill_payment endpoint - moved to _parked/runway/routes/bill_execution.py
+# QBO is only a ledger rail - it cannot execute payments
+# Payment scheduling moved to _parked/ for future Ramp implementation
 
 @router.get("/{bill_id}/runway-impact")
 async def get_bill_runway_impact(

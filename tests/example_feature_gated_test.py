@@ -128,7 +128,7 @@ class TestReserveServiceFeatureGating(FeatureGateTestMixin):
         """Set up test fixtures."""
         self.db = Mock()
         self.business_id = "test_business"
-        from runway.services.0_data_orchestrators.reserve_runway import RunwayReserveService
+        from runway.services.data_orchestrators.reserve_runway import RunwayReserveService
         self.reserve_service = RunwayReserveService(self.db, self.business_id)
     
     def test_reserve_creation_with_ramp_enabled(self):

@@ -6,6 +6,5 @@ No business logic - just HTTP calls and resilience infrastructure.
 """
 
 from .client import QBORawClient
-from .smart_sync import SmartSyncService
 
-__all__ = ["QBORawClient", "SmartSyncService"]
+__all__ = ["QBORawClient"]

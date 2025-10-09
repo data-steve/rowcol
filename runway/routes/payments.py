@@ -13,9 +13,9 @@ from datetime import datetime
 from infra.database.session import get_db
 from infra.auth.auth import get_current_business_id
 from domains.ap.services.payment import PaymentService
-from runway.services.1_calculators.reserve_runway import RunwayReserveService
+from runway.services.data_orchestrators.reserve_runway import RunwayReserveService
 from domains.ap.schemas.payment import PaymentResponse, PaymentExecutionRequest
-from common.exceptions import BusinessRuleViolationError
+from infra.config.exceptions import BusinessRuleViolationError
 
 router = APIRouter(tags=["AP Payments"])
 
@@ -101,47 +101,9 @@ async def get_payment(
             detail=f"Failed to get payment: {str(e)}"
         )
 
-@router.post("/{payment_id}/execute")
-async def execute_payment(
-    payment_id: int,
-    execution_data: PaymentExecutionRequest,
-    services: Dict = Depends(get_services)
-):
-    """
-    Execute a scheduled payment.
-    
-    Orchestrates payment execution with QBO sync, reserve release,
-    and runway impact tracking.
-    """
-    try:
-        payment_service = services["payment_service"]
-        
-        # Execute the payment workflow (handles QBO integration internally)
-        payment = await payment_service.execute_payment_workflow(
-            payment_id=payment_id,
-            confirmation_number=execution_data.confirmation_number
-        )
-        
-        return {
-            "message": "Payment executed successfully",
-            "payment_id": payment_id,
-            "confirmation_number": payment.confirmation_number,
-            "execution_date": payment.execution_date.isoformat(),
-            "amount": float(payment.amount),
-            "qbo_confirmation": qbo_payment.get("Id"),
-            "runway_impact": payment_service.calculate_payment_runway_impact(payment)
-        }
-        
-    except BusinessRuleViolationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to execute payment: {str(e)}"
-        )
+# REMOVED: execute_payment endpoint - moved to _parked/runway/routes/bill_execution.py
+# QBO is only a ledger rail - it cannot execute payments
+# Payment execution moved to _parked/ for future Ramp implementation
 
 @router.post("/{payment_id}/cancel")
 async def cancel_payment(

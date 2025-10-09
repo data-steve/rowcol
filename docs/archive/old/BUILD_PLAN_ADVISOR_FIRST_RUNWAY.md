@@ -353,7 +353,7 @@ def get_client_list(advisor: Advisor = Depends(get_current_advisor)):
 # advisor/client_management/services/client_list_service.py
 from typing import List, Dict
 from domains.core.models.business import Business
-from runway.services.1_calculators.runway_calculator import RunwayCalculator
+from runway.services.calculators.runway_calculator import RunwayCalculator
 
 class ClientListService:
     def __init__(self, db: Session, advisor_id: str):

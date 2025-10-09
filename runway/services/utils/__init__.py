@@ -4,8 +4,9 @@ Runway Services Utilities
 Utility functions and helpers for runway services.
 """
 
-from .qbo_mapper import QBOMapper
+# QBOMapper moved to infra.qbo.qbo_mapper
+# from .qbo_mapper import QBOMapper
 
 __all__ = [
-    "QBOMapper"
+    # "QBOMapper"  # Moved to infra.qbo.qbo_mapper
 ]

@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from domains.ap.services.bill_ingestion import BillService
+from domains.ap.services.bill import BillService
 from domains.ap.models.bill import Bill, BillPriority
 
 @pytest.fixture

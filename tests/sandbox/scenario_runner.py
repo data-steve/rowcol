@@ -41,7 +41,7 @@ from sqlalchemy.orm import Session
 from infra.database.session import SessionLocal
 from infra.qbo.client import QBORawClient
 from infra.qbo.health import QBOHealthMonitor
-from infra.qbo.smart_sync import SmartSyncService
+from domains.qbo.services.sync_service import QBOSyncService
 from domains.core.models.business import Business
 # from infra.qbo.integration_models import Integration  # Replaced with Business model fields
 from sandbox.scenario_data import BusinessScenarioProvider
@@ -252,7 +252,7 @@ class QBOScenarioTester:
         try:
             if self.use_real_qbo:
                 # Test real data retrieval using SmartSyncService
-                smart_sync = SmartSyncService(business_id, "test-realm", self.db)
+                smart_sync = QBOSyncService(business_id, "test-realm", self.db)
                 bills_data = await smart_sync.get_bills_for_digest()
                 invoices_data = await smart_sync.get_invoices_for_digest()
                 accounts_data = await smart_sync.get_accounts_for_digest()

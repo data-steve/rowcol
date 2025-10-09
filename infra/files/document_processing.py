@@ -19,7 +19,7 @@ from typing import Optional, Dict, Any, List
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
-from common.exceptions import ValidationError
+from infra.config.exceptions import ValidationError
 from domains.core.models.document import Document as DocumentModel
 from domains.core.schemas.document import Document
 from domains.core.services.base_service import TenantAwareService

@@ -20,12 +20,12 @@ from domains.core.models.business import Business
 # from infra.qbo.integration_models import Integration  # Replaced with Business model
 from domains.ap.models.bill import Bill, BillStatus
 from domains.ap.models.vendor import Vendor
-from domains.ap.services.bill_ingestion import BillService  # Available service
+from domains.ap.services.bill import BillService  # Available service
 from domains.ap.services.payment import PaymentService
-from infra.qbo.smart_sync import SmartSyncService
-from runway.services.1_calculators.runway_calculator import RunwayCalculator
-from runway.services.2_experiences.tray import TrayService
-from runway.services.1_calculators.priority_calculator import PriorityCalculator
+from domains.qbo.services.sync_service import QBOSyncService
+from runway.services.calculators.runway_calculator import RunwayCalculator
+from runway.services.experiences.tray import TrayService
+from runway.services.calculators.priority_calculator import PriorityCalculator
 from domains.core.models.balance import Balance
 
 @pytest.mark.integration
@@ -47,7 +47,7 @@ class TestSmartAPE2E:
         by our AP services without mock dependencies.
         """
         # Get real QBO bills
-        smart_sync = SmartSyncService(db, ap_business.business_id)
+        smart_sync = QBOSyncService(ap_business.business_id, "", db)
         qbo_data = await smart_sync.get_qbo_data_for_digest()
         
         assert "bills" in qbo_data, "QBO data missing bills"
@@ -149,7 +149,7 @@ class TestSmartAPE2E:
         Validates that processed bills appear correctly in the prep tray
         with proper prioritization and runway impact data.
         """
-        smart_sync = SmartSyncService(db, ap_business.business_id)
+        smart_sync = QBOSyncService(ap_business.business_id, "", db)
         tray_service = TrayService(db, ap_business.business_id)
         # Get real QBO data
         qbo_data = await smart_sync.get_qbo_data_for_digest()
@@ -259,7 +259,7 @@ class TestSmartAPE2E:
         """
         try:
             # Test 1: QBO AP Data Access
-            smart_sync = SmartSyncService(db, ap_business.business_id)
+            smart_sync = QBOSyncService(ap_business.business_id, "", db)
             qbo_data = await smart_sync.get_qbo_data_for_digest()
             bills = qbo_data.get("bills", [])
             vendors = qbo_data.get("vendors", [])
@@ -268,7 +268,7 @@ class TestSmartAPE2E:
             assert len(vendors) > 0, "No vendors available - AP features cannot work"
     
             # Test 2: Bill Processing Pipeline
-            from domains.ap.services.bill_ingestion import BillService
+            from domains.ap.services.bill import BillService
             bill_service = BillService(db, ap_business.business_id)
             test_bill = bills[0]
             processed_bill = bill_service.ingest_bill_from_qbo(ap_business.business_id, test_bill)
@@ -286,7 +286,7 @@ class TestSmartAPE2E:
             assert "priority_score" in prioritized_bills[0], "Payment priority logic failed"
     
             # Test 5: Tray Integration - Use QBO data provider, not mocks!
-            from runway.services.2_experiences.tray import QBOTrayDataProvider
+            from runway.services.experiences.tray import QBOTrayDataProvider
             qbo_tray_provider = QBOTrayDataProvider(db, ap_business.business_id)
             tray_service = TrayService(db, ap_business.business_id, data_provider=qbo_tray_provider)
             tray_items = tray_service.get_tray_items(ap_business.business_id)
@@ -307,7 +307,7 @@ class TestSmartAPE2E:
         LIGHTWEIGHT: Ensure RunwayCalculator works in Smart AP context with QBO-shaped data.
         Avoids heavy scenarios but verifies core outputs exist and are sane.
         """
-        smart_sync = SmartSyncService(db, ap_business.business_id)
+        smart_sync = QBOSyncService(ap_business.business_id, "", db)
         runway_calculator = RunwayCalculator(db, ap_business.business_id)
 
         qbo_data = await smart_sync.get_qbo_data_for_digest()

@@ -91,4 +91,5 @@ class Vendor(Base, TimestampMixin, TenantMixin):
     business = relationship("Business")
     bills = relationship("Bill", back_populates="vendor")
     payments = relationship("Payment", back_populates="vendor")
+    transaction_logs = relationship("VendorTransactionLog", back_populates="vendor")
     

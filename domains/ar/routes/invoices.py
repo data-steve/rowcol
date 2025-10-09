@@ -10,17 +10,9 @@ from datetime import datetime
 
 router = APIRouter()
 
-@router.post("/invoices")
-def create_invoice(invoice_data: dict, business_id: str, db: Session = Depends(get_db)):
-    service = InvoiceService(db, business_id)
-    return service.create_invoice(
-        business_id=business_id,
-        customer_id=invoice_data["customer_id"],
-        issue_date=datetime.fromisoformat(invoice_data["issue_date"].replace('Z', '+00:00')),
-        due_date=datetime.fromisoformat(invoice_data["due_date"].replace('Z', '+00:00')),
-        total=invoice_data["total"],
-        lines=invoice_data["lines"]
-    )
+# REMOVED: create_invoice endpoint - moved to _parked/runway/routes/invoice_execution.py
+# QBO is only a ledger rail - it cannot create invoices
+# Invoice creation moved to _parked/ for future Stripe implementation
 
 @router.get("/")
 def get_invoices(business_id: int, db: Session = Depends(get_db)):

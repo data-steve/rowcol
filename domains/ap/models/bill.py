@@ -86,6 +86,7 @@ class Bill(Base, TimestampMixin, TenantMixin):
     business = relationship("Business")
     approved_by_user = relationship("User", foreign_keys=[approved_by])
     payments = relationship("Payment", back_populates="bill")
+    transaction_logs = relationship("BillTransactionLog", back_populates="bill")
     
     # Hybrid properties for decimal conversion
     @hybrid_property

@@ -20,7 +20,7 @@ from decimal import Decimal, InvalidOperation
 from dataclasses import dataclass
 from enum import Enum
 
-from common.exceptions import ValidationError
+from infra.config.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 

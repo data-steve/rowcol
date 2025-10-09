@@ -14,7 +14,7 @@ from enum import Enum
 import time
 import json
 
-from common.exceptions import IntegrationError
+from infra.config.exceptions import IntegrationError
 from .config import qbo_config
 from .dtos import QBOIntegrationDTO, QBOIntegrationStatuses
 

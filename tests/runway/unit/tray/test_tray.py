@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from runway.services.2_experiences.tray import TrayService
+from runway.services.experiences.tray import TrayService
 from runway.models.tray_item import TrayItem
 from datetime import datetime
 import pytest

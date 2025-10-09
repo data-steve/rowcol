@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from infra.database.session import get_db
-from runway.services.2_experiences.digest import DigestService
+from runway.services.experiences import DigestService
 
 router = APIRouter(tags=['digest'])
 
@@ -56,16 +56,17 @@ async def send_all_digests(db: Session = Depends(get_db)):
     result = await digest_service.send_digest_to_all_businesses()
     return result
 
-@router.get('/digest/email-status')
-async def get_email_provider_status():
-    """Get status of email providers"""
-    from runway.experiences.digest.email import EmailService
+# TODO: DIGEST EMAIL IS OLD WAY OF THINKING FOR OODALOO  --- this is old
+# @router.get('/digest/email-status')
+# async def get_email_provider_status():
+#     """Get status of email providers"""
+#     from runway.services.experiences.digest.email import EmailService
     
-    email_service = EmailService()
-    provider_status = email_service.get_provider_status()
+#     email_service = EmailService()
+#     provider_status = email_service.get_provider_status()
     
-    return {
-        "providers": provider_status,
-        "healthy_providers": sum(1 for status in provider_status.values() if status),
-        "total_providers": len(provider_status)
-    }
+#     return {
+#         "providers": provider_status,
+#         "healthy_providers": sum(1 for status in provider_status.values() if status),
+#         "total_providers": len(provider_status)
+#     }

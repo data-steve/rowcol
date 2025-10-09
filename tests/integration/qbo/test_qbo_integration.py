@@ -38,7 +38,7 @@
 # from infra.qbo.health import QBOHealthMonitor, QBOConnectionStatus
 # from infra.qbo.auth import QBOAuthService
 # from infra.qbo.smart_sync import SmartSyncService
-# from common.exceptions import IntegrationError
+# from infra.config.exceptions import IntegrationError
 
 
 # # Test configuration

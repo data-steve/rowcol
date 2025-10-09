@@ -97,6 +97,7 @@ infra/qbo/
 - **Purpose**: QBO orchestration and resilience
 - **Responsibilities**: Rate limiting, retry logic, deduplication, caching
 - **Dependencies**: QBORawClient (lazy loaded), DTOs only
+- **Multi-Rail Design**: Each integration rail will have its own SmartSyncService variant
 
 ### QBOAuthService
 - **Purpose**: QBO authentication and token management
@@ -141,9 +142,50 @@ This module was created during the "Nuclear Cleanup" of QBO architecture to reso
 4. Implemented lazy initialization patterns
 5. Made services accept data as parameters
 
+## Multi-Rail Architecture
+
+This QBO infrastructure is designed as the first rail in a multi-rail architecture. Each integration rail will have its own SmartSyncService variant:
+
+### Current Implementation
+- **SmartSyncService (QBO)** - Handles QBO-specific orchestration
+  - Rate limiting: 500 req/min, 100 req/sec
+  - Retry logic: Exponential backoff
+  - Caching: 240min TTL for data operations
+  - Activity tracking: QBO-specific user activity patterns
+
+### Future Implementations
+- **RampSmartSyncService (Ramp)** - Ramp-specific orchestration
+  - Rate limiting: Ramp-specific limits
+  - Retry logic: Ramp-specific error handling
+  - Caching: Ramp-specific data patterns
+  - Activity tracking: Ramp-specific user activity
+
+- **PlaidSmartSyncService (Plaid)** - Plaid-specific orchestration
+  - Rate limiting: Plaid-specific limits
+  - Retry logic: Webhook-based patterns
+  - Caching: Plaid-specific data structures
+  - Activity tracking: Plaid-specific patterns
+
+- **StripeSmartSyncService (Stripe)** - Stripe-specific orchestration
+  - Rate limiting: Stripe-specific limits
+  - Retry logic: Stripe-specific error handling
+  - Caching: Stripe-specific data patterns
+  - Activity tracking: Stripe-specific patterns
+
+### Why Rail-Specific Orchestration?
+
+Each rail handles its own orchestration because different APIs have fundamentally different:
+- **Rate limiting rules and patterns**
+- **Retry logic and error handling**
+- **Caching strategies and TTL requirements**
+- **Activity tracking and sync timing needs**
+
+This design allows each rail to be optimized for its specific API characteristics while maintaining a consistent high-level interface for domain services.
+
 ## Future Considerations
 
 - Consider moving DTOs to a shared `common/dtos/` package if used across multiple modules
 - Implement proper token storage and refresh mechanisms
 - Add comprehensive health monitoring and alerting
 - Consider caching strategies for frequently accessed data
+- Design shared orchestration patterns that can be reused across rails
