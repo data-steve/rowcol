@@ -1,0 +1,69 @@
+# RowCol MVP Recovery - Cursor Rules
+# This file prevents contamination during the Strangler-Fig recovery process
+
+## Ways of Working
+Remeber I'm a junior dev w principal MLE and product chops vibe coding my own infra heavy product. So you gotta help me along: I think this note should be added to the .cursorrules so I don't have to keep bringing it up.
+
+## SECURITY RULES
+- NEVER print sensitive data (tokens, keys, passwords) in the context window
+- NEVER print access tokens, refresh tokens, or any authentication credentials
+- NEVER print API keys, secrets, or any sensitive configuration values
+- NEVER print database connection strings or credentials
+- NEVER print any data that contains "token", "key", "secret", "password", "credential"
+- Access and refresh tokens belong in the database, not .env files
+- Only print non-sensitive identifiers (realm_id, business_id, etc.)
+- When debugging authentication issues, use placeholder text like "TOKEN_REDACTED" or "***"
+- If you must show token-related data, truncate it to first 10 characters + "..."
+
+## ALLOWED PATHS
+You may modify files ONLY under:
+- _clean/**
+- scripts/ci_guard.sh
+- README.md (root level only)
+
+## BLOCKED PATHS
+Do not create, edit, or delete files outside the paths above.
+
+## LEGACY CODE HANDLING
+When asked to use legacy code, prefer:
+- copying only the minimal functions needed into _clean/mvp/infra/** but they have to be sanitized first
+- assume it will need refactoring to align with new requirements
+- and possibly also implementing a thinned down version so we get out from under scope-creep and pivot-cruft
+
+## BLOCKED IMPORTS
+Do not import from legacy folders:
+- runway/services/data_orchestrators/**
+- domains/*/services/** (contain architectural rot)
+- infra/qbo/** (legacy paths outside MVP)
+- infra/jobs/** (job scheduler, job storage)
+- plaid/**, ramp/**, stripe/**
+- Any path outside _clean/**
+
+## ARCHITECTURE ENFORCEMENT
+All Runway code must depend on Domains gateway interfaces only.
+- runway/ → domains/ → infra/ (no back edges, ever)
+- Domains define interfaces; Infra implements them; Runway composes
+- Use composition root (wiring.py) for dependency injection
+
+## RECOVERY CONTEXT
+This is a Strangler-Fig recovery to eliminate architectural rot.
+- Current domains contain rot - they bypass Smart Sync pattern
+- We must establish clean architecture first, then rebuild domains
+- QBO-only MVP first, then add other rails using same patterns
+
+## FILE STRUCTURE
+Follow the structure defined in _clean/mvp/recovery_build_plan.md:
+- _clean/mvp/runway/ - Product orchestration and calculators
+- _clean/mvp/domains/ - Rail-agnostic interfaces only
+- _clean/mvp/infra/ - QBO client, sync orchestrator, repos
+
+## TESTING
+All changes must include tests that verify:
+- STRICT beats cache (snapshot edge)
+- Bill tray service works correctly
+- Console snapshot service works correctly
+- Throttle hygiene (QBO 429)
+- Stale mirror hygiene
+
+## MIGRATION MANIFEST
+Reference _clean/strangled_fig/migration_manifest.md for concrete porting instructions.
