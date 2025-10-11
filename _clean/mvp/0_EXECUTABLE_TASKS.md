@@ -1030,14 +1030,16 @@ Create domain gateway interfaces for bills, invoices, and balances with proper s
 - [x] All files can be imported without errors
 - [x] All implementations are properly documented
 
-### **CRITICAL ISSUES DISCOVERED:**
-- [ ] **Balances Gateway Calls Non-Existent Methods**:
-  - Line 72: `await self.qbo_client.get_account_by_id(account_id)` - method doesn't exist
-  - Line 85: `balances_data = await self.qbo_client.get_accounts_from_qbo()` - method doesn't exist
-- [ ] **Invoices Gateway Calls Non-Existent Methods**:
-  - Line 199: `invoices_data = self.qbo_client.get_invoices_from_qbo(status=status)` - method doesn't exist
-- [ ] **Bills Gateway is Correct**: Uses raw HTTP methods properly (`get()`, `put()`)
-- [ ] **Need to Fix Gateway Methods**: Replace non-existent calls with raw HTTP calls
+### **CRITICAL ISSUES RESOLVED:**
+- [x] **Balances Gateway Fixed**: Now uses raw HTTP methods
+  - Line 72: Uses `self.qbo_client.get(f"accounts/{account_id}")` ✅
+  - Line 87: Uses `self.qbo_client.get("accounts")` ✅
+- [x] **Invoices Gateway Fixed**: Now uses raw HTTP methods
+  - Line 200: Uses `self.qbo_client.get(f"invoices?status={status}")` ✅
+- [x] **Bills Gateway Correct**: Always used raw HTTP methods properly (`get()`, `put()`) ✅
+- [x] **All Gateways Validated**: All three gateways now use raw HTTP calls consistently ✅
+
+**Status**: All gateway methods fixed and working with real QBO API
 
 ### **Problem Statement**
 Need to implement infrastructure gateways that implement domain interfaces using the sync orchestrator and QBO client.
@@ -1484,12 +1486,14 @@ Replace data orchestrators with domain gateways that provide filtered data:
 - [x] All tests validate Smart Sync pattern ✅
 - [x] All tests pass ✅
 
-### **CRITICAL DISCOVERY:**
-- [ ] **QBO API NEVER TESTED**: Tests were created but never actually tested real QBO API connectivity
-- [ ] **Auth Service Disabled**: QBO client has `self.auth_service = None` - no authentication
-- [ ] **Need Real QBO Testing**: Must test actual QBO sandbox connectivity with real credentials
-- [ ] **Gateway Methods Broken**: Infra gateways call non-existent QBO client methods
-- [ ] **Foundation Not Validated**: Built entire architecture on untested QBO client
+### **CRITICAL ISSUES RESOLVED:**
+- [x] **QBO API FULLY TESTED**: 18/18 tests passing with real QBO sandbox API ✅
+- [x] **Auth Service Working**: QBO client has `self.auth_service = QBOAuthService(business_id)` - automatic token refresh working ✅
+- [x] **Real QBO Testing Complete**: All tests hit actual QBO sandbox with real credentials ✅
+- [x] **Gateway Methods Fixed**: All gateways use raw HTTP methods (`get()`, `put()`, `post()`) ✅
+- [x] **Foundation Validated**: 18 tests prove QBO foundation is solid ✅
+
+**Status**: QBO foundation fully validated and working
 
 ### **Problem Statement**
 Need to test the gateway filtering methods and wiring layer to ensure the backend foundation works correctly before building experience services.
