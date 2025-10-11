@@ -1654,23 +1654,277 @@ Create focused tests for gateway filtering methods, Smart Sync pattern, and wiri
 
 ---
 
+## **Task 9: Port Production-Grade API Infrastructure**
+
+- **Status:** `[📋]` **NEEDS IMPLEMENTATION**
+- **Priority:** P1 High
+- **Justification:** Production-grade rate limiting, retry logic, and circuit breaker patterns needed for QBO API reliability
+- **Execution Status:** **Execution-Ready**
+
+### **Task Checklist:**
+- [ ] Create `_clean/mvp/infra/api/base_client.py` with BaseAPIClient patterns
+- [ ] Create `_clean/mvp/infra/api/rate_limiter.py` with rate limiting logic
+- [ ] Create `_clean/mvp/infra/api/retry_handler.py` with exponential backoff retry
+- [ ] Create `_clean/mvp/infra/api/circuit_breaker.py` with circuit breaker pattern
+- [ ] Create `_clean/mvp/infra/api/exceptions.py` with typed API errors
+- [ ] Update `_clean/mvp/infra/rails/qbo/client.py` to extend BaseAPIClient
+- [ ] Update `_clean/mvp/infra/rails/qbo/auth.py` with retry logic for token refresh
+- [ ] All files can be imported without errors
+- [ ] QBO client properly handles 429 rate limit errors
+- [ ] QBO client properly retries transient failures
+- [ ] All files are properly documented
+
+### **CRITICAL DISCOVERY:**
+- ✅ **Legacy Has Production Patterns**: `infra/api/base_client.py` has rate limiting, retry, circuit breaker, caching
+- ✅ **Legacy Has Auth Patterns**: `infra/auth/auth.py` has JWT token management and HTTPBearer security
+- ❌ **MVP Missing These Patterns**: Current QBO client has NO rate limiting, NO retry logic, NO circuit breaker
+- ✅ **Tests Validate Missing Behavior**: `test_qbo_throttling.py` tests behavior we don't implement yet
+- ✅ **Migration Manifest Requires**: Acceptance test #3: "Throttle hygiene (QBO 429 → bounded retry → hygiene flag visible)"
+
+### **Problem Statement**
+Need to port production-grade API infrastructure patterns from legacy `infra/api/` and `infra/auth/` to MVP nucleus:
+1. **Rate Limiting**: QBO has strict rate limits - need client-side throttling
+2. **Retry Logic**: Exponential backoff with jitter for transient failures
+3. **Circuit Breaker**: Stop hammering QBO if it's down
+4. **Typed Errors**: Proper exception hierarchy for different error types
+5. **Auth Patterns**: JWT token management for user authentication (future)
+
+### **User Story**
+"As a developer, I need production-grade API infrastructure so that the QBO client can handle rate limits, transient failures, and circuit breaking gracefully."
+
+### **Solution Overview**
+Port the production-grade patterns from `infra/api/base_client.py` and `infra/auth/auth.py`:
+- **BaseAPIClient**: Abstract base with rate limiting, retry, circuit breaker, caching
+- **QBORawClient**: Extend BaseAPIClient with QBO-specific implementation
+- **QBOAuthService**: Add retry logic for token refresh operations
+- **Typed Errors**: APIError hierarchy for proper error handling
+
+### **Files to Port:**
+
+#### **From `infra/api/base_client.py`:**
+```python
+# Port these classes/patterns to _clean/mvp/infra/api/
+
+1. RateLimitConfig - Configuration for rate limiting
+2. RetryConfig - Configuration for retry logic  
+3. CacheConfig - Configuration for response caching
+4. APIError hierarchy - RateLimitError, AuthenticationError, NetworkError
+5. BaseAPIClient - Abstract base with all patterns
+   - _should_allow_call() - Rate limiting logic
+   - _wait_for_rate_limit() - Wait logic
+   - _retry_with_backoff() - Exponential backoff
+   - Circuit breaker pattern
+   - Response caching
+```
+
+#### **From `infra/auth/auth.py`:**
+```python
+# Port these patterns to _clean/mvp/infra/auth/ (for future use)
+
+1. LoginRequest/Response models - Pydantic schemas
+2. JWT token management - create_access_token(), verify_token()
+3. HTTPBearer security - FastAPI security dependency
+4. Password validation - Security patterns
+
+Note: These are for FUTURE user authentication, NOT for QBO system tokens
+```
+
+### **Pattern to Implement:**
+
+```python
+# _clean/mvp/infra/api/base_client.py
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional
+from datetime import datetime, timedelta
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+class RateLimitConfig:
+    """QBO-specific rate limiting configuration."""
+    min_interval_seconds: float = 0.5  # 2 requests per second max
+    max_calls_per_minute: int = 30     # QBO limit
+    burst_limit: int = 10              # Short burst allowance
+    backoff_multiplier: float = 2.0
+    max_retries: int = 3
+
+class APIError(Exception):
+    """Base exception for API errors."""
+    def __init__(self, message: str, status_code: Optional[int] = None, 
+                 retry_after: Optional[int] = None):
+        self.message = message
+        self.status_code = status_code
+        self.retry_after = retry_after
+        super().__init__(message)
+
+class RateLimitError(APIError):
+    """Raised when rate limit is exceeded."""
+    pass
+
+class BaseAPIClient(ABC):
+    """Base API client with rate limiting, retry, circuit breaker."""
+    
+    def __init__(self, rate_limit_config: Optional[RateLimitConfig] = None):
+        self.rate_limit_config = rate_limit_config or RateLimitConfig()
+        self.rate_limits = {
+            "last_call": None,
+            "minute_calls": [],
+            "circuit_breaker_open": False,
+            "circuit_breaker_until": None
+        }
+    
+    @abstractmethod
+    def get_base_url(self) -> str:
+        """Get the base URL for the API."""
+        pass
+    
+    @abstractmethod
+    def get_auth_headers(self) -> Dict[str, str]:
+        """Get authentication headers."""
+        pass
+    
+    def _should_allow_call(self) -> bool:
+        """Check if API call should be allowed based on rate limiting."""
+        # Implementation from legacy base_client.py
+        pass
+    
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
+    async def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+        """Make HTTP request with retry logic."""
+        # Implementation with circuit breaker and rate limiting
+        pass
+```
+
+```python
+# _clean/mvp/infra/rails/qbo/client.py - Updated to extend BaseAPIClient
+from infra.api.base_client import BaseAPIClient, RateLimitConfig
+
+class QBORawClient(BaseAPIClient):
+    """QBO HTTP client with rate limiting and retry logic."""
+    
+    def __init__(self, business_id: str, realm_id: str, db_session=None):
+        # QBO-specific rate limits
+        qbo_rate_config = RateLimitConfig(
+            min_interval_seconds=0.5,  # 2 calls per second
+            max_calls_per_minute=30,   # QBO sandbox limit
+            burst_limit=10,            # Allow short bursts
+            backoff_multiplier=2.0,
+            max_retries=3
+        )
+        super().__init__(rate_limit_config=qbo_rate_config)
+        
+        self.business_id = business_id
+        self.realm_id = realm_id
+        self.base_url = f"{qbo_config.api_base_url}/{realm_id}"
+        self.auth_service = QBOAuthService(business_id) if business_id else None
+    
+    def get_base_url(self) -> str:
+        return self.base_url
+    
+    def get_auth_headers(self) -> Dict[str, str]:
+        access_token = self.auth_service.get_valid_access_token()
+        return {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json"
+        }
+    
+    def get(self, endpoint: str) -> Dict[str, Any]:
+        """Make GET request with automatic rate limiting and retry."""
+        return self._make_request("GET", endpoint)
+```
+
+### **QBO-Specific Rate Limits:**
+From QBO API documentation:
+- **Sandbox**: 30 requests per minute per realm
+- **Production**: 500 requests per minute per realm
+- **Burst**: Short bursts allowed but triggers throttling
+- **429 Response**: Includes `Retry-After` header
+
+### **Migration Manifest Context:**
+```
+PORT infra/api/base_client.py → _clean/mvp/infra/api/base_client.py
+  - Keep: Rate limiting, retry logic, circuit breaker
+  - Drop: Platform enum (QBO only for MVP)
+  - Adapt: Make QBO-specific rate limits configurable
+
+PORT infra/auth/auth.py → _clean/mvp/infra/auth/auth.py
+  - Keep: JWT patterns, Pydantic schemas (for future user auth)
+  - Drop: Not needed for QBO system tokens
+  - Note: This is for FUTURE user authentication, not MVP
+```
+
+### **Acceptance Test (from Migration Manifest):**
+```python
+def test_throttle_hygiene():
+    """QBO 429 → bounded retry → hygiene flag visible"""
+    client = QBORawClient("test", "realm123")
+    
+    # Simulate high-volume requests
+    for i in range(100):
+        try:
+            response = client.get("query?query=SELECT * FROM Bill MAXRESULTS 1")
+        except RateLimitError as e:
+            # Verify bounded retry
+            assert e.retry_after is not None
+            # Verify hygiene flag set
+            # (This would be in sync orchestrator's on_hygiene callback)
+            break
+```
+
+### **Dependencies:** Task 2 (QBO Infrastructure), Task 8 (Test Gateway and Wiring Layer)
+
+### **Verification:** 
+- Run `ls -la _clean/mvp/infra/api/` - should show API infrastructure files
+- Run `python -c "from infra.api.base_client import BaseAPIClient; print('BaseAPIClient imported successfully')"`
+- Run `python -c "from infra.rails.qbo.client import QBORawClient; print('QBORawClient with rate limiting')"`
+- Run `pytest _clean/mvp/tests/test_qbo_throttling.py -v` - should validate rate limiting works
+- Test QBO client handles 429 errors gracefully
+- Test circuit breaker opens after repeated failures
+
+### **Definition of Done:**
+- [ ] API infrastructure ported from legacy to MVP
+- [ ] QBO client extends BaseAPIClient with rate limiting
+- [ ] QBO client handles 429 errors gracefully with retry
+- [ ] Circuit breaker pattern prevents hammering QBO when down
+- [ ] Exponential backoff with jitter for transient failures
+- [ ] Typed error hierarchy for proper exception handling
+- [ ] All tests pass with real QBO API calls
+- [ ] All files properly documented
+
+### **Progress Tracking:**
+- Update status to `[🔄]` when starting work
+- Update status to `[✅]` when task is complete
+- Update status to `[❌]` if blocked or failed
+
+### **Git Commit:**
+- After completing verification, commit the specific files modified:
+- `git add _clean/mvp/infra/api/ _clean/mvp/infra/rails/qbo/client.py _clean/mvp/infra/rails/qbo/auth.py`
+- `git commit -m "feat: add production-grade API infrastructure with rate limiting and retry logic"`
+
+### **Todo List Integration:**
+- Create Cursor todo for this task when starting
+- Update todo status as work progresses
+- Mark todo complete when task is done
+
+---
+
 ## **Summary**
 
-This document provides 8 executable tasks in the correct priority order:
+This document provides 9 executable tasks in the correct priority order:
 
 1. **Task 1**: Bootstrap MVP Nucleus (Foundation)
 2. **Task 2**: Copy and Sanitize QBO Infrastructure (QBO Client)
-3. **Task 3**: Implement Smart Sync Pattern (Sync Orchestrator)
-4. **Task 4**: Implement Domain Gateways (Rail-Agnostic Interfaces)
-5. **Task 5**: Implement Infra Gateways (QBO Implementations)
+3. **Task 3**: Create Database Schema and Repositories
+4. **Task 4**: Implement Sync Orchestrator
+5. **Task 5**: Create Domain Gateways (Rail-Agnostic Interfaces)
 6. **Task 6**: Implement Infra Gateways (QBO Implementations)
 7. **Task 7**: Bridge Domain Gateways to Runway Services
 8. **Task 8**: Test Gateway and Wiring Layer
+9. **Task 9**: Port Production-Grade API Infrastructure (Rate Limiting, Retry, Circuit Breaker)
 
 ### **Additional Solutioning Tasks**
 
 For deeper product and workflow solutioning, see:
-- **`_clean/mvp/advisor_workflow_solutioning.md`** - Tasks 9-11 for advisor workflow, calculators, and experience services
+- **`_clean/mvp/advisor_workflow_solutioning.md`** - Tasks 10-12 for advisor workflow, calculators, and experience services
 
 These solutioning tasks require extensive product research and user story development before implementation.
 
