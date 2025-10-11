@@ -11,6 +11,10 @@ Remeber I'm a junior dev w principal MLE and product chops vibe coding my own in
 - ALL QBO tests must use real authentication and real API calls
 - Use pytest fixtures from conftest.py for database and QBO tokens
 - Tests should verify real integration works, not mock behavior
+- NEVER delete tests just because they fail or use mocks
+- ALWAYS fix/cleanse tests to work with real API calls instead of deleting
+- Principle: CLEANSE AND FIX over DELETING
+- If a test is fundamentally wrong, discuss with user before deleting
 
 ## SECURITY RULES
 - NEVER print sensitive data (tokens, keys, passwords) in the context window
