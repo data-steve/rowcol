@@ -391,11 +391,11 @@ class QBOAuthService:
     def _load_system_tokens(self) -> Optional[Dict[str, Any]]:
         """Load system tokens from database."""
         try:
-            from sqlalchemy import create_engine, text
+            from sqlalchemy import text
+            from infra.db.session import get_database_engine
             
-            # Use the clean root database
-            database_url = 'sqlite:///../../_clean/rowcol.db'  # Use the clean root database
-            engine = create_engine(database_url)
+            # Use centralized database configuration
+            engine = get_database_engine()
             
             with engine.connect() as conn:
                 result = conn.execute(text("""
@@ -439,13 +439,13 @@ class QBOAuthService:
     def _save_system_tokens(self, tokens: Dict[str, Any]) -> bool:
         """Save system tokens to database."""
         try:
-            from sqlalchemy import create_engine, text
+            from sqlalchemy import text
+            from infra.db.session import get_database_engine
             
             self.logger.info("Saving refreshed tokens to database")
             
-            # Use the clean root database
-            database_url = 'sqlite:///../../_clean/rowcol.db'  # Use the clean root database
-            engine = create_engine(database_url)
+            # Use centralized database configuration
+            engine = get_database_engine()
             
             with engine.connect() as conn:
                 # Check if record exists

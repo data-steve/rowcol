@@ -20,19 +20,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 # ==================== DATABASE CONFIGURATION ====================
 
-# Real production database for QBO integration tests
-SQLALCHEMY_DATABASE_URL = 'sqlite:///../../_clean/rowcol.db'
+# Import from centralized database module - SINGLE SOURCE OF TRUTH
+from infra.db.session import (
+    get_database_url,
+    get_database_engine,
+    SQLALCHEMY_DATABASE_URL
+)
 
 # In-memory test database for unit tests
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
-
-def get_database_url():
-    """Get PRODUCTION database URL. Use for QBO integration tests."""
-    return SQLALCHEMY_DATABASE_URL
-
-def get_database_engine():
-    """Get PRODUCTION database engine. Use for QBO integration tests."""
-    return create_engine(SQLALCHEMY_DATABASE_URL)
 
 # Test database setup
 test_engine = create_engine(
