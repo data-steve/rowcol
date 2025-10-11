@@ -300,11 +300,11 @@ class BalancesGateway(Protocol):
   * Retry logic with exponential backoff
   * Status: **HIGH VALUE** - Eliminates duplicate try/catch patterns
 
-* **📋 PORT (Task 10)** `enums.py` → `_clean/mvp/infra/utils/enums.py`
-  * Unified enums across application
-  * SyncStrategy, SyncPriority, BulkSyncStrategy
-  * JobStatus, JobPriority
-  * Status: **MEDIUM VALUE** - Ensures consistency
+* **⚠️ PARTIAL** `enums.py` - Some already exist in MVP
+  * **✅ ALREADY IN MVP**: `FreshnessHint` in `_clean/mvp/infra/sync/entity_policy.py`
+  * **📋 PORT IF NEEDED**: `SyncStrategy`, `SyncPriority`, `BulkSyncStrategy` from `infra/utils/enums.py`
+  * **📋 PORT IF NEEDED**: `JobStatus`, `JobPriority` from `infra/utils/enums.py`
+  * Status: **LOW PRIORITY** - MVP sync already has what it needs, port rest only when building job scheduler
 
 ### `infra/config/*` ⭐ **CRITICAL FOR PRODUCT**
 
@@ -343,10 +343,13 @@ class BalancesGateway(Protocol):
   * Contact preferences
   * Status: **FUTURE** - Not needed for MVP
 
-* **📋 PORT (Task 11)** `rail_configs.py` → `_clean/mvp/infra/config/rail_configs.py`
-  * Rail-specific configuration (QBO, Ramp, Plaid, Stripe)
-  * API endpoints, rate limits, sync frequencies
-  * Status: **NEEDED** - QBO portions already exist, consolidate here
+* **⚠️ CONFLICTING** `rail_configs.py` - QBO config already exists in different location
+  * **✅ ALREADY IN MVP**: `_clean/mvp/infra/rails/qbo/config.py` (QBOConfig class)
+  * **📋 CONSOLIDATE (Task 11)**: Merge `infra/config/rail_configs.py::QBOSettings` into MVP
+  * **DECISION NEEDED**: Follow `infra/rails/{rail}/config.py` pattern (current) vs `infra/config/rail_configs.py` (legacy)
+  * **RECOMMENDATION**: Keep current pattern - each rail owns its config in its module
+  * Action: Extract additional settings from `QBOSettings` (retry attempts, sync batch size, feature flags) into MVP `QBOConfig`
+  * Status: **NEEDS CONSOLIDATION** - Merge best of both, keep rail-specific pattern
 
 * **📋 PORT (Task 11)** `exceptions.py` → `_clean/mvp/infra/config/exceptions.py`
   * Custom exception hierarchy

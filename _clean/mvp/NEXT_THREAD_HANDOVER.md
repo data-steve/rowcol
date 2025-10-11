@@ -100,33 +100,66 @@ poetry run pytest tests/ -v -m qbo_real_api
 
 ## **🔧 What Needs to Be Done Next**
 
-### **Phase 1: Complete Task 8 Requirements**
-Task 8 requires these additional components (currently only tests exist):
+### **🚨 CRITICAL DISCOVERY: Config Consolidation Issue**
 
-1. **Domain Gateway Filtering Tests**
-   - Need actual gateway filtering logic implementation
-   - Currently have: Gateway interfaces + QBO implementations
-   - Need: Filtering methods for Hygiene Tray vs Decision Console
+**Problem**: We have **TWO** QBO config implementations:
+1. **MVP**: `_clean/mvp/infra/rails/qbo/config.py` (QBOConfig) - simpler, working
+2. **Legacy**: `infra/config/rail_configs.py` (QBOSettings) - more comprehensive
 
-2. **Wiring Layer Tests**
-   - Need wiring/composition root implementation
-   - Currently have: Runway services + domain gateways
-   - Need: Dependency injection wiring in `runway/wiring.py`
+**Differences**:
+- **MVP QBOConfig**: Basic OAuth + API URLs (60 lines)
+- **Legacy QBOSettings**: OAuth + API URLs + Retry config + Sync config + Feature flags (97 lines)
+
+**Decision Needed** (for Task 11):
+- ✅ **RECOMMENDED**: Keep `infra/rails/{rail}/config.py` pattern (each rail owns its config)
+- ❌ **NOT RECOMMENDED**: Move to centralized `infra/config/rail_configs.py` (legacy pattern)
+
+**Action for Task 11**:
+1. Extract additional settings from legacy `QBOSettings`:
+   - `token_refresh_buffer_minutes`
+   - `max_api_retries`, `api_timeout_seconds`, `rate_limit_delay_seconds`
+   - `sync_batch_size`, `sync_retry_attempts`, `sync_retry_delay_seconds`
+   - Entity-specific feature flags (bills, invoices, customers, vendors)
+2. Merge into MVP `_clean/mvp/infra/rails/qbo/config.py`
+3. Keep rail-specific pattern for consistency
+
+### **Phase 1: Port Business Rules (Task 11)**
+**CRITICAL for product features** - Must do before building tray/console:
+
+1. **`infra/config/core_thresholds.py`** (P0 Critical)
+   - RunwayThresholds: CRITICAL_DAYS=7, WARNING_DAYS=30, HEALTHY_DAYS=90
+   - TrayPriorities: URGENT_SCORE=80, TYPE_WEIGHTS
+   - Required for runway calculations and tray priority scoring
+
+2. **`infra/config/feature_gates.py`** (P0 Critical)
+   - FeatureGateSettings: QBO-only mode detection
+   - Already using this pattern in architecture
+
+3. **`infra/config/exceptions.py`** (P1 High)
+   - IntegrationError, ValidationError, BusinessNotFoundError
+   - **Already ported**: `_clean/mvp/infra/config/exceptions.py` exists ✅
+
+4. **`infra/utils/validation.py`** (P1 High)
+   - Data validation for tray hygiene
+   - Field-level error reporting
 
 ### **Phase 2: Build Product Experiences**
-Once Task 8 complete:
+Once Task 11 complete:
 
-1. **Hygiene Tray Service**
-   - Bills tray (urgent/upcoming/overdue)
-   - AP hygiene (bills without vendors, incomplete bills)
+1. **Implement Gateway Filtering Logic**
+   - Add filtering methods to domain gateways
+   - Distinguish between Hygiene Tray data vs Decision Console data
+   - Test with real QBO data
 
-2. **Decision Console Service**
-   - Snapshot views with filtering
-   - Complete data for decision making
+2. **Implement Wiring Layer**
+   - Complete `runway/wiring.py` composition root
+   - Wire domain gateways → runway services
+   - Test dependency injection
 
-3. **Digest Service**
-   - Runway impact calculations
-   - Time-based grouping
+3. **Build First Experience Service**
+   - Start with Bill Tray (simpler than console)
+   - Use real QBO data from tests
+   - Prove end-to-end flow works
 
 ---
 
@@ -159,18 +192,35 @@ database_url = 'sqlite:///../../_clean/rowcol.db'  # DON'T DO THIS
 
 ---
 
-## **📋 Task Status Summary**
+## **📋 Task Status Summary (Tasks 1-11)**
 
+### **✅ Infrastructure Foundation (Tasks 1-8) - COMPLETE**
 | Task | Status | Notes |
 |------|--------|-------|
 | Task 1: Bootstrap MVP Nucleus | ✅ Complete | Foundation structure created |
 | Task 2: Copy QBO Infrastructure | ✅ Complete | QBO client with auto-refresh working |
-| Task 3: Database Schema | ✅ Complete | SQLite schema operational |
+| Task 3: Database Schema | ✅ Complete | SQLite schema + ORM operational |
 | Task 4: Sync Orchestrator | ✅ Complete | Smart Sync pattern implemented |
 | Task 5: Domain Gateways | ✅ Complete | Rail-agnostic interfaces created |
 | Task 6: Infra Gateways | ✅ Complete | QBO implementations working |
 | Task 7: Bridge to Runway | ✅ Complete | Services created, need wiring |
-| Task 8: Test & Validate | ⚠️ Partial | 18 tests passing, need gateway filtering + wiring |
+| Task 8: Test & Validate | ✅ Complete | **18/18 tests passing, all real QBO API** |
+
+**Note**: Tasks 1-8 focused on **QBO foundation only**. All critical issues resolved:
+- ✅ Database centralized with SQLAlchemy ORM
+- ✅ OAuth 2.0 with automatic token refresh
+- ✅ Real API testing (no mocks)
+- ✅ Smart Sync pattern working
+- ✅ Security rules enforced
+
+### **📋 New Infrastructure Tasks (Tasks 9-11) - PLANNED**
+| Task | Status | Notes |
+|------|--------|-------|
+| Task 9: API Infrastructure | 📋 Planned | Rate limiting, retry, circuit breaker (deferred - not urgent) |
+| Task 10: Utils & Validation | 📋 Planned | Validation, error handling, enums (some overlap with MVP) |
+| Task 11: Business Rules & Config | 📋 Planned | **CRITICAL for product features** - thresholds, feature gates, domain rules |
+
+**Note**: Tasks 9-11 are **new additions** discovered after Tasks 1-8 were complete. They port additional infrastructure from legacy code that will be needed for product features.
 
 ---
 
