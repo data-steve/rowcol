@@ -121,9 +121,39 @@ Keep the good stuff, but **copy only the parts** needed for Bills/Invoices/Balan
 
 **DB session**
 
-* **PORT** `infra/database/session.py`
+* **✅ PORTED** `infra/database/session.py` → `_clean/mvp/infra/db/session.py`
+  * Centralized database configuration with absolute path handling
+  * SQLAlchemy engine and SessionLocal factory
+  * `get_database_url()`, `get_database_engine()`, `get_db()` helper functions
+  * Environment variable support for `SQLALCHEMY_DATABASE_URL`
+  * Single source of truth for all database connections
 
-  * Reuse engine/session creation.
+* **✅ PORTED** `infra/database/models.py` → `_clean/mvp/infra/db/models.py`
+  * SQLAlchemy ORM models for database tables
+  * `SystemIntegrationToken` model for OAuth tokens
+  * Proper `Base` declarative base for all models
+  * Replaced raw SQL `text()` queries with proper ORM in auth service
+
+**API Infrastructure**
+
+* **📋 PLANNED (Task 9)** `infra/api/base_client.py` → `_clean/mvp/infra/api/base_client.py`
+  * Rate limiting with configurable limits per platform
+  * Exponential backoff retry logic with jitter
+  * Circuit breaker pattern for reliability
+  * Response caching with TTL
+  * Typed error hierarchy (RateLimitError, AuthenticationError, NetworkError)
+  * QBO-specific rate limits: 30 req/min (sandbox), 500 req/min (production)
+  * Status: Documented in Task 9, not yet implemented
+
+**Auth Infrastructure**
+
+* **📋 PLANNED (Task 9)** `infra/auth/auth.py` → `_clean/mvp/infra/auth/auth.py`
+  * JWT token management for user authentication (future)
+  * Pydantic request/response models
+  * HTTPBearer security for FastAPI
+  * Password validation patterns
+  * Note: For FUTURE user auth, NOT for QBO system tokens
+  * Status: Documented in Task 9, not yet implemented
 
 **Transaction log**
 
@@ -248,8 +278,10 @@ class BalancesGateway(Protocol):
 
 ### `infra/database/*`
 
-* `session.py`, `base.py`, `models.py` → **PORT/ADAPT** as needed for mirror tables.
-* `transaction.py` → **DROP** unless it’s your generic integration_log; prefer **one** `log_repo.py`.
+* **✅ PORTED** `session.py` → `_clean/mvp/infra/db/session.py` - Centralized database configuration with absolute paths
+* **✅ PORTED** `models.py` → `_clean/mvp/infra/db/models.py` - SQLAlchemy ORM models (`SystemIntegrationToken`, `Base`)
+* **✅ PORTED** `base.py` patterns → Folded into `models.py` with proper declarative base
+* `transaction.py` → **DROP** unless it's your generic integration_log; prefer **one** `log_repo.py`.
 
 ### `domains/ap/*`
 
@@ -313,8 +345,131 @@ class BalancesGateway(Protocol):
 
 * Transaction log: **IN** (generic `integration_log`, via `LogRepo`).
 * State mirror: **IN** (mirror tables + repos).
-* Smart sync: **IN**, but **wrapped** inside infra gateways (domains don’t instantiate it; runway never sees it).
-* Runway calculators: **IN** (that’s your product value).
+* Smart sync: **IN**, but **wrapped** inside infra gateways (domains don't instantiate it; runway never sees it).
+* Runway calculators: **IN** (that's your product value).
 * Data orchestrators (legacy): **OUT** (replaced by gateways).
 
-If you want, I can also draft a one-page **“Move Plan”** per file with concrete commit steps (old path → new path + TODOs).
+---
+
+## K) **ACTUAL MIGRATION STATUS** (What We've Done)
+
+### **✅ COMPLETED PORTS**
+
+#### **Database Infrastructure (✅ DONE)**
+```
+infra/database/session.py → _clean/mvp/infra/db/session.py
+  ✅ Centralized database configuration
+  ✅ Absolute path handling via _PROJECT_ROOT
+  ✅ Environment variable support (SQLALCHEMY_DATABASE_URL)
+  ✅ SessionLocal factory and get_db() helper
+  ✅ Single source of truth for all database connections
+
+infra/database/models.py → _clean/mvp/infra/db/models.py
+  ✅ SQLAlchemy ORM models (SystemIntegrationToken, Base)
+  ✅ Replaced raw SQL text() queries with ORM in auth service
+  ✅ Proper datetime handling and indexes
+  ✅ Status tracking for tokens (active, expired, revoked)
+
+infra/database/base.py → Merged into models.py
+  ✅ Declarative base patterns integrated
+```
+
+**Git Commits:**
+- `refactor: centralize database configuration in infra/db/session.py`
+- `refactor: replace raw SQL with SQLAlchemy ORM in auth.py`
+
+**Tests Passing:** ✅ All 18 tests passing with real QBO API
+
+---
+
+#### **QBO Infrastructure (✅ DONE)**
+```
+infra/qbo/auth.py → _clean/mvp/infra/rails/qbo/auth.py
+  ✅ OAuth 2.0 authentication service
+  ✅ Automatic token refresh with expiry checking
+  ✅ Database-backed token storage (no .env tokens)
+  ✅ Fixed unreachable return bug in get_valid_access_token()
+  ✅ Fixed field names (access_token vs accessToken)
+  ✅ SQLAlchemy ORM integration for token management
+
+infra/qbo/client.py → _clean/mvp/infra/rails/qbo/client.py
+  ✅ Raw HTTP client for QBO API
+  ✅ Automatic token refresh via auth service
+  ✅ GET/POST/PUT/DELETE methods
+  ✅ Proper error handling and logging
+  ⚠️  Missing: Rate limiting, retry logic, circuit breaker (Task 9)
+
+infra/qbo/config.py → _clean/mvp/infra/rails/qbo/config.py
+  ✅ QBO configuration from environment
+  ✅ Sandbox/production URLs
+  ✅ Client ID/secret management
+
+infra/qbo/dtos.py → _clean/mvp/infra/rails/qbo/dtos.py
+  ✅ Data transfer objects for QBO entities
+```
+
+**Git Commits:**
+- `feat: copy and sanitize QBO infrastructure for MVP`
+- `fix: QBO auth service bugs and add auto-refresh`
+
+**Tests Passing:** ✅ Real QBO API connectivity validated
+
+---
+
+### **📋 PLANNED (Task 9)**
+
+#### **API Infrastructure (📋 NOT YET PORTED)**
+```
+infra/api/base_client.py → _clean/mvp/infra/api/base_client.py
+  📋 Rate limiting with configurable limits
+  📋 Exponential backoff retry logic with jitter
+  📋 Circuit breaker pattern for reliability
+  📋 Response caching with TTL
+  📋 Typed error hierarchy (RateLimitError, AuthenticationError)
+  📋 QBO-specific: 30 req/min (sandbox), 500 req/min (production)
+
+Status: Documented in Task 9 of 0_EXECUTABLE_TASKS.md
+Why Deferred: Current simple client works for MVP, not hitting rate limits yet
+When Needed: Before production, multi-user load, or high-volume operations
+```
+
+#### **Auth Infrastructure (📋 NOT YET PORTED)**
+```
+infra/auth/auth.py → _clean/mvp/infra/auth/auth.py
+  📋 JWT token management for user authentication
+  📋 Pydantic request/response models
+  📋 HTTPBearer security for FastAPI
+  📋 Password validation patterns
+  
+Status: Documented in Task 9 of 0_EXECUTABLE_TASKS.md
+Note: For FUTURE user authentication, NOT for QBO system tokens
+Why Deferred: MVP uses system-level QBO tokens, no user auth yet
+When Needed: When adding multi-user/multi-tenant user authentication
+```
+
+---
+
+### **Migration Summary**
+
+**What's Working Now:**
+- ✅ Database layer with centralized configuration and ORM
+- ✅ QBO OAuth 2.0 with automatic token refresh
+- ✅ QBO API connectivity with real sandbox testing
+- ✅ 18 tests passing with real QBO API calls (no mocks)
+- ✅ SQLAlchemy ORM replacing raw SQL queries
+
+**What's Documented But Not Yet Implemented:**
+- 📋 API rate limiting and retry logic (Task 9)
+- 📋 Circuit breaker pattern (Task 9)
+- 📋 User authentication infrastructure (Task 9, future)
+
+**Key Architectural Wins:**
+1. **Single Database Source of Truth**: All code references `infra/db/session.py`
+2. **No Mocks in Tests**: All tests hit real QBO API
+3. **SQLAlchemy ORM Over Raw SQL**: Proper database abstraction
+4. **Automatic Token Refresh**: No manual token management
+5. **Clean Separation**: `_clean/mvp/` isolated from legacy code
+
+---
+
+If you want, I can also draft a one-page **"Move Plan"** per file with concrete commit steps (old path → new path + TODOs).
