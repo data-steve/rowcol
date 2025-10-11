@@ -278,4 +278,181 @@ Once business rules ported:
 
 ---
 
-**The QBO foundation is rock solid. All tests passing. Ready to build product experiences.**
+## **📋 Task 9: Port Production-Grade API Infrastructure (DEFERRED)**
+
+**Status**: 📋 Planned (not urgent)  
+**Priority**: P1 High (but deferred)  
+**Why Deferred**: Current simple client works for MVP, not hitting rate limits yet
+
+### **What This Task Does:**
+Ports production-grade patterns from `infra/api/base_client.py`:
+- Rate limiting with configurable limits
+- Exponential backoff retry logic
+- Circuit breaker pattern
+- Response caching with TTL
+- Typed error hierarchy
+
+### **When You'll Need It:**
+- Before production launch
+- Multi-user/high-volume scenarios
+- When hitting QBO rate limits (30 req/min sandbox, 500 req/min production)
+
+### **Quick Implementation:**
+1. Port `infra/api/base_client.py` → `_clean/mvp/infra/api/base_client.py`
+2. Update `QBORawClient` to extend `BaseAPIClient`
+3. Add retry logic to `QBOAuthService` for token refresh
+4. Test with `test_qbo_throttling.py` (already exists)
+
+**Decision**: Skip for now, implement when needed.
+
+---
+
+## **📋 Task 10: Port Infrastructure Utilities (OPTIONAL)**
+
+**Status**: 📋 Planned (some overlap with MVP)  
+**Priority**: P1 High  
+
+### **What This Task Does:**
+Ports utilities from `infra/utils/`:
+- **validation.py**: Data validation (HIGH VALUE for tray hygiene)
+- **error_handling.py**: Centralized error management decorators
+- **enums.py**: ⚠️ PARTIAL - `FreshnessHint` already exists in MVP
+
+### **What's Already in MVP:**
+- ✅ `FreshnessHint` in `_clean/mvp/infra/sync/entity_policy.py`
+- ✅ Basic error handling in gateways
+
+### **What's Useful to Port:**
+1. **validation.py** (HIGH VALUE)
+   - `ValidationResult`, `ValidationRule` dataclasses
+   - Business data validation for runway calculations
+   - Field-level error reporting for tray hygiene
+
+2. **error_handling.py** (HIGH VALUE)
+   - `@handle_integration_errors` decorator
+   - `@retry_with_backoff` decorator
+   - Eliminates duplicate try/catch patterns
+
+### **Quick Implementation:**
+1. Port `infra/utils/validation.py` → `_clean/mvp/infra/utils/validation.py`
+2. Port `infra/utils/error_handling.py` → `_clean/mvp/infra/utils/error_handling.py`
+3. Skip `enums.py` - already have what we need
+
+**Decision**: Port validation.py when building tray hygiene features.
+
+---
+
+## **📋 Task 11: Port Business Rules & Configuration (CRITICAL)**
+
+**Status**: 📋 Planned  
+**Priority**: P0 Critical - **DO THIS BEFORE PRODUCT FEATURES**  
+
+### **⚠️ Config Consolidation Required:**
+
+**Problem**: QBO config exists in two places:
+- **MVP**: `_clean/mvp/infra/rails/qbo/config.py` (60 lines, working)
+- **Legacy**: `infra/config/rail_configs.py::QBOSettings` (97 lines, comprehensive)
+
+**Action**: Merge additional settings into MVP config:
+```python
+# Add to _clean/mvp/infra/rails/qbo/config.py:
+- token_refresh_buffer_minutes
+- max_api_retries, api_timeout_seconds, rate_limit_delay_seconds  
+- sync_batch_size, sync_retry_attempts, sync_retry_delay_seconds
+- Entity-specific feature flags (bills, invoices, customers, vendors)
+```
+
+### **What This Task Does:**
+
+#### **1. Core Thresholds (P0 CRITICAL)**
+Port `infra/config/core_thresholds.py` → `_clean/mvp/infra/config/core_thresholds.py`
+
+**Why Critical**: Runway calculations and tray priority scoring depend on these:
+```python
+# RunwayThresholds
+CRITICAL_DAYS = 7      # Less than 1 week = critical alert
+WARNING_DAYS = 30      # Less than 1 month = warning
+HEALTHY_DAYS = 90      # More than 3 months = healthy
+
+# TrayPriorities  
+URGENT_SCORE = 80      # Requires immediate attention
+MEDIUM_SCORE = 60      # Should be handled today
+TYPE_WEIGHTS = {
+    "overdue_bill": 35,
+    "upcoming_payroll": 40,
+    "overdue_invoice": 30,
+    ...
+}
+
+# DigestSettings
+LOOKBACK_DAYS = 90
+FORECAST_DAYS = 30
+
+# RunwayAnalysisSettings
+AP_OPTIMIZATION_EFFICIENCY = 0.1   # 10% of overdue AP can be optimized
+AR_COLLECTION_EFFICIENCY = 0.3     # 30% collection efficiency
+```
+
+#### **2. Feature Gates (P0 CRITICAL)**
+Port `infra/config/feature_gates.py` → `_clean/mvp/infra/config/feature_gates.py`
+
+**Why Critical**: Already using this architecture pattern:
+```python
+class FeatureGateSettings:
+    enable_qbo = os.getenv("ENABLE_QBO_INTEGRATION", "true")
+    enable_ramp = os.getenv("ENABLE_RAMP_INTEGRATION", "false")
+    
+    # QBO-only mode detection
+    is_qbo_only_mode = enable_qbo and not any([enable_ramp, enable_plaid, enable_stripe])
+    
+    # Product capabilities
+    enable_payment_execution = enable_ramp  # Requires Ramp
+    enable_reserve_management = enable_ramp
+```
+
+#### **3. Exceptions (P1 HIGH)**
+**Already done** ✅: `_clean/mvp/infra/config/exceptions.py` exists  
+**Action**: Just verify imports work
+
+#### **4. Domain Rules (NEEDED FOR FEATURES)**
+
+Port when building respective features:
+- `collections_rules.py` → AR collections logic (for collections console)
+- `payment_rules.py` → AP payment logic (for payment scheduling)
+- `risk_assessment_rules.py` → Risk scoring (for decision console)
+
+### **Quick Implementation Checklist:**
+
+**Step 1: Consolidate QBO Config**
+- [ ] Open `_clean/mvp/infra/rails/qbo/config.py`
+- [ ] Add settings from `infra/config/rail_configs.py::QBOSettings`
+- [ ] Test that existing code still works
+
+**Step 2: Port Core Thresholds**
+- [ ] Copy `infra/config/core_thresholds.py` → `_clean/mvp/infra/config/core_thresholds.py`
+- [ ] Keep all thresholds exactly as-is (they're battle-tested)
+- [ ] Verify imports work
+
+**Step 3: Port Feature Gates**
+- [ ] Copy `infra/config/feature_gates.py` → `_clean/mvp/infra/config/feature_gates.py`
+- [ ] Verify QBO-only mode detection works
+- [ ] Test feature flag checks
+
+**Step 4: Verify Exceptions**
+- [ ] Confirm `_clean/mvp/infra/config/exceptions.py` works
+- [ ] Update imports in gateways if needed
+
+**Step 5: Test Everything**
+```bash
+# Verify imports work
+python -c "from infra.config.core_thresholds import RunwayThresholds; print(RunwayThresholds.CRITICAL_DAYS)"
+python -c "from infra.config.feature_gates import FeatureGateSettings; print('OK')"
+python -c "from infra.config.exceptions import IntegrationError; print('OK')"
+
+# Run existing tests - should still pass
+poetry run pytest tests/ -v
+```
+
+---
+
+**The QBO foundation is rock solid. All tests passing. Port business rules (Task 11), then ready to test product experiences.**
