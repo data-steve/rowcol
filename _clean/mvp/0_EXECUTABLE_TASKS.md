@@ -1907,9 +1907,198 @@ def test_throttle_hygiene():
 
 ---
 
+## **Task 10: Port Infrastructure Utilities**
+
+- **Status:** `[📋]` **RECOMMENDED FOR INFRA**
+- **Priority:** P1 High
+- **Justification:** Essential utilities for data validation, error handling, and consistency - needed before building product features
+- **Execution Status:** **Execution-Ready**
+
+### **Task Checklist:**
+- [ ] Port `infra/utils/validation.py` → `_clean/mvp/infra/utils/validation.py`
+- [ ] Port `infra/utils/error_handling.py` → `_clean/mvp/infra/utils/error_handling.py`
+- [ ] Port `infra/utils/enums.py` → `_clean/mvp/infra/utils/enums.py`
+- [ ] Update imports in existing MVP code to use new utilities
+- [ ] All files can be imported without errors
+- [ ] Tests pass with new utilities
+- [ ] All files properly documented
+
+### **Problem Statement**
+Need infrastructure utilities for data validation, error handling, and unified enums to support product features and ensure data quality.
+
+### **User Story**
+"As a developer, I need centralized validation and error handling utilities so that I can build product features with consistent data quality and error management."
+
+### **Solution Overview**
+Port production-grade utilities from legacy `infra/utils/` to MVP:
+- **validation.py**: Comprehensive data validation for business data, API inputs, configuration
+- **error_handling.py**: Decorators and utilities for consistent error handling across services
+- **enums.py**: Unified enums for sync strategies, job status, priorities
+
+### **Files to Port:**
+
+```python
+# infra/utils/validation.py → _clean/mvp/infra/utils/validation.py
+- ValidationSeverity (WARNING, ERROR, CRITICAL)
+- ValidationResult dataclass
+- ValidationRule dataclass
+- Comprehensive validators for:
+  * Business data (runway calculations, financial data)
+  * API inputs (sanitization, constraint checking)
+  * Configuration values
+  * Custom validation rules
+- Field-level error reporting
+- Status: HIGH VALUE - Essential for tray hygiene and data quality
+
+# infra/utils/error_handling.py → _clean/mvp/infra/utils/error_handling.py
+- ErrorContext enum (API_CALL, DATABASE_OPERATION, etc.)
+- @handle_integration_errors decorator
+- @handle_database_errors decorator
+- @retry_with_backoff decorator
+- Centralized logging and error reporting
+- Status: HIGH VALUE - Eliminates duplicate try/catch patterns
+
+# infra/utils/enums.py → _clean/mvp/infra/utils/enums.py
+- SyncStrategy (ON_DEMAND, SCHEDULED, EVENT_TRIGGERED, BACKGROUND)
+- SyncPriority (HIGH, MEDIUM, LOW)
+- BulkSyncStrategy (FULL_SYNC, INCREMENTAL, SELECTIVE)
+- JobStatus (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
+- JobPriority (HIGH, MEDIUM, LOW)
+- Status: MEDIUM VALUE - Ensures consistency across codebase
+```
+
+### **Dependencies:** Task 9 (API Infrastructure) - error handling integrates with API patterns
+
+### **Verification:**
+- Run `ls -la _clean/mvp/infra/utils/` - should show utility files
+- Run `python -c "from infra.utils.validation import ValidationResult; print('Validation imported')"`
+- Run `python -c "from infra.utils.error_handling import handle_integration_errors; print('Error handling imported')"`
+- Run `python -c "from infra.utils.enums import SyncStrategy; print('Enums imported')"`
+- Run `pytest _clean/mvp/tests/ -v` - all tests should pass
+
+### **Definition of Done:**
+- [ ] All utility files ported to MVP
+- [ ] Existing code updated to use utilities where appropriate
+- [ ] All tests pass
+- [ ] All files properly documented
+- [ ] No breaking changes to existing functionality
+
+### **Git Commit:**
+- `git add _clean/mvp/infra/utils/`
+- `git commit -m "feat: port infrastructure utilities (validation, error handling, enums)"`
+
+---
+
+## **Task 11: Port Business Rules and Configuration**
+
+- **Status:** `[📋]` **CRITICAL FOR PRODUCT**
+- **Priority:** P0 Critical
+- **Justification:** Core product logic depends on these business rules - needed before building product features
+- **Execution Status:** **Execution-Ready**
+
+### **Task Checklist:**
+- [ ] Port `infra/config/core_thresholds.py` → `_clean/mvp/infra/config/core_thresholds.py`
+- [ ] Port `infra/config/feature_gates.py` → `_clean/mvp/infra/config/feature_gates.py`
+- [ ] Port `infra/config/collections_rules.py` → `_clean/mvp/infra/config/collections_rules.py`
+- [ ] Port `infra/config/payment_rules.py` → `_clean/mvp/infra/config/payment_rules.py`
+- [ ] Port `infra/config/risk_assessment_rules.py` → `_clean/mvp/infra/config/risk_assessment_rules.py`
+- [ ] Port `infra/config/exceptions.py` → `_clean/mvp/infra/config/exceptions.py`
+- [ ] Port `infra/config/rail_configs.py` → `_clean/mvp/infra/config/rail_configs.py` (QBO portions)
+- [ ] Update imports in existing MVP code
+- [ ] All files can be imported without errors
+- [ ] Tests pass with new configuration
+- [ ] All files properly documented
+
+### **Problem Statement**
+Need to port business rules, thresholds, and configuration from legacy codebase to support product features:
+- **Runway calculations** depend on thresholds (CRITICAL_DAYS, WARNING_DAYS)
+- **Tray priority scoring** depends on weights and scoring rules
+- **Feature gates** control QBO-only mode and multi-rail functionality
+- **Collections/Payment rules** define business logic for AP/AR
+- **Risk assessment** provides scoring algorithms
+
+### **User Story**
+"As a developer, I need centralized business rules and configuration so that product features use consistent thresholds and logic across the application."
+
+### **Solution Overview**
+Port business rules and configuration from legacy `infra/config/` to MVP, maintaining clear documentation and ownership:
+
+```python
+# infra/config/core_thresholds.py → _clean/mvp/infra/config/core_thresholds.py
+- RunwayThresholds: CRITICAL_DAYS=7, WARNING_DAYS=30, HEALTHY_DAYS=90
+- TrayPriorities: URGENT_SCORE=80, MEDIUM_SCORE=60, TYPE_WEIGHTS
+- DigestSettings: LOOKBACK_DAYS=90, FORECAST_DAYS=30
+- RunwayAnalysisSettings: AP_OPTIMIZATION_EFFICIENCY, AR_COLLECTION_EFFICIENCY
+- Status: CRITICAL - Core product logic depends on these
+
+# infra/config/feature_gates.py → _clean/mvp/infra/config/feature_gates.py
+- IntegrationRail enum (QBO, RAMP, PLAID, STRIPE)
+- FeatureGateSettings class
+- is_rail_enabled(), can_use_feature()
+- QBO-only mode detection
+- Status: CRITICAL - Already using this pattern in architecture
+
+# infra/config/collections_rules.py → _clean/mvp/infra/config/collections_rules.py
+- AR collections business logic
+- Customer risk scoring
+- Payment reliability thresholds
+- Status: NEEDED FOR AR - Port when building collections console
+
+# infra/config/payment_rules.py → _clean/mvp/infra/config/payment_rules.py
+- AP payment business logic
+- Vendor risk scoring
+- Payment timing optimization
+- Status: NEEDED FOR AP - Port when building payment scheduling
+
+# infra/config/risk_assessment_rules.py → _clean/mvp/infra/config/risk_assessment_rules.py
+- Customer & vendor risk scoring algorithms
+- Risk threshold definitions
+- Status: NEEDED FOR DECISIONS - Port when building decision console
+
+# infra/config/exceptions.py → _clean/mvp/infra/config/exceptions.py
+- IntegrationError, ValidationError, BusinessNotFoundError
+- Custom exception hierarchy
+- Status: HIGH VALUE - Consistent error handling
+
+# infra/config/rail_configs.py → _clean/mvp/infra/config/rail_configs.py
+- QBO-specific configuration (extract QBO portions)
+- API endpoints, rate limits, sync frequencies
+- Status: NEEDED - Consolidate existing QBO config here
+```
+
+### **Architecture Note:**
+The `infra/config/` folder follows a clear pattern:
+- **Domain-specific rule files** (collections, payment, risk)
+- **Documented business logic** with industry standards
+- **Configurable by business** (marked for future per-tenant customization)
+- **Version controlled** (all changes tracked in git)
+
+### **Dependencies:** Task 10 (Infrastructure Utilities) - validation and exceptions used by config
+
+### **Verification:**
+- Run `ls -la _clean/mvp/infra/config/` - should show config files
+- Run `python -c "from infra.config.core_thresholds import RunwayThresholds; print(f'Critical days: {RunwayThresholds.CRITICAL_DAYS}')"`
+- Run `python -c "from infra.config.feature_gates import FeatureGateSettings; print('Feature gates imported')"`
+- Run `python -c "from infra.config.exceptions import ValidationError; print('Exceptions imported')"`
+- Run `pytest _clean/mvp/tests/ -v` - all tests should pass
+
+### **Definition of Done:**
+- [ ] All config files ported to MVP
+- [ ] Business logic properly documented with industry standards
+- [ ] Existing code updated to use config where appropriate
+- [ ] All tests pass
+- [ ] All files properly documented
+- [ ] README.md in config/ folder explaining architecture
+
+### **Git Commit:**
+- `git add _clean/mvp/infra/config/`
+- `git commit -m "feat: port business rules and configuration (thresholds, feature gates, domain rules)"`
+
+---
+
 ## **Summary**
 
-This document provides 9 executable tasks in the correct priority order:
+This document provides 11 executable tasks in the correct priority order:
 
 1. **Task 1**: Bootstrap MVP Nucleus (Foundation)
 2. **Task 2**: Copy and Sanitize QBO Infrastructure (QBO Client)
@@ -1920,11 +2109,13 @@ This document provides 9 executable tasks in the correct priority order:
 7. **Task 7**: Bridge Domain Gateways to Runway Services
 8. **Task 8**: Test Gateway and Wiring Layer
 9. **Task 9**: Port Production-Grade API Infrastructure (Rate Limiting, Retry, Circuit Breaker)
+10. **Task 10**: Port Infrastructure Utilities (Validation, Error Handling, Enums)
+11. **Task 11**: Port Business Rules and Configuration (Thresholds, Feature Gates, Domain Rules)
 
 ### **Additional Solutioning Tasks**
 
 For deeper product and workflow solutioning, see:
-- **`_clean/mvp/advisor_workflow_solutioning.md`** - Tasks 10-12 for advisor workflow, calculators, and experience services
+- **`_clean/mvp/advisor_workflow_solutioning.md`** - Tasks 12-14 for advisor workflow, calculators, and experience services
 
 These solutioning tasks require extensive product research and user story development before implementation.
 

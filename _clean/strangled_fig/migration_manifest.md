@@ -283,6 +283,76 @@ class BalancesGateway(Protocol):
 * **✅ PORTED** `base.py` patterns → Folded into `models.py` with proper declarative base
 * `transaction.py` → **DROP** unless it's your generic integration_log; prefer **one** `log_repo.py`.
 
+### `infra/utils/*` ⭐ **RECOMMENDED PORT**
+
+* **📋 PORT (Task 10)** `validation.py` → `_clean/mvp/infra/utils/validation.py`
+  * Comprehensive data validation utilities
+  * Business data validation (runway calculations, financial data)
+  * API input validation and sanitization
+  * Custom validation rules and constraints
+  * Field-level error reporting
+  * Status: **HIGH VALUE** - Essential for data quality and tray hygiene
+
+* **📋 PORT (Task 10)** `error_handling.py` → `_clean/mvp/infra/utils/error_handling.py`
+  * Centralized error management decorators
+  * API call error handling
+  * Database operation error handling
+  * Retry logic with exponential backoff
+  * Status: **HIGH VALUE** - Eliminates duplicate try/catch patterns
+
+* **📋 PORT (Task 10)** `enums.py` → `_clean/mvp/infra/utils/enums.py`
+  * Unified enums across application
+  * SyncStrategy, SyncPriority, BulkSyncStrategy
+  * JobStatus, JobPriority
+  * Status: **MEDIUM VALUE** - Ensures consistency
+
+### `infra/config/*` ⭐ **CRITICAL FOR PRODUCT**
+
+* **📋 PORT (Task 11)** `core_thresholds.py` → `_clean/mvp/infra/config/core_thresholds.py`
+  * Runway calculation thresholds (CRITICAL_DAYS=7, WARNING_DAYS=30, HEALTHY_DAYS=90)
+  * Tray priority scoring and weights
+  * Digest settings and forecast parameters
+  * Runway analysis factors (AP optimization, AR collection efficiency)
+  * Status: **CRITICAL** - Core product logic depends on these
+
+* **📋 PORT (Task 11)** `feature_gates.py` → `_clean/mvp/infra/config/feature_gates.py`
+  * Multi-rail feature gating (QBO, Ramp, Plaid, Stripe)
+  * QBO-only mode detection
+  * Product capability flags (reserve management, payment execution)
+  * Status: **CRITICAL** - Already using this architecture pattern
+
+* **📋 PORT (Task 11)** `collections_rules.py` → `_clean/mvp/infra/config/collections_rules.py`
+  * AR collections business logic
+  * Customer risk scoring
+  * Payment reliability thresholds
+  * Status: **NEEDED FOR AR** - Port when building collections console
+
+* **📋 PORT (Task 11)** `payment_rules.py` → `_clean/mvp/infra/config/payment_rules.py`
+  * AP payment business logic
+  * Vendor risk scoring
+  * Payment timing optimization
+  * Status: **NEEDED FOR AP** - Port when building payment scheduling
+
+* **📋 PORT (Task 11)** `risk_assessment_rules.py` → `_clean/mvp/infra/config/risk_assessment_rules.py`
+  * Customer & vendor risk scoring algorithms
+  * Risk threshold definitions
+  * Status: **NEEDED FOR DECISIONS** - Port when building decision console
+
+* **📋 PORT (Task 11)** `communication_rules.py` → `_clean/mvp/infra/config/communication_rules.py`
+  * Email frequency rules
+  * Contact preferences
+  * Status: **FUTURE** - Not needed for MVP
+
+* **📋 PORT (Task 11)** `rail_configs.py` → `_clean/mvp/infra/config/rail_configs.py`
+  * Rail-specific configuration (QBO, Ramp, Plaid, Stripe)
+  * API endpoints, rate limits, sync frequencies
+  * Status: **NEEDED** - QBO portions already exist, consolidate here
+
+* **📋 PORT (Task 11)** `exceptions.py` → `_clean/mvp/infra/config/exceptions.py`
+  * Custom exception hierarchy
+  * IntegrationError, ValidationError, BusinessNotFoundError
+  * Status: **HIGH VALUE** - Consistent error handling
+
 ### `domains/ap/*`
 
 * `models/*` → **ADAPT**: use as source for Mirror shape if aligned; otherwise keep domain models separate from physical mirror models.
