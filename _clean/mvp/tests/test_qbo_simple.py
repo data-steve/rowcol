@@ -11,7 +11,8 @@ This test proves that:
 import pytest
 import os
 import httpx
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+from conftest import get_database_engine
 
 
 @pytest.mark.qbo_real_api
@@ -24,8 +25,7 @@ class TestQBOSimpleAPI:
         print("\n🔥 QBO API CONNECTIVITY TEST")
         
         # Get tokens from system integration tokens table
-        database_url = 'sqlite:///../../_clean/rowcol.db'  # Use the clean root database
-        engine = create_engine(database_url)
+        engine = get_database_engine()
 
         with engine.connect() as conn:
             result = conn.execute(text(
@@ -71,19 +71,16 @@ class TestQBOSimpleAPI:
                 else:
                     pytest.fail(f"QBO API call failed with status {response.status_code}")
 
-    @pytest.mark.asyncio
-    async def test_qbo_bills_query(self):
+    def test_qbo_bills_query(self):
         """Test that we can query bills from QBO sandbox."""
         print("\n🔥 QBO BILLS QUERY TEST")
         
-        # Get tokens from system integration tokens table
-        database_url = 'sqlite:///../../_clean/rowcol.db'  # Use the clean root database
-        engine = create_engine(database_url)
+        # Get realm_id from database
+        engine = get_database_engine()
 
         with engine.connect() as conn:
             result = conn.execute(text(
-                "SELECT external_id, access_token, refresh_token "
-                "FROM system_integration_tokens "
+                "SELECT external_id FROM system_integration_tokens "
                 "WHERE rail = 'qbo' AND environment = 'sandbox' AND status = 'active' "
                 "ORDER BY updated_at DESC LIMIT 1"
             )).fetchone()
@@ -91,63 +88,50 @@ class TestQBOSimpleAPI:
             if not result:
                 pytest.skip("No QBO system tokens found. Run qbo_token_setup.py --init-from-json first.")
             
-            realm_id, access_token, refresh_token = result
+            realm_id = result[0]
             
-            if not all([access_token, realm_id]):
-                pytest.skip("QBO business missing tokens.")
+            if not realm_id:
+                pytest.skip("QBO business missing realm_id.")
             
-            print(f"✅ Testing with realm: {realm_id}")
+            print(f"✅ Testing with realm: {realm_id[:10]}...")
+            
+            # Use QBO client with auto-refresh
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from infra.rails.qbo.client import QBORawClient
+            
+            client = QBORawClient("system", realm_id)
             
             # Test QBO Bills query
             print("\n📋 Testing QBO Bills query")
-            url = f"https://sandbox-quickbooks.api.intuit.com/v3/company/{realm_id}/query"
-            headers = {
-                "Authorization": f"Bearer {access_token}",
-                "Accept": "application/json",
-                "Content-Type": "application/text"
-            }
-            
-            # QBO Query Language (QQL) to get bills
-            query = "SELECT * FROM Bill MAXRESULTS 5"
-            
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(url, headers=headers, params={"query": query})
+            try:
+                response = client.get("query?query=SELECT * FROM Bill MAXRESULTS 5")
                 
-                print(f"📊 Response status: {response.status_code}")
+                bills = response.get('QueryResponse', {}).get('Bill', [])
+                print("✅ SUCCESS: QBO Bills query works!")
+                print(f"✅ Found {len(bills)} bills")
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    bills = data.get('QueryResponse', {}).get('Bill', [])
-                    print("✅ SUCCESS: QBO Bills query works!")
-                    print(f"✅ Found {len(bills)} bills")
-                    
-                    if bills:
-                        first_bill = bills[0]
-                        print(f"✅ First bill ID: {first_bill.get('Id', 'N/A')}")
-                        print(f"✅ First bill total: {first_bill.get('TotalAmt', 'N/A')}")
-                    
-                    assert response.status_code == 200
-                elif response.status_code == 401:
-                    pytest.fail("QBO API returned 401 - tokens are invalid. Run qbo_token_setup.py --init-from-json")
-                else:
-                    print(f"⚠️  QBO Bills query returned status {response.status_code}")
-                    print(f"⚠️  Response: {response.text[:200]}...")
-                    # Don't fail the test - bills might not exist in sandbox
-                    assert response.status_code in [200, 400]  # 400 is OK if no bills exist
+                if bills:
+                    first_bill = bills[0]
+                    print(f"✅ First bill ID: {first_bill.get('Id', 'N/A')}")
+                    print(f"✅ First bill total: {first_bill.get('TotalAmt', 'N/A')}")
+                
+                assert 'QueryResponse' in response
+            except Exception as e:
+                print(f"❌ QBO Bills query failed: {e}")
+                pytest.fail(f"QBO Bills query failed: {e}")
 
-    @pytest.mark.asyncio
-    async def test_qbo_accounts_query(self):
+    def test_qbo_accounts_query(self):
         """Test that we can query accounts from QBO sandbox."""
         print("\n🔥 QBO ACCOUNTS QUERY TEST")
         
-        # Get tokens from system integration tokens table
-        database_url = 'sqlite:///../../_clean/rowcol.db'  # Use the clean root database
-        engine = create_engine(database_url)
+        # Get realm_id from database
+        engine = get_database_engine()
 
         with engine.connect() as conn:
             result = conn.execute(text(
-                "SELECT external_id, access_token, refresh_token "
-                "FROM system_integration_tokens "
+                "SELECT external_id FROM system_integration_tokens "
                 "WHERE rail = 'qbo' AND environment = 'sandbox' AND status = 'active' "
                 "ORDER BY updated_at DESC LIMIT 1"
             )).fetchone()
@@ -155,49 +139,40 @@ class TestQBOSimpleAPI:
             if not result:
                 pytest.skip("No QBO system tokens found. Run qbo_token_setup.py --init-from-json first.")
             
-            realm_id, access_token, refresh_token = result
+            realm_id = result[0]
             
-            if not all([access_token, realm_id]):
-                pytest.skip("QBO business missing tokens.")
+            if not realm_id:
+                pytest.skip("QBO business missing realm_id.")
             
-            print(f"✅ Testing with realm: {realm_id}")
+            print(f"✅ Testing with realm: {realm_id[:10]}...")
+            
+            # Use QBO client with auto-refresh
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from infra.rails.qbo.client import QBORawClient
+            
+            client = QBORawClient("system", realm_id)
             
             # Test QBO Accounts query
             print("\n📋 Testing QBO Accounts query")
-            url = f"https://sandbox-quickbooks.api.intuit.com/v3/company/{realm_id}/query"
-            headers = {
-                "Authorization": f"Bearer {access_token}",
-                "Accept": "application/json",
-                "Content-Type": "application/text"
-            }
-            
-            # QBO Query Language (QQL) to get accounts
-            query = "SELECT * FROM Account MAXRESULTS 5"
-            
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(url, headers=headers, params={"query": query})
+            try:
+                response = client.get("query?query=SELECT * FROM Account MAXRESULTS 5")
                 
-                print(f"📊 Response status: {response.status_code}")
+                accounts = response.get('QueryResponse', {}).get('Account', [])
+                print("✅ SUCCESS: QBO Accounts query works!")
+                print(f"✅ Found {len(accounts)} accounts")
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    accounts = data.get('QueryResponse', {}).get('Account', [])
-                    print("✅ SUCCESS: QBO Accounts query works!")
-                    print(f"✅ Found {len(accounts)} accounts")
-                    
-                    if accounts:
-                        first_account = accounts[0]
-                        print(f"✅ First account: {first_account.get('Name', 'N/A')}")
-                        print(f"✅ Account type: {first_account.get('AccountType', 'N/A')}")
-                    
-                    assert response.status_code == 200
-                elif response.status_code == 401:
-                    pytest.fail("QBO API returned 401 - tokens are invalid. Run qbo_token_setup.py --init-from-json")
-                else:
-                    print(f"⚠️  QBO Accounts query returned status {response.status_code}")
-                    print(f"⚠️  Response: {response.text[:200]}...")
-                    # Don't fail the test - accounts might not exist in sandbox
-                    assert response.status_code in [200, 400]  # 400 is OK if no accounts exist
+                if accounts:
+                    first_account = accounts[0]
+                    print(f"✅ First account: {first_account.get('Name', 'N/A')}")
+                    print(f"✅ Account type: {first_account.get('AccountType', 'N/A')}")
+                
+                assert 'QueryResponse' in response
+                assert len(accounts) > 0
+            except Exception as e:
+                print(f"❌ QBO Accounts query failed: {e}")
+                pytest.fail(f"QBO Accounts query failed: {e}")
 
 
 if __name__ == "__main__":

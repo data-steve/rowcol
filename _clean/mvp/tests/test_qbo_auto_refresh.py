@@ -10,9 +10,10 @@ This test proves that:
 
 import pytest
 import os
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from conftest import get_database_engine
 
 from infra.rails.qbo.client import QBORawClient
 from infra.rails.qbo.auth import QBOAuthService, QBOEnvironment
@@ -27,8 +28,7 @@ class TestQBOAutoRefresh:
         print("\n🔥 QBO AUTO-REFRESH TEST")
         
         # Get realm_id from database
-        database_url = 'sqlite:///../../_clean/rowcol.db'  # Use the clean root database
-        engine = create_engine(database_url)
+        engine = get_database_engine()
 
         with engine.connect() as conn:
             result = conn.execute(text(
