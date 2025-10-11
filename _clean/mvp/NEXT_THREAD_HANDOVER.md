@@ -146,20 +146,25 @@ poetry run pytest tests/ -v -m qbo_real_api
 ### **Phase 2: Build Product Experiences**
 Once Task 11 complete:
 
-1. **Implement Gateway Filtering Logic**
-   - Add filtering methods to domain gateways
-   - Distinguish between Hygiene Tray data vs Decision Console data
-   - Test with real QBO data
+**NOTE**: Most of this is already done! Just needs testing:
 
-2. **Implement Wiring Layer**
-   - Complete `runway/wiring.py` composition root
-   - Wire domain gateways → runway services
-   - Test dependency injection
+1. **✅ Gateway Filtering - DONE**
+   - `list_incomplete()` - Bills/invoices with missing data (Hygiene Tray)
+   - `list_payment_ready()` - Bills ready for payment scheduling (Decision Console)
+   - **Location**: `_clean/mvp/infra/gateways/qbo/bills_gateway.py` (lines 57, 75)
 
-3. **Build First Experience Service**
-   - Start with Bill Tray (simpler than console)
-   - Use real QBO data from tests
-   - Prove end-to-end flow works
+2. **✅ Wiring Layer - DONE**
+   - Full composition root in `_clean/mvp/runway/wiring.py`
+   - Factory methods: `create_bills_gateway()`, `create_tray_service()`, `create_console_service()`
+   - Proper dependency injection with singleton repos
+   - **Status**: 270 lines of production-ready wiring code
+
+3. **✅ Experience Services - DONE**
+   - **TrayService**: `_clean/mvp/runway/services/tray_service.py` (uses `list_incomplete()`)
+   - **ConsoleService**: `_clean/mvp/runway/services/console_service.py` (uses `list_payment_ready()`)
+   - **DigestService**: Consumes Tray + Console outputs (no direct QBO calls)
+
+**What's Missing**: Integration tests to prove the full stack works end-to-end!
 
 ---
 
@@ -247,20 +252,29 @@ database_url = 'sqlite:///../../_clean/rowcol.db'  # DON'T DO THIS
 
 ## **💡 Next Thread Should Focus On**
 
-1. **Implement Gateway Filtering Logic**
-   - Add filtering methods to domain gateways
-   - Distinguish between Hygiene Tray data vs Decision Console data
+**Priority 1: Port Business Rules (Task 11 - CRITICAL)**
+Before testing product features, we need:
+1. **`infra/config/core_thresholds.py`** - Runway thresholds, tray priorities (CRITICAL)
+2. **`infra/config/feature_gates.py`** - QBO-only mode detection (CRITICAL)
+3. **`infra/utils/validation.py`** - Data validation for tray hygiene (HIGH VALUE)
+4. **`infra/config/exceptions.py`** - Already done ✅, but verify imports work
+
+**Priority 2: Integration Testing**
+Once business rules ported:
+1. **Test Full Stack End-to-End**
+   - TrayService → Gateway → Sync → QBO → Mirror → Domain objects
+   - Verify filtering works (`list_incomplete()`, `list_payment_ready()`)
    - Test with real QBO data
 
-2. **Implement Wiring Layer**
-   - Complete `runway/wiring.py` composition root
-   - Wire domain gateways → runway services
-   - Test dependency injection
+2. **Test Wiring Layer**
+   - Verify `create_tray_service()` creates working service
+   - Verify dependency injection works correctly
+   - Test with multiple advisor/business combinations
 
-3. **Build First Experience Service**
-   - Start with Bill Tray (simpler than console)
-   - Use real QBO data from tests
-   - Prove end-to-end flow works
+3. **Build API Endpoints** (Optional)
+   - `/api/tray/{business_id}` - Hygiene tray
+   - `/api/console/{business_id}` - Decision console
+   - Prove HTTP → Service → Gateway → QBO flow works
 
 ---
 
