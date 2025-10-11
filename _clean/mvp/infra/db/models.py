@@ -13,6 +13,29 @@ from typing import Optional
 
 Base = declarative_base()
 
+
+class SystemIntegrationToken(Base):
+    """System-level integration tokens for QBO OAuth."""
+    __tablename__ = 'system_integration_tokens'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    rail = Column(String(50), nullable=False, index=True)  # 'qbo', 'ramp', 'plaid', 'stripe'
+    environment = Column(String(50), nullable=False)  # 'sandbox', 'production'
+    external_id = Column(String(255), nullable=True)  # realm_id for QBO
+    access_token = Column(Text, nullable=True)
+    refresh_token = Column(Text, nullable=True)
+    access_expires_at = Column(DateTime, nullable=True)
+    refresh_expires_at = Column(DateTime, nullable=True)
+    status = Column(String(50), default='active')  # 'active', 'expired', 'revoked'
+    created_at = Column(DateTime, nullable=False, default=func.now())
+    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+    
+    # Composite index for common queries
+    __table_args__ = (
+        Index('idx_system_tokens_rail_env', 'rail', 'environment', 'status'),
+    )
+
+
 class MirrorBill(Base):
     """Mirror table for bills from QBO."""
     __tablename__ = 'mirror_bills'

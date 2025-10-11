@@ -389,32 +389,26 @@ class QBOAuthService:
             }
     
     def _load_system_tokens(self) -> Optional[Dict[str, Any]]:
-        """Load system tokens from database."""
+        """Load system tokens from database using SQLAlchemy ORM."""
         try:
-            from sqlalchemy import text
-            from infra.db.session import get_database_engine
+            from infra.db.session import SessionLocal
+            from infra.db.models import SystemIntegrationToken
             
-            # Use centralized database configuration
-            engine = get_database_engine()
-            
-            with engine.connect() as conn:
-                result = conn.execute(text("""
-                    SELECT access_token, refresh_token, access_expires_at, refresh_expires_at, external_id
-                    FROM system_integration_tokens 
-                    WHERE rail = 'qbo' 
-                    AND environment = 'sandbox'
-                    AND status = 'active'
-                    ORDER BY updated_at DESC
-                    LIMIT 1
-                """)).fetchone()
+            # Use SQLAlchemy ORM
+            with SessionLocal() as session:
+                token = session.query(SystemIntegrationToken).filter(
+                    SystemIntegrationToken.rail == 'qbo',
+                    SystemIntegrationToken.environment == 'sandbox',
+                    SystemIntegrationToken.status == 'active'
+                ).order_by(SystemIntegrationToken.updated_at.desc()).first()
                 
-                if result:
+                if token:
                     return {
-                        'access_token': result[0],
-                        'refresh_token': result[1],
-                        'access_expires_at': result[2],
-                        'refresh_expires_at': result[3],
-                        'external_id': result[4]
+                        'access_token': token.access_token,
+                        'refresh_token': token.refresh_token,
+                        'access_expires_at': token.access_expires_at,
+                        'refresh_expires_at': token.refresh_expires_at,
+                        'external_id': token.external_id
                     }
                 return None
                 
@@ -437,61 +431,44 @@ class QBOAuthService:
             return None
     
     def _save_system_tokens(self, tokens: Dict[str, Any]) -> bool:
-        """Save system tokens to database."""
+        """Save system tokens to database using SQLAlchemy ORM."""
         try:
-            from sqlalchemy import text
-            from infra.db.session import get_database_engine
+            from infra.db.session import SessionLocal
+            from infra.db.models import SystemIntegrationToken
             
             self.logger.info("Saving refreshed tokens to database")
             
-            # Use centralized database configuration
-            engine = get_database_engine()
-            
-            with engine.connect() as conn:
+            # Use SQLAlchemy ORM
+            with SessionLocal() as session:
                 # Check if record exists
-                existing = conn.execute(text("""
-                    SELECT id FROM system_integration_tokens 
-                    WHERE rail = 'qbo' AND environment = 'sandbox'
-                """)).fetchone()
+                existing = session.query(SystemIntegrationToken).filter(
+                    SystemIntegrationToken.rail == 'qbo',
+                    SystemIntegrationToken.environment == 'sandbox'
+                ).first()
                 
                 if existing:
                     # Update existing system tokens
-                    conn.execute(text("""
-                        UPDATE system_integration_tokens 
-                        SET access_token = :access_token,
-                            refresh_token = :refresh_token,
-                            access_expires_at = :access_expires_at,
-                            refresh_expires_at = :refresh_expires_at,
-                            status = 'active',
-                            updated_at = :updated_at
-                        WHERE rail = 'qbo' 
-                        AND environment = 'sandbox'
-                    """), {
-                        'access_token': tokens.get('access_token'),
-                        'refresh_token': tokens.get('refresh_token'),
-                        'access_expires_at': tokens.get('access_expires_at'),
-                        'refresh_expires_at': tokens.get('refresh_expires_at'),
-                        'updated_at': datetime.now(timezone.utc).isoformat()
-                    })
+                    existing.access_token = tokens.get('access_token')
+                    existing.refresh_token = tokens.get('refresh_token')
+                    existing.access_expires_at = tokens.get('access_expires_at')
+                    existing.refresh_expires_at = tokens.get('refresh_expires_at')
+                    existing.status = 'active'
+                    # updated_at will be automatically updated by onupdate=func.now()
                 else:
                     # Insert new system tokens
-                    conn.execute(text("""
-                        INSERT INTO system_integration_tokens 
-                        (rail, environment, external_id, access_token, refresh_token, 
-                         access_expires_at, refresh_expires_at, status, created_at, updated_at)
-                        VALUES ('qbo', 'sandbox', :external_id, :access_token, :refresh_token,
-                                :access_expires_at, :refresh_expires_at, 'active', :created_at, :updated_at)
-                    """), {
-                        'external_id': tokens.get('external_id', 'system'),
-                        'access_token': tokens.get('access_token'),
-                        'refresh_token': tokens.get('refresh_token'),
-                        'access_expires_at': tokens.get('access_expires_at'),
-                        'refresh_expires_at': tokens.get('refresh_expires_at'),
-                        'created_at': datetime.now(timezone.utc).isoformat(),
-                        'updated_at': datetime.now(timezone.utc).isoformat()
-                    })
+                    new_token = SystemIntegrationToken(
+                        rail='qbo',
+                        environment='sandbox',
+                        external_id=tokens.get('external_id', 'system'),
+                        access_token=tokens.get('access_token'),
+                        refresh_token=tokens.get('refresh_token'),
+                        access_expires_at=tokens.get('access_expires_at'),
+                        refresh_expires_at=tokens.get('refresh_expires_at'),
+                        status='active'
+                    )
+                    session.add(new_token)
                 
-                conn.commit()
+                session.commit()
                 return True
                 
         except Exception as e:
