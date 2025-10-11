@@ -175,10 +175,33 @@ class QBOAuthService:
             Valid access token or None if not available
         """
         try:
-            # For now, return None - this would need to be implemented
-            # with proper token storage and refresh logic
-            self.logger.warning("get_valid_access_token not fully implemented in simplified version")
-            return None
+            # Load tokens from file
+            tokens = self._load_tokens()
+            if not tokens:
+                self.logger.warning("No tokens found in storage")
+                return None
+            
+            access_token = tokens.get('access_token')
+            refresh_token = tokens.get('refresh_token')
+            expires_at = tokens.get('expires_at')
+            
+            if not access_token:
+                self.logger.warning("No access token found")
+                return None
+            
+            # Check if token is expired (with 5 minute buffer)
+            if expires_at and datetime.utcnow() >= datetime.fromisoformat(expires_at) - timedelta(minutes=5):
+                self.logger.info("Access token expired, attempting refresh")
+                if refresh_token:
+                    new_tokens = self._refresh_tokens(refresh_token)
+                    if new_tokens:
+                        self._save_tokens(new_tokens)
+                        return new_tokens.get('access_token')
+                else:
+                    self.logger.warning("No refresh token available")
+                    return None
+            
+            return access_token
             
         except Exception as e:
             self.logger.error(f"Failed to get valid access token: {e}")
@@ -187,10 +210,9 @@ class QBOAuthService:
     def is_connected(self) -> bool:
         """Check if business has valid QBO connection."""
         try:
-            # For now, return False - this would need to be implemented
-            # with proper connection status checking
-            self.logger.warning("is_connected not fully implemented in simplified version")
-            return False
+            # Check if we have a valid access token
+            access_token = self.get_valid_access_token()
+            return access_token is not None
             
         except Exception as e:
             self.logger.error(f"Failed to check connection status: {e}")
@@ -199,9 +221,22 @@ class QBOAuthService:
     def disconnect(self) -> bool:
         """Disconnect QBO integration."""
         try:
-            # For now, return True - this would need to be implemented
-            # with proper disconnection logic
-            self.logger.warning("disconnect not fully implemented in simplified version")
+            # Load existing data
+            data = {}
+            if os.path.exists(TOKEN_FILE):
+                with open(TOKEN_FILE, 'r') as f:
+                    data = json.load(f)
+            
+            # Remove tokens for this business
+            if self.business_id in data:
+                del data[self.business_id]
+                
+                # Save back to file
+                with open(TOKEN_FILE, 'w') as f:
+                    json.dump(data, f, indent=2)
+                
+                self.logger.info(f"Disconnected QBO for business {self.business_id}")
+            
             return True
             
         except Exception as e:
@@ -211,14 +246,27 @@ class QBOAuthService:
     def get_connection_status(self) -> Dict[str, Any]:
         """Get detailed connection status."""
         try:
-            return {
-                "connected": self.is_connected(),
-                "status": QBOIntegrationStatuses.DISCONNECTED,
+            connected = self.is_connected()
+            tokens = self._load_tokens()
+            
+            status = QBOIntegrationStatuses.CONNECTED if connected else QBOIntegrationStatuses.DISCONNECTED
+            
+            result = {
+                "connected": connected,
+                "status": status,
                 "platform": "qbo",
                 "business_id": self.business_id,
-                "environment": self.environment.value,
-                "message": "Simplified auth service - full implementation needed"
+                "environment": self.environment.value
             }
+            
+            if tokens:
+                result.update({
+                    "expires_at": tokens.get('expires_at'),
+                    "stored_at": tokens.get('stored_at'),
+                    "refreshed_at": tokens.get('refreshed_at')
+                })
+            
+            return result
             
         except Exception as e:
             self.logger.error(f"Failed to get connection status: {e}")
@@ -229,3 +277,102 @@ class QBOAuthService:
                 "business_id": self.business_id,
                 "error": str(e)
             }
+    
+    def _load_tokens(self) -> Optional[Dict[str, Any]]:
+        """Load tokens from storage file."""
+        try:
+            if not os.path.exists(TOKEN_FILE):
+                return None
+            
+            with open(TOKEN_FILE, 'r') as f:
+                data = json.load(f)
+                return data.get(self.business_id)
+                
+        except Exception as e:
+            self.logger.error(f"Failed to load tokens: {e}")
+            return None
+    
+    def _save_tokens(self, tokens: Dict[str, Any]) -> bool:
+        """Save tokens to storage file."""
+        try:
+            # Load existing data
+            data = {}
+            if os.path.exists(TOKEN_FILE):
+                with open(TOKEN_FILE, 'r') as f:
+                    data = json.load(f)
+            
+            # Update with new tokens
+            data[self.business_id] = tokens
+            
+            # Save back to file
+            with open(TOKEN_FILE, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to save tokens: {e}")
+            return False
+    
+    def _refresh_tokens(self, refresh_token: str) -> Optional[Dict[str, Any]]:
+        """Refresh access token using refresh token."""
+        try:
+            import requests
+            
+            # Prepare refresh request
+            refresh_data = {
+                'grant_type': 'refresh_token',
+                'refresh_token': refresh_token
+            }
+            
+            # Basic auth with client credentials
+            auth = (qbo_config.client_id, qbo_config.client_secret)
+            
+            # Make refresh request
+            response = requests.post(
+                qbo_config.token_url,
+                data=refresh_data,
+                auth=auth,
+                headers={'Accept': 'application/json'}
+            )
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                
+                # Calculate expiration time (QBO tokens expire in 1 hour)
+                expires_in = token_data.get('expires_in', 3600)
+                expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+                
+                return {
+                    'access_token': token_data.get('access_token'),
+                    'refresh_token': token_data.get('refresh_token', refresh_token),
+                    'expires_at': expires_at.isoformat(),
+                    'business_id': self.business_id,
+                    'refreshed_at': datetime.utcnow().isoformat()
+                }
+            else:
+                self.logger.error(f"Token refresh failed: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to refresh tokens: {e}")
+            return None
+    
+    def store_tokens(self, access_token: str, refresh_token: str, expires_in: int = 3600) -> bool:
+        """Store tokens for this business."""
+        try:
+            expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+            
+            tokens = {
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'expires_at': expires_at.isoformat(),
+                'business_id': self.business_id,
+                'stored_at': datetime.utcnow().isoformat()
+            }
+            
+            return self._save_tokens(tokens)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to store tokens: {e}")
+            return False

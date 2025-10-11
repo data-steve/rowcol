@@ -26,44 +26,91 @@ QBO API has well-documented fragility that can disrupt the cash runway ritual:
 - **State Mirror Pattern**: Local mutable database for fast reads, synced from external APIs
 - **Smart Sync Pattern**: DB freshness checks → API fallback → Log INBOUND → Mirror upsert
 
+## Sync Orchestrator Interface (Concrete)
+
+### Core Interface
+```python
+# infra/sync/orchestrator.py
+class SyncOrchestrator:
+    def read_refresh(
+        self,
+        entity: str,                    # "bills", "invoices", "balances"
+        client_id: str,                 # advisor_id in MVP
+        hint: Literal["CACHED_OK", "STRICT"],
+        mirror_is_fresh: Callable[[str, str, dict], bool],  # (entity, client_id, policy) -> bool
+        fetch_remote: Callable[[], tuple[list[dict], str | None]],  # returns (raw, source_version)
+        upsert_mirror: Callable[[list[dict], str | None, datetime], None],
+        read_from_mirror: Callable[[], list[Any]],
+        on_hygiene: Callable[[str, str], None],  # (client_id, code) -> None
+    ) -> list[Any]:
+        # Policy-driven freshness check
+        # STRICT or stale/expired → rail → INBOUND log → mirror upsert → return mirror
+        # CACHED_OK + fresh → return mirror
+        # Error → log failure + hygiene flag + return stale mirror
+
+    def write_idempotent(
+        self,
+        operation: str,                 # "ap.post_bill_payment"
+        client_id: str,                 # advisor_id in MVP
+        idem_key: str,                  # stable key for deduplication
+        call_remote: Callable[[], dict],
+        optimistic_apply: Callable[[dict], None],
+        on_hygiene: Callable[[str, str], None],
+    ) -> dict:
+        # OUTBOUND intent log → rail call → OUTBOUND result log → optimistic mirror apply
+        # Error → log failure + hygiene flag + raise exception
+```
+
+### Entity Policy (Configuration)
+```python
+# core/freshness_policy.py
+ENTITY_POLICY = {
+    "bills":    {"soft_ttl_s": 300,  "hard_ttl_s": 3600},   # 5min soft, 1hr hard
+    "invoices": {"soft_ttl_s": 900,  "hard_ttl_s": 3600},   # 15min soft, 1hr hard
+    "balances": {"soft_ttl_s": 120,  "hard_ttl_s": 600},    # 2min soft, 10min hard
+}
+```
+
 ## Architecture Patterns
 
 ### Pattern 1: User Actions (Smart Sync Pattern)
 ```python
 # Runway Service → Domain Gateway → Infra Gateway → Sync Orchestrator
-@router.post("/bills/{bill_id}/pay")
-async def pay_bill(bill_id: str, payment_data: PaymentRequest, business_id: str = Depends(get_business_id)):
+@router.get("/snapshot")
+async def get_snapshot(advisor_id: str = Depends(get_advisor_id), business_id: str = Depends(get_business_id)):
     # Composition root creates service with proper gateways
-    tray_service = create_tray_service(business_id)
-    payment = await tray_service.schedule_payment(bill_id, payment_data)
-    return {"status": "scheduled", "payment_id": payment.id, "runway_impact": "+2 days"}
+    console_service = create_console_service(advisor_id, business_id)
+    snapshot = await console_service.get_snapshot()
+    return {"status": "success", "snapshot": snapshot, "runway_impact": "+2 days"}
 
-# Domain Gateway Interface
+# Domain Gateway Interface (Advisor-First Model)
 class BillsGateway(Protocol):
-    def schedule_payment(self, bill_id: str, amount: Decimal, pay_on: date) -> str: ...
+    def list(self, q: ListBillsQuery) -> List[Bill]: ...
+    # Note: Bill payment scheduling handled by Ramp rail (future), not QBO
 
-# Infra Gateway Implementation
+# Infra Gateway Implementation (Concrete Sync Orchestrator Interface)
 class QBOBillsGateway(BillsGateway):
     def __init__(self, qbo_client: QBOClient, sync: SyncOrchestrator, log: LogRepo, mirror: BillsMirrorRepo):
         self.qbo = qbo_client
         self.sync = sync
         self.log = log
         self.mirror = mirror
-    
-    def schedule_payment(self, bill_id: str, amount: Decimal, pay_on: date) -> str:
-        # Log OUTBOUND intent
-        payment_id = self.log.append(direction="OUTBOUND", rail="qbo", operation="schedule_payment",
-                                    client_id=self.qbo.client_id, payload_json=json.dumps({
-                                        "bill_id": bill_id, "amount": str(amount), "pay_on": pay_on.isoformat()
-                                    }))
-        
-        # Execute via QBO client
-        qbo_result = self.qbo.schedule_payment(bill_id, amount, pay_on)
-        
-        # Update mirror optimistically
-        self.mirror.upsert_payment(payment_id, qbo_result, synced_at=self.sync.now())
-        
-        return payment_id
+
+    def list(self, q: ListBillsQuery) -> List[Bill]:
+        return self.sync.read_refresh(
+            entity="bills",
+            client_id=q.advisor_id,  # advisor_id is primary identifier
+            hint=q.freshness_hint,
+            mirror_is_fresh=lambda e, c, p: self.mirror.is_fresh(q.advisor_id, q.business_id, p),
+            fetch_remote=lambda: self.qbo.list_bills(company_id=q.business_id, status=q.status),
+            upsert_mirror=lambda raw, ver, ts: self.mirror.upsert_many(q.advisor_id, q.business_id, raw, ver, ts),
+            read_from_mirror=lambda: self.mirror.list_open(q.advisor_id, q.business_id),
+            on_hygiene=lambda c, code: self.log.flag_hygiene(c, code)
+        )
+
+    # Note: QBO BillsGateway only handles read operations
+    # Bill payment scheduling will be handled by Ramp gateway (future rail)
+    # QBO is the ledger hub - we read bills from QBO, but payments go through Ramp
 ```
 
 ### Pattern 2: Background Syncs (Smart Sync Pattern)
@@ -311,9 +358,98 @@ await stripe_smart_sync.get_payments() # Stripe orchestration
 3. **Clear Separation**: Each rail's orchestration logic is self-contained
 4. **Consistent Interface**: All rails provide similar high-level methods to domain services
 
+## Smart Sync Pattern Specification
+
+*The correct architecture pattern that connects domain gateways, infra gateways, sync orchestrator, transaction logs, and state mirror tables*
+
+### **The Smart Sync Pattern (Correct Implementation)**
+
+#### **What Should Happen**
+```
+Runway Service → Domain Gateway (interface) → Infra Gateway (impl) → Sync Orchestrator → Rail API
+                                                      ↓
+                                              Transaction Log ← Mirror DB
+```
+
+#### **The Smart Switching Logic**
+1. **Runway Service** calls domain gateway interface (e.g., `BillsGateway.list()`)
+2. **Infra Gateway** checks if local data is fresh enough via Sync Orchestrator
+3. **If fresh**: Return data from State Mirror (fast)
+4. **If stale**: Call Rail API, log INBOUND transaction, update State Mirror, return fresh data
+5. **Transaction Log**: Record all data changes for audit trail and replayability
+
+### **Current Broken Implementation (What We're Fixing)**
+
+#### **Current Reality**
+```
+BillService.get_bills_due_in_days() → Direct DB Query (bypasses sync service)
+QBOSyncService.get_bills_by_due_days() → Direct API Call (no smart switching)
+DataOrchestrator → Direct QBOSyncService calls (wrong pattern)
+```
+
+#### **The Disconnect**
+- **Domain services** do their own database queries (bypass sync)
+- **QBOSyncService** just does raw API calls (no smart switching)
+- **Data orchestrators** call sync service directly (wrong layer)
+- **No connection** between domain services and sync orchestrator
+- **Transaction logs** not integrated with the switching logic
+
+### **Key Architectural Principles**
+
+#### **1. Domain Gateways (Interfaces)**
+- **Location**: `domains/*/gateways.py`
+- **Purpose**: Rail-agnostic business interfaces
+- **Dependencies**: None (pure interfaces)
+- **Examples**: `BillsGateway`, `BalancesGateway`, `InvoicesGateway`
+
+#### **2. Infra Gateways (Implementations)**
+- **Location**: `infra/gateways/`
+- **Purpose**: Rail-specific implementations of domain gateways
+- **Dependencies**: Sync Orchestrator, Rail Clients, Transaction Log, State Mirror
+- **Examples**: `QBOBillsGateway`, `RampBillsGateway`, `PlaidBalancesGateway`
+
+#### **3. Sync Orchestrator (Centralized Logic)**
+- **Location**: `infra/sync/orchestrator.py`
+- **Purpose**: Centralized sync logic, freshness checks, transaction logging
+- **Dependencies**: Transaction Log, State Mirror
+- **Examples**: `SyncOrchestrator`
+
+#### **4. Runway Services (Orchestration)**
+- **Location**: `runway/services/`
+- **Purpose**: Product-specific orchestration using domain gateways
+- **Dependencies**: Domain Gateway interfaces only
+- **Examples**: `TrayService`, `ConsoleService`
+
+#### **5. Composition Root (Dependency Injection)**
+- **Location**: `runway/wiring.py`
+- **Purpose**: Single place where domain interfaces are bound to infra implementations
+- **Dependencies**: All infra implementations
+- **Examples**: `create_tray_service()`, `create_console_service()`
+
+### **The Real Fix Needed**
+
+1. **Create Domain Gateways** - Define rail-agnostic interfaces in domains
+2. **Create Infra Gateways** - Implement domain gateways with Smart Sync pattern
+3. **Create Sync Orchestrator** - Centralized sync logic with transaction logging
+4. **Update Runway Services** - Use domain gateways instead of direct calls
+5. **Create Composition Root** - Single place for dependency injection
+6. **Deprecate Data Orchestrators** - Replace with domain gateway pattern
+
+### **Success Criteria**
+
+- [ ] Domain gateways provide rail-agnostic interfaces
+- [ ] Infra gateways implement Smart Sync pattern
+- [ ] Sync orchestrator centralizes all sync logic
+- [ ] Transaction log captures all data changes
+- [ ] State mirror provides fast local reads
+- [ ] Runway services use domain gateways only
+- [ ] Composition root handles all dependency injection
+- [ ] No direct rail calls from runway services
+- [ ] No direct sync calls from domain services
+
 ## References
 
 - [ADR-001: Domains/Runway Separation](./ADR-001-domains-runway-separation.md)
 - [ADR-003: Multi-Tenancy Strategy](./ADR-003-multi-tenancy-strategy.md)
-- [ADR-006: Data Orchestrator Pattern](./ADR-006-data-orchestrator-pattern.md)
 - [ADR-007: Service Boundaries](./ADR-007-service-boundaries.md)
+- [ADR-010: Multi-Rail Financial Control Plane](./ADR-010-multi-rail-financial-control-plane.md)

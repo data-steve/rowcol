@@ -4,6 +4,14 @@
 ## Ways of Working
 Remeber I'm a junior dev w principal MLE and product chops vibe coding my own infra heavy product. So you gotta help me along: I think this note should be added to the .cursorrules so I don't have to keep bringing it up.
 
+## TESTING RULES
+- NEVER use mocks in tests - all tests must hit real QBO API
+- NEVER use unittest.mock.Mock, unittest.mock.AsyncMock, or @patch decorators
+- NEVER create fake/mock QBO responses - use real sandbox data
+- ALL QBO tests must use real authentication and real API calls
+- Use pytest fixtures from conftest.py for database and QBO tokens
+- Tests should verify real integration works, not mock behavior
+
 ## SECURITY RULES
 - NEVER print sensitive data (tokens, keys, passwords) in the context window
 - NEVER print access tokens, refresh tokens, or any authentication credentials

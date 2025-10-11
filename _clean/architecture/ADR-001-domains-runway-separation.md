@@ -166,8 +166,7 @@ domains/ap/
 ├── models/         # SQLAlchemy models
 ├── services/       # Business logic services
 ├── schemas/        # Pydantic schemas for data validation
-├── routes/         # Internal API routes (if needed)
-└── tests/          # Domain-specific tests
+└── routes/         # Internal API routes (if needed)
 ```
 
 **Runway Structure**:
@@ -176,8 +175,15 @@ runway/
 ├── routes/         # User-facing API endpoints
 ├── services/       # Orchestration services
 ├── schemas/        # API DTOs and contracts
-├── middleware/     # Cross-cutting concerns
-└── tests/          # Integration and workflow tests
+└── middleware/     # Cross-cutting concerns
+```
+
+**Test Structure**:
+```
+tests/
+├── domains/        # Domain-specific tests
+├── runway/         # Integration and workflow tests
+└── infra/          # Infrastructure tests
 ```
 
 ## Monitoring and Success Metrics

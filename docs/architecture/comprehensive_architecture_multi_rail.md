@@ -56,9 +56,9 @@ RowCol’s architecture is layered to separate user interaction, business logic,
 └─────────────────┬───────────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────────┐
-│                   EXTERNAL INTEGRATIONS                     │
+│                   EXTERNAL INTEGRATIONS    (RAILS)          │
 ├─────────────────────────────────────────────────────────────┤
-│ QBO | Ramp | Plaid | Stripe (CSV)                         │
+│ QBO (Ledger) | Ramp (AP) | Plaid (Balance) Stripe (AR)      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -77,10 +77,10 @@ RowCol’s architecture is layered to separate user interaction, business logic,
    - **Integration Services**: Connect to QBO, Ramp, Plaid, and Stripe (CSV).
    - **Core Services**: Handle database, authentication, and caching.
 5. **External Integrations**:
-   - **QBO**: Ledger for Bills and BillPayments.
+   - **QBO**: Ledger for Bills and Invoices (BillPayments).
    - **Ramp**: Bill ingestion and payment execution.
    - **Plaid**: Real-time cash balances.
-   - **Stripe**: CSV-based A/R data (MVP).
+   - **Stripe**: A/R data (MVP).
 
 ## Multi-Rail Architecture: Hub-and-Spoke Model
 RowCol operates as a **Financial Control Plane** using a hub-and-spoke architecture where each external rail has a specific, well-defined role:
@@ -241,7 +241,7 @@ Domains and integrations are accessed internally by the runway orchestration lay
 - **Bank Domain**: Cash balance integration (Plaid).
 - **Policy Domain**: Liquidity guardrails and rules engine.
 - **Vendor Normalization**: Vendor identity graph for Ramp/QBO alignment.
-- **Integration Services**: QBO (ledger), Ramp (execution), Plaid (balances), Stripe (CSV).
+- **Integration Services**: QBO (ledger), Ramp (AP execution), Plaid (balances), Stripe (AR).
 
 **Interaction**:
 - Runway orchestration calls internal domain services (e.g., AP for bills, policy for guardrails).
