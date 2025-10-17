@@ -22,10 +22,13 @@ Remeber I'm a junior dev w principal MLE and product chops vibe coding my own in
 - NEVER print API keys, secrets, or any sensitive configuration values
 - NEVER print database connection strings or credentials
 - NEVER print any data that contains "token", "key", "secret", "password", "credential"
+- NEVER print partial tokens, truncated tokens, or any portion of sensitive data
+- NEVER print token existence status, token lengths, or token metadata
 - Access and refresh tokens belong in the database, not .env files
 - Only print non-sensitive identifiers (realm_id, business_id, etc.)
 - When debugging authentication issues, use placeholder text like "TOKEN_REDACTED" or "***"
-- If you must show token-related data, truncate it to first 10 characters + "..."
+- FORCE: Use boolean checks (exists/not exists) instead of printing token data
+- FORCE: Use status indicators (✅/❌) instead of printing sensitive values
 
 ## ALLOWED PATHS
 You may modify files ONLY under:

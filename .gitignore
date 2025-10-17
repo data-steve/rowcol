@@ -169,3 +169,6 @@ PLAN.json
 
 # VCR Cassettes
 tests/cassettes/
+
+# Images
+*.png
