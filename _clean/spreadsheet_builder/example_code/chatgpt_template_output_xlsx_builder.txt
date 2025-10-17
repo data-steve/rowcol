@@ -1,0 +1,243 @@
+# Re-run creation of the RowCol MVP scaffold and demo generation.
+import os, json, textwrap, sys
+from pathlib import Path
+
+base = Path("/mnt/data/rowcol_mvp")
+(base/"app").mkdir(parents=True, exist_ok=True)
+(base/"config").mkdir(parents=True, exist_ok=True)
+(base/"templates").mkdir(parents=True, exist_ok=True)
+(base/"output").mkdir(parents=True, exist_ok=True)
+
+mapping_engine = r'''
+import json
+from collections import defaultdict
+from typing import Dict, Tuple, Any, List
+
+def _month_key(date_str: str) -> str:
+    return date_str[:7]
+
+def stub_transactions() -> List[dict]:
+    tx = []
+    for day in (5, 19):
+        tx.append({"TxnDate": f"2025-08-{day:02d}", "AccountRef": {"value": "4001"}, "EntityRef": {"name": "Client Retainer"}, "TotalAmt": 5000})
+    for day in (5, 19):
+        tx.append({"TxnDate": f"2025-09-{day:02d}", "AccountRef": {"value": "4001"}, "EntityRef": {"name": "Client Retainer"}, "TotalAmt": 5000})
+    tx.append({"TxnDate": "2025-08-10", "AccountRef": {"value": "62150"}, "EntityRef": {"name": "Mission First Operations, LLC"}, "TotalAmt": 2200})
+    tx.append({"TxnDate": "2025-09-10", "AccountRef": {"value": "62150"}, "EntityRef": {"name": "Mission First Operations, LLC"}, "TotalAmt": 2200})
+    tx.append({"TxnDate": "2025-08-22", "AccountRef": {"value": "65000"}, "EntityRef": {"name": "Best Equip Co"}, "TotalAmt": 1800})
+    tx.append({"TxnDate": "2025-08-15", "AccountRef": {"value": "60110"}, "EntityRef": {"name": "Payroll Cycle"}, "TotalAmt": 12000})
+    tx.append({"TxnDate": "2025-08-30", "AccountRef": {"value": "60110"}, "EntityRef": {"name": "Payroll Cycle"}, "TotalAmt": 12000})
+    tx.append({"TxnDate": "2025-09-15", "AccountRef": {"value": "60110"}, "EntityRef": {"name": "Payroll Cycle"}, "TotalAmt": 12000})
+    tx.append({"TxnDate": "2025-09-30", "AccountRef": {"value": "60110"}, "EntityRef": {"name": "Payroll Cycle"}, "TotalAmt": 12000})
+    tx.append({"TxnDate": "2025-08-12", "AccountRef": {"value": None}, "EntityRef": {"name": "Unknown Vendor"}, "TotalAmt": 400})
+    return tx
+
+def _load_json(path: str, default):
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return default
+
+def detect_transactions(config_path: str, client_overrides_path: str = None) -> Tuple[Dict[str, Dict], Dict[str, Any]]:
+    config = _load_json(config_path, {
+        "inflows": {"gl_range": ["4000-4999"], "threshold_major": 1000},
+        "outflows": {"gl_range": ["6000-6999"], "threshold_one_time": 500},
+        "payroll": {"gl_range": ["60100-60199"]}
+    })
+    client_overrides = _load_json(client_overrides_path, {}) if client_overrides_path else {}
+
+    transactions = stub_transactions()
+
+    mappings = {"inflows": defaultdict(lambda: defaultdict(float)),
+                "outflows": defaultdict(lambda: defaultdict(float)),
+                "pending": defaultdict(float)}
+    total = 0
+    mapped = 0
+
+    def in_any_range(gl_str, ranges):
+        if not gl_str:
+            return False
+        try:
+            val = int(gl_str)
+        except (TypeError, ValueError):
+            return False
+        for r in ranges:
+            lo, hi = r.split("-")
+            if int(lo) <= val <= int(hi):
+                return True
+        return False
+
+    for tx in transactions:
+        total += 1
+        gl = tx.get("AccountRef", {}).get("value")
+        amt = float(tx.get("TotalAmt", 0) or 0)
+        date = tx.get("TxnDate") or ""
+        month = _month_key(date) if date else None
+
+        vendor = (tx.get("EntityRef", {}) or {}).get("name") or ""
+        if vendor in client_overrides:
+            ov = client_overrides[vendor]
+            gl = ov.get("gl", gl)
+
+        if month is None:
+            continue
+
+        if in_any_range(gl, config.get("inflows", {}).get("gl_range", [])):
+            sub = "major" if amt > config["inflows"].get("threshold_major", 1000) else "recurring"
+            mappings["inflows"][month][sub] += amt
+            mapped += 1
+        elif in_any_range(gl, config.get("payroll", {}).get("gl_range", [])):
+            mappings["outflows"][month]["payroll"] += amt
+            mapped += 1
+        elif in_any_range(gl, config.get("outflows", {}).get("gl_range", [])):
+            sub = "one-time" if amt > config["outflows"].get("threshold_one_time", 500) else "recurring"
+            mappings["outflows"][month][sub] += amt
+            mapped += 1
+        else:
+            mappings["pending"][month] += amt
+
+    dq = {"mapped_gl_count": mapped, "total_tx_count": total, "quality_score": (mapped / total) if total else 0.0}
+    mappings["inflows"] = {k: dict(v) for k, v in mappings["inflows"].items()}
+    mappings["outflows"] = {k: dict(v) for k, v in mappings["outflows"].items()}
+    mappings["pending"] = dict(mappings["pending"])
+    return mappings, dq
+'''
+
+renderer = r'''
+from openpyxl import load_workbook
+
+def populate_excel(template_path: str, output_path: str, mappings, data_quality):
+    wb = load_workbook(template_path)
+    ws = wb["Cash Flow"]
+    ws["A1"] = f"Data Quality: {data_quality.get('quality_score', 0):.2%}"
+
+    month_cols = {"2025-08": "C", "2025-09": "D", "2025-10": "E"}
+    ws["C2"] = 250000  # seed
+
+    for month, col in month_cols.items():
+        inflows = mappings.get("inflows", {}).get(month, {})
+        outflows = mappings.get("outflows", {}).get(month, {})
+        pending = mappings.get("pending", {}).get(month, 0)
+
+        ws[f"{col}4"]  = inflows.get("recurring", 0)
+        ws[f"{col}8"]  = inflows.get("major", 0)
+        ws[f"{col}27"] = outflows.get("recurring", 0)
+        ws[f"{col}39"] = outflows.get("one-time", 0)
+        ws[f"{col}42"] = outflows.get("payroll", 0)
+        ws[f"{col}45"] = pending
+
+    wb.save(output_path)
+    return output_path
+'''
+
+main_py = r'''
+import os
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from app.mapping_engine import detect_transactions
+from app.renderer import populate_excel
+
+app = FastAPI(title="RowCol MVP")
+
+BASE = os.environ.get("ROWCOL_BASE", "/mnt/data/rowcol_mvp")
+CONFIG = os.path.join(BASE, "config", "gl_mapping_config.json")
+CLIENT_OVR = os.path.join(BASE, "config", "client_gl_mappings.json")
+TEMPLATE = os.path.join(BASE, "templates", "template_v1.xlsx")
+OUTPUT = os.path.join(BASE, "output", "output.xlsx")
+
+@app.get("/generate-workbook")
+def generate_workbook():
+    mappings, dq = detect_transactions(CONFIG, CLIENT_OVR)
+    path = populate_excel(TEMPLATE, OUTPUT, mappings, dq)
+    return JSONResponse({"ok": True, "output_path": path, "dq": dq, "mappings": mappings})
+'''
+
+# write files
+(base/"app"/"mapping_engine.py").write_text(mapping_engine)
+(base/"app"/"renderer.py").write_text(renderer)
+(base/"app"/"main.py").write_text(main_py)
+
+# configs
+gl_config = {
+    "inflows": {"gl_range": ["4000-4999"], "threshold_major": 1000},
+    "outflows": {"gl_range": ["6000-6999"], "threshold_one_time": 1500},
+    "payroll": {"gl_range": ["60100-60199"]}
+}
+client_overrides = {
+    "Mission First Operations, LLC": {"gl": "62150", "frequency": "monthly", "amount": 2200}
+}
+(base/"config"/"gl_mapping_config.json").write_text(json.dumps(gl_config, indent=2))
+(base/"config"/"client_gl_mappings.json").write_text(json.dumps(client_overrides, indent=2))
+
+# template excel
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
+
+wb = Workbook()
+ws = wb.active
+ws.title = "Cash Flow"
+ws["A1"] = "RowCol Cash Forecast (Demo)"
+ws["A2"] = "Beginning Cash"
+ws["A4"] = "INFLOWS — Recurring"
+ws["A8"] = "INFLOWS — Major/Variable"
+ws["A27"] = "OUTFLOWS — Recurring Vendors"
+ws["A39"] = "OUTFLOWS — One-time AP"
+ws["A42"] = "OUTFLOWS — Payroll"
+ws["A45"] = "Pending (Unmapped)"
+ws["B1"] = "Label"
+ws["C1"] = "2025-08"
+ws["D1"] = "2025-09"
+ws["E1"] = "2025-10"
+ws["A60"] = "Total Inflows"
+ws["A61"] = "Total Outflows"
+ws["A62"] = "Net Change"
+ws["A63"] = "Ending Cash"
+for col in ["C","D","E"]:
+    ws[f"{col}60"] = f"=SUM({col}4,{col}8)"
+    ws[f"{col}61"] = f"=SUM({col}27,{col}39,{col}42,{col}45)"
+    ws[f"{col}62"] = f"={col}60-{col}61"
+ws["C63"] = "=C2+C62"
+ws["D2"]  = "=C63"
+ws["D63"] = "=D2+D62"
+ws["E2"]  = "=D63"
+ws["E63"] = "=E2+E62"
+
+def fill_range(cells, color):
+    fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+    for row in ws[cells]:
+        for c in row:
+            c.fill = fill
+
+fill_range("A2:A2", "DDEEFF")
+fill_range("A4:A10", "FFEEDA")
+fill_range("A8:A12", "FFD7F0")
+fill_range("A27:A37", "FFEEDA")
+fill_range("A39:A41", "FFD2D2")
+fill_range("A42:A44", "DDEEFF")
+fill_range("A45:A45", "EEE8AA")
+
+wb.save(base/"templates"/"template_v1.xlsx")
+
+# README
+(base/"README.md").write_text(textwrap.dedent("""
+# RowCol MVP (Planner Mode → Excel)
+- GL-based mapping + thresholds → Inflows/Outflows/Pending
+- Excel template with formulas & roll-forward
+- FastAPI endpoint: /generate-workbook (uses stub data for now)
+
+Paths:
+- Template: /mnt/data/rowcol_mvp/templates/template_v1.xlsx
+- Output:   /mnt/data/rowcol_mvp/output/output.xlsx
+"""))
+
+# run a demo generation using the stubbed mapping
+sys.path.append(str(base))
+from app.mapping_engine import detect_transactions
+from app.renderer import populate_excel
+mappings, dq = detect_transactions(str(base/"config"/"gl_mapping_config.json"),
+                                   str(base/"config"/"client_gl_mappings.json"))
+out_path = populate_excel(str(base/"templates"/"template_v1.xlsx"),
+                          str(base/"output"/"output.xlsx"),
+                          mappings, dq)
+print("Generated:", out_path)
