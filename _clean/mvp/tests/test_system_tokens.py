@@ -36,7 +36,7 @@ def test_system_token_management():
         print("\n2. Testing access token retrieval...")
         access_token = auth_service.get_valid_access_token()
         if access_token:
-            print(f"   ✅ Access token retrieved: {access_token[:20]}...")
+            print(f"   ✅ Access token retrieved: TOKEN_REDACTED")
         else:
             print("   ❌ No access token available")
         

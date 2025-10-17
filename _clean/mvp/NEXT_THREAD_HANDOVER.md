@@ -278,6 +278,487 @@ Once business rules ported:
 
 ---
 
+
+## **Task 9: Port Production-Grade API Infrastructure**
+
+- **Status:** `[📋]` **NEEDS IMPLEMENTATION**
+- **Priority:** P1 High
+- **Justification:** Production-grade rate limiting, retry logic, and circuit breaker patterns needed for QBO API reliability
+- **Execution Status:** **Execution-Ready**
+
+### **Task Checklist:**
+- [ ] Create `_clean/mvp/infra/api/base_client.py` with BaseAPIClient patterns
+- [ ] Create `_clean/mvp/infra/api/rate_limiter.py` with rate limiting logic
+- [ ] Create `_clean/mvp/infra/api/retry_handler.py` with exponential backoff retry
+- [ ] Create `_clean/mvp/infra/api/circuit_breaker.py` with circuit breaker pattern
+- [ ] Create `_clean/mvp/infra/api/exceptions.py` with typed API errors
+- [ ] Update `_clean/mvp/infra/rails/qbo/client.py` to extend BaseAPIClient
+- [ ] Update `_clean/mvp/infra/rails/qbo/auth.py` with retry logic for token refresh
+- [ ] All files can be imported without errors
+- [ ] QBO client properly handles 429 rate limit errors
+- [ ] QBO client properly retries transient failures
+- [ ] All files are properly documented
+
+### **CRITICAL DISCOVERY:**
+- ✅ **Legacy Has Production Patterns**: `infra/api/base_client.py` has rate limiting, retry, circuit breaker, caching
+- ✅ **Legacy Has Auth Patterns**: `infra/auth/auth.py` has JWT token management and HTTPBearer security
+- ❌ **MVP Missing These Patterns**: Current QBO client has NO rate limiting, NO retry logic, NO circuit breaker
+- ✅ **Tests Validate Missing Behavior**: `test_qbo_throttling.py` tests behavior we don't implement yet
+- ✅ **Migration Manifest Requires**: Acceptance test #3: "Throttle hygiene (QBO 429 → bounded retry → hygiene flag visible)"
+
+### **Problem Statement**
+Need to port production-grade API infrastructure patterns from legacy `infra/api/` and `infra/auth/` to MVP nucleus:
+1. **Rate Limiting**: QBO has strict rate limits - need client-side throttling
+2. **Retry Logic**: Exponential backoff with jitter for transient failures
+3. **Circuit Breaker**: Stop hammering QBO if it's down
+4. **Typed Errors**: Proper exception hierarchy for different error types
+5. **Auth Patterns**: JWT token management for user authentication (future)
+
+### **User Story**
+"As a developer, I need production-grade API infrastructure so that the QBO client can handle rate limits, transient failures, and circuit breaking gracefully."
+
+### **Solution Overview**
+Port the production-grade patterns from `infra/api/base_client.py` and `infra/auth/auth.py`:
+- **BaseAPIClient**: Abstract base with rate limiting, retry, circuit breaker, caching
+- **QBORawClient**: Extend BaseAPIClient with QBO-specific implementation
+- **QBOAuthService**: Add retry logic for token refresh operations
+- **Typed Errors**: APIError hierarchy for proper error handling
+
+### **Files to Port:**
+
+#### **From `infra/api/base_client.py`:**
+```python
+# Port these classes/patterns to _clean/mvp/infra/api/
+
+1. RateLimitConfig - Configuration for rate limiting
+2. RetryConfig - Configuration for retry logic  
+3. CacheConfig - Configuration for response caching
+4. APIError hierarchy - RateLimitError, AuthenticationError, NetworkError
+5. BaseAPIClient - Abstract base with all patterns
+   - _should_allow_call() - Rate limiting logic
+   - _wait_for_rate_limit() - Wait logic
+   - _retry_with_backoff() - Exponential backoff
+   - Circuit breaker pattern
+   - Response caching
+```
+
+#### **From `infra/auth/auth.py`:**
+```python
+# Port these patterns to _clean/mvp/infra/auth/ (for future use)
+
+1. LoginRequest/Response models - Pydantic schemas
+2. JWT token management - create_access_token(), verify_token()
+3. HTTPBearer security - FastAPI security dependency
+4. Password validation - Security patterns
+
+Note: These are for FUTURE user authentication, NOT for QBO system tokens
+```
+
+### **Pattern to Implement:**
+
+```python
+# _clean/mvp/infra/api/base_client.py
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional
+from datetime import datetime, timedelta
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+class RateLimitConfig:
+    """QBO-specific rate limiting configuration."""
+    min_interval_seconds: float = 0.5  # 2 requests per second max
+    max_calls_per_minute: int = 30     # QBO limit
+    burst_limit: int = 10              # Short burst allowance
+    backoff_multiplier: float = 2.0
+    max_retries: int = 3
+
+class APIError(Exception):
+    """Base exception for API errors."""
+    def __init__(self, message: str, status_code: Optional[int] = None, 
+                 retry_after: Optional[int] = None):
+        self.message = message
+        self.status_code = status_code
+        self.retry_after = retry_after
+        super().__init__(message)
+
+class RateLimitError(APIError):
+    """Raised when rate limit is exceeded."""
+    pass
+
+class BaseAPIClient(ABC):
+    """Base API client with rate limiting, retry, circuit breaker."""
+    
+    def __init__(self, rate_limit_config: Optional[RateLimitConfig] = None):
+        self.rate_limit_config = rate_limit_config or RateLimitConfig()
+        self.rate_limits = {
+            "last_call": None,
+            "minute_calls": [],
+            "circuit_breaker_open": False,
+            "circuit_breaker_until": None
+        }
+    
+    @abstractmethod
+    def get_base_url(self) -> str:
+        """Get the base URL for the API."""
+        pass
+    
+    @abstractmethod
+    def get_auth_headers(self) -> Dict[str, str]:
+        """Get authentication headers."""
+        pass
+    
+    def _should_allow_call(self) -> bool:
+        """Check if API call should be allowed based on rate limiting."""
+        # Implementation from legacy base_client.py
+        pass
+    
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
+    async def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+        """Make HTTP request with retry logic."""
+        # Implementation with circuit breaker and rate limiting
+        pass
+```
+
+```python
+# _clean/mvp/infra/rails/qbo/client.py - Updated to extend BaseAPIClient
+from infra.api.base_client import BaseAPIClient, RateLimitConfig
+
+class QBORawClient(BaseAPIClient):
+    """QBO HTTP client with rate limiting and retry logic."""
+    
+    def __init__(self, business_id: str, realm_id: str, db_session=None):
+        # QBO-specific rate limits
+        qbo_rate_config = RateLimitConfig(
+            min_interval_seconds=0.5,  # 2 calls per second
+            max_calls_per_minute=30,   # QBO sandbox limit
+            burst_limit=10,            # Allow short bursts
+            backoff_multiplier=2.0,
+            max_retries=3
+        )
+        super().__init__(rate_limit_config=qbo_rate_config)
+        
+        self.business_id = business_id
+        self.realm_id = realm_id
+        self.base_url = f"{qbo_config.api_base_url}/{realm_id}"
+        self.auth_service = QBOAuthService(business_id) if business_id else None
+    
+    def get_base_url(self) -> str:
+        return self.base_url
+    
+    def get_auth_headers(self) -> Dict[str, str]:
+        access_token = self.auth_service.get_valid_access_token()
+        return {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json"
+        }
+    
+    def get(self, endpoint: str) -> Dict[str, Any]:
+        """Make GET request with automatic rate limiting and retry."""
+        return self._make_request("GET", endpoint)
+```
+
+### **QBO-Specific Rate Limits:**
+From QBO API documentation:
+- **Sandbox**: 30 requests per minute per realm
+- **Production**: 500 requests per minute per realm
+- **Burst**: Short bursts allowed but triggers throttling
+- **429 Response**: Includes `Retry-After` header
+
+### **Migration Manifest Context:**
+```
+PORT infra/api/base_client.py → _clean/mvp/infra/api/base_client.py
+  - Keep: Rate limiting, retry logic, circuit breaker
+  - Drop: Platform enum (QBO only for MVP)
+  - Adapt: Make QBO-specific rate limits configurable
+
+PORT infra/auth/auth.py → _clean/mvp/infra/auth/auth.py
+  - Keep: JWT patterns, Pydantic schemas (for future user auth)
+  - Drop: Not needed for QBO system tokens
+  - Note: This is for FUTURE user authentication, not MVP
+```
+
+### **Acceptance Test (from Migration Manifest):**
+```python
+def test_throttle_hygiene():
+    """QBO 429 → bounded retry → hygiene flag visible"""
+    client = QBORawClient("test", "realm123")
+    
+    # Simulate high-volume requests
+    for i in range(100):
+        try:
+            response = client.get("query?query=SELECT * FROM Bill MAXRESULTS 1")
+        except RateLimitError as e:
+            # Verify bounded retry
+            assert e.retry_after is not None
+            # Verify hygiene flag set
+            # (This would be in sync orchestrator's on_hygiene callback)
+            break
+```
+
+### **Dependencies:** Task 2 (QBO Infrastructure), Task 8 (Test Gateway and Wiring Layer)
+
+### **Verification:** 
+- Run `ls -la _clean/mvp/infra/api/` - should show API infrastructure files
+- Run `python -c "from infra.api.base_client import BaseAPIClient; print('BaseAPIClient imported successfully')"`
+- Run `python -c "from infra.rails.qbo.client import QBORawClient; print('QBORawClient with rate limiting')"`
+- Run `pytest _clean/mvp/tests/test_qbo_throttling.py -v` - should validate rate limiting works
+- Test QBO client handles 429 errors gracefully
+- Test circuit breaker opens after repeated failures
+
+### **Definition of Done:**
+- [ ] API infrastructure ported from legacy to MVP
+- [ ] QBO client extends BaseAPIClient with rate limiting
+- [ ] QBO client handles 429 errors gracefully with retry
+- [ ] Circuit breaker pattern prevents hammering QBO when down
+- [ ] Exponential backoff with jitter for transient failures
+- [ ] Typed error hierarchy for proper exception handling
+- [ ] All tests pass with real QBO API calls
+- [ ] All files properly documented
+
+### **Progress Tracking:**
+- Update status to `[🔄]` when starting work
+- Update status to `[✅]` when task is complete
+- Update status to `[❌]` if blocked or failed
+
+### **Git Commit:**
+- After completing verification, commit the specific files modified:
+- `git add _clean/mvp/infra/api/ _clean/mvp/infra/rails/qbo/client.py _clean/mvp/infra/rails/qbo/auth.py`
+- `git commit -m "feat: add production-grade API infrastructure with rate limiting and retry logic"`
+
+### **Todo List Integration:**
+- Create Cursor todo for this task when starting
+- Update todo status as work progresses
+- Mark todo complete when task is done
+
+---
+
+## **Task 10: Port Infrastructure Utilities**
+
+- **Status:** `[📋]` **RECOMMENDED FOR INFRA**
+- **Priority:** P1 High
+- **Justification:** Essential utilities for data validation, error handling, and consistency - needed before building product features
+- **Execution Status:** **Execution-Ready**
+
+### **Task Checklist:**
+- [ ] Port `infra/utils/validation.py` → `_clean/mvp/infra/utils/validation.py`
+- [ ] Port `infra/utils/error_handling.py` → `_clean/mvp/infra/utils/error_handling.py`
+- [ ] Port `infra/utils/enums.py` → `_clean/mvp/infra/utils/enums.py`
+- [ ] Update imports in existing MVP code to use new utilities
+- [ ] All files can be imported without errors
+- [ ] Tests pass with new utilities
+- [ ] All files properly documented
+
+### **Problem Statement**
+Need infrastructure utilities for data validation, error handling, and unified enums to support product features and ensure data quality.
+
+### **User Story**
+"As a developer, I need centralized validation and error handling utilities so that I can build product features with consistent data quality and error management."
+
+### **Solution Overview**
+Port production-grade utilities from legacy `infra/utils/` to MVP:
+- **validation.py**: Comprehensive data validation for business data, API inputs, configuration
+- **error_handling.py**: Decorators and utilities for consistent error handling across services
+- **enums.py**: Unified enums for sync strategies, job status, priorities
+
+### **Files to Port:**
+
+```python
+# infra/utils/validation.py → _clean/mvp/infra/utils/validation.py
+- ValidationSeverity (WARNING, ERROR, CRITICAL)
+- ValidationResult dataclass
+- ValidationRule dataclass
+- Comprehensive validators for:
+  * Business data (runway calculations, financial data)
+  * API inputs (sanitization, constraint checking)
+  * Configuration values
+  * Custom validation rules
+- Field-level error reporting
+- Status: HIGH VALUE - Essential for tray hygiene and data quality
+
+# infra/utils/error_handling.py → _clean/mvp/infra/utils/error_handling.py
+- ErrorContext enum (API_CALL, DATABASE_OPERATION, etc.)
+- @handle_integration_errors decorator
+- @handle_database_errors decorator
+- @retry_with_backoff decorator
+- Centralized logging and error reporting
+- Status: HIGH VALUE - Eliminates duplicate try/catch patterns
+
+# infra/utils/enums.py → _clean/mvp/infra/utils/enums.py
+- SyncStrategy (ON_DEMAND, SCHEDULED, EVENT_TRIGGERED, BACKGROUND)
+- SyncPriority (HIGH, MEDIUM, LOW)
+- BulkSyncStrategy (FULL_SYNC, INCREMENTAL, SELECTIVE)
+- JobStatus (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
+- JobPriority (HIGH, MEDIUM, LOW)
+- Status: MEDIUM VALUE - Ensures consistency across codebase
+```
+
+### **Dependencies:** Task 9 (API Infrastructure) - error handling integrates with API patterns
+
+### **Verification:**
+- Run `ls -la _clean/mvp/infra/utils/` - should show utility files
+- Run `python -c "from infra.utils.validation import ValidationResult; print('Validation imported')"`
+- Run `python -c "from infra.utils.error_handling import handle_integration_errors; print('Error handling imported')"`
+- Run `python -c "from infra.utils.enums import SyncStrategy; print('Enums imported')"`
+- Run `pytest _clean/mvp/tests/ -v` - all tests should pass
+
+### **Definition of Done:**
+- [ ] All utility files ported to MVP
+- [ ] Existing code updated to use utilities where appropriate
+- [ ] All tests pass
+- [ ] All files properly documented
+- [ ] No breaking changes to existing functionality
+
+### **Git Commit:**
+- `git add _clean/mvp/infra/utils/`
+- `git commit -m "feat: port infrastructure utilities (validation, error handling, enums)"`
+
+---
+
+## **Task 11: Port Business Rules and Configuration**
+
+- **Status:** `[📋]` **CRITICAL FOR PRODUCT**
+- **Priority:** P0 Critical
+- **Justification:** Core product logic depends on these business rules - needed before building product features
+- **Execution Status:** **Execution-Ready**
+
+### **Task Checklist:**
+- [ ] Port `infra/config/core_thresholds.py` → `_clean/mvp/infra/config/core_thresholds.py`
+- [ ] Port `infra/config/feature_gates.py` → `_clean/mvp/infra/config/feature_gates.py`
+- [ ] Port `infra/config/collections_rules.py` → `_clean/mvp/infra/config/collections_rules.py`
+- [ ] Port `infra/config/payment_rules.py` → `_clean/mvp/infra/config/payment_rules.py`
+- [ ] Port `infra/config/risk_assessment_rules.py` → `_clean/mvp/infra/config/risk_assessment_rules.py`
+- [ ] Port `infra/config/exceptions.py` → `_clean/mvp/infra/config/exceptions.py`
+- [ ] Port `infra/config/rail_configs.py` → `_clean/mvp/infra/config/rail_configs.py` (QBO portions)
+- [ ] Update imports in existing MVP code
+- [ ] All files can be imported without errors
+- [ ] Tests pass with new configuration
+- [ ] All files properly documented
+
+### **Problem Statement**
+Need to port business rules, thresholds, and configuration from legacy codebase to support product features:
+- **Runway calculations** depend on thresholds (CRITICAL_DAYS, WARNING_DAYS)
+- **Tray priority scoring** depends on weights and scoring rules
+- **Feature gates** control QBO-only mode and multi-rail functionality
+- **Collections/Payment rules** define business logic for AP/AR
+- **Risk assessment** provides scoring algorithms
+
+### **User Story**
+"As a developer, I need centralized business rules and configuration so that product features use consistent thresholds and logic across the application."
+
+### **Solution Overview**
+Port business rules and configuration from legacy `infra/config/` to MVP, maintaining clear documentation and ownership:
+
+```python
+# infra/config/core_thresholds.py → _clean/mvp/infra/config/core_thresholds.py
+- RunwayThresholds: CRITICAL_DAYS=7, WARNING_DAYS=30, HEALTHY_DAYS=90
+- TrayPriorities: URGENT_SCORE=80, MEDIUM_SCORE=60, TYPE_WEIGHTS
+- DigestSettings: LOOKBACK_DAYS=90, FORECAST_DAYS=30
+- RunwayAnalysisSettings: AP_OPTIMIZATION_EFFICIENCY, AR_COLLECTION_EFFICIENCY
+- Status: CRITICAL - Core product logic depends on these
+
+# infra/config/feature_gates.py → _clean/mvp/infra/config/feature_gates.py
+- IntegrationRail enum (QBO, RAMP, PLAID, STRIPE)
+- FeatureGateSettings class
+- is_rail_enabled(), can_use_feature()
+- QBO-only mode detection
+- Status: CRITICAL - Already using this pattern in architecture
+
+# infra/config/collections_rules.py → _clean/mvp/infra/config/collections_rules.py
+- AR collections business logic
+- Customer risk scoring
+- Payment reliability thresholds
+- Status: NEEDED FOR AR - Port when building collections console
+
+# infra/config/payment_rules.py → _clean/mvp/infra/config/payment_rules.py
+- AP payment business logic
+- Vendor risk scoring
+- Payment timing optimization
+- Status: NEEDED FOR AP - Port when building payment scheduling
+
+# infra/config/risk_assessment_rules.py → _clean/mvp/infra/config/risk_assessment_rules.py
+- Customer & vendor risk scoring algorithms
+- Risk threshold definitions
+- Status: NEEDED FOR DECISIONS - Port when building decision console
+
+# infra/config/exceptions.py → _clean/mvp/infra/config/exceptions.py
+- IntegrationError, ValidationError, BusinessNotFoundError
+- Custom exception hierarchy
+- Status: HIGH VALUE - Consistent error handling
+
+# infra/config/rail_configs.py → _clean/mvp/infra/config/rail_configs.py
+- QBO-specific configuration (extract QBO portions)
+- API endpoints, rate limits, sync frequencies
+- Status: NEEDED - Consolidate existing QBO config here
+```
+
+### **Architecture Note:**
+The `infra/config/` folder follows a clear pattern:
+- **Domain-specific rule files** (collections, payment, risk)
+- **Documented business logic** with industry standards
+- **Configurable by business** (marked for future per-tenant customization)
+- **Version controlled** (all changes tracked in git)
+
+### **Dependencies:** Task 10 (Infrastructure Utilities) - validation and exceptions used by config
+
+### **Verification:**
+- Run `ls -la _clean/mvp/infra/config/` - should show config files
+- Run `python -c "from infra.config.core_thresholds import RunwayThresholds; print(f'Critical days: {RunwayThresholds.CRITICAL_DAYS}')"`
+- Run `python -c "from infra.config.feature_gates import FeatureGateSettings; print('Feature gates imported')"`
+- Run `python -c "from infra.config.exceptions import ValidationError; print('Exceptions imported')"`
+- Run `pytest _clean/mvp/tests/ -v` - all tests should pass
+
+### **Definition of Done:**
+- [ ] All config files ported to MVP
+- [ ] Business logic properly documented with industry standards
+- [ ] Existing code updated to use config where appropriate
+- [ ] All tests pass
+- [ ] All files properly documented
+- [ ] README.md in config/ folder explaining architecture
+
+### **Git Commit:**
+- `git add _clean/mvp/infra/config/`
+- `git commit -m "feat: port business rules and configuration (thresholds, feature gates, domain rules)"`
+
+---
+
+## **Summary**
+
+This document provides 11 executable tasks in the correct priority order:
+
+1. **Task 1**: Bootstrap MVP Nucleus (Foundation)
+2. **Task 2**: Copy and Sanitize QBO Infrastructure (QBO Client)
+3. **Task 3**: Create Database Schema and Repositories
+4. **Task 4**: Implement Sync Orchestrator
+5. **Task 5**: Create Domain Gateways (Rail-Agnostic Interfaces)
+6. **Task 6**: Implement Infra Gateways (QBO Implementations)
+7. **Task 7**: Bridge Domain Gateways to Runway Services
+8. **Task 8**: Test Gateway and Wiring Layer
+9. **Task 9**: Port Production-Grade API Infrastructure (Rate Limiting, Retry, Circuit Breaker)
+10. **Task 10**: Port Infrastructure Utilities (Validation, Error Handling, Enums)
+11. **Task 11**: Port Business Rules and Configuration (Thresholds, Feature Gates, Domain Rules)
+
+### **Additional Solutioning Tasks**
+
+For deeper product and workflow solutioning, see:
+- **`_clean/mvp/advisor_workflow_solutioning.md`** - Tasks 12-14 for advisor workflow, calculators, and experience services
+
+These solutioning tasks require extensive product research and user story development before implementation.
+
+Each task includes:
+- **Status tracking** with checkboxes
+- **Comprehensive discovery commands** for validation
+- **Recursive triage process** for safe execution
+- **Specific patterns to implement** with code examples
+- **Verification steps** to ensure success
+- **Git commit instructions** for proper version control
+- **Todo list integration** for progress tracking
+
+**This approach ensures hands-free execution with proper validation and prevents the mistakes that led to the original architectural rot.**
+
+
+
+
+<!-- 
 ## **📋 Task 9: Port Production-Grade API Infrastructure (DEFERRED)**
 
 **Status**: 📋 Planned (not urgent)  
@@ -455,4 +936,4 @@ poetry run pytest tests/ -v
 
 ---
 
-**The QBO foundation is rock solid. All tests passing. Port business rules (Task 11), then ready to test product experiences.**
+**The QBO foundation is rock solid. All tests passing. Port business rules (Task 11), then ready to test product experiences.** -->

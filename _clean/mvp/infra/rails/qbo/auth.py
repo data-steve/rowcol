@@ -12,177 +12,38 @@ Usage:
     auth_service.initiate_system_oauth_flow()  # One-time setup
 """
 
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 from datetime import datetime, timedelta, timezone
 import logging
-import secrets
-import os
+import webbrowser
 from enum import Enum
-import time
-import json
 
 from infra.config.exceptions import IntegrationError
 from .config import qbo_config
-from .dtos import QBOIntegrationDTO, QBOIntegrationStatuses
 
 logger = logging.getLogger(__name__)
-
-TOKEN_FILE = os.path.join(os.path.dirname(__file__), 'dev_tokens.json')
 
 
 class QBOEnvironment(Enum):
     """QBO environment types."""
-    MOCK = "mock"
     SANDBOX = "sandbox"
     PRODUCTION = "production"
 
 
 class QBOAuthService:
-    """
-    QBO authentication service that doesn't depend on domain models.
+    """QBO authentication service for system tokens."""
     
-    This service provides QBO OAuth functionality without database dependencies
-    to avoid circular imports.
-    """
-    
-    def __init__(self, business_id: str, environment: QBOEnvironment = QBOEnvironment.MOCK):
+    def __init__(self, business_id: str, environment: QBOEnvironment = QBOEnvironment.SANDBOX):
         self.business_id = business_id
         self.environment = environment
         self.logger = logging.getLogger(f"{__name__}.{business_id}")
-        
-        logger.info(f"Initialized QBOAuthService for business {business_id}, environment {environment.value}")
-    
-    def initiate_oauth_flow(self, user_id: str) -> Dict[str, Any]:
-        """
-        Initiate QBO OAuth flow and return authorization URL.
-        
-        Args:
-            user_id: ID of the user initiating the flow
-            
-        Returns:
-            Dict containing authorization URL and state
-        """
-        try:
-            # Generate OAuth state for security
-            state = secrets.token_urlsafe(32)
-            
-            auth_url = self._generate_real_auth_url(state)
-            
-            return {
-                "auth_url": auth_url,
-                "state": state,
-                "business_id": self.business_id,
-                "environment": self.environment.value
-            }
-            
-        except IntegrationError as e:
-            self.logger.error(f"Failed to initiate QBO OAuth flow: {e}", exc_info=True)
-            raise IntegrationError("Failed to initiate QBO connection", {"error": str(e)})
-    
-    def _generate_mock_auth_url(self, state: str) -> str:
-        """Generate mock auth URL for development/testing."""
-        base_url = qbo_config.api_base_url.replace('/v3/company', '')
-        return f"{base_url}/oauth2/v1/authorize?client_id={qbo_config.client_id}&scope=com.intuit.quickbooks.accounting&redirect_uri={qbo_config.redirect_uri}&response_type=code&state={state}"
-    
-    def _generate_real_auth_url(self, state: str) -> str:
-        """Generate real QBO auth URL using Intuit SDK."""
-        try:
-            from intuitlib.client import AuthClient
-            from intuitlib.enums import Scopes
-            
-            auth_client = AuthClient(
-                client_id=qbo_config.client_id,
-                client_secret=qbo_config.client_secret,
-                environment=qbo_config.environment,
-                redirect_uri=qbo_config.redirect_uri
-            )
-            
-            return auth_client.get_authorization_url([Scopes.ACCOUNTING], state)
-            
-        except ImportError:
-            self.logger.error("Intuit SDK not available for real QBO auth")
-            raise IntegrationError("QBO SDK not available", {"error": "Intuit SDK not installed"})
-        except IntegrationError as e:
-            self.logger.error(f"Failed to generate real QBO auth URL: {e}")
-            raise IntegrationError("Failed to generate QBO auth URL", {"error": str(e)})
-    
-    def complete_oauth_flow(self, state: str, authorization_code: str, realm_id: str) -> Dict[str, Any]:
-        """
-        Complete OAuth flow by exchanging authorization code for access token.
-        
-        Args:
-            state: OAuth state parameter
-            authorization_code: Authorization code from QBO
-            realm_id: QBO company ID
-            
-        Returns:
-            Dict containing access token and connection details
-        """
-        try:
-            # Exchange code for tokens
-            if self.environment == QBOEnvironment.MOCK:
-                access_token, refresh_token = self._exchange_mock_tokens(authorization_code)
-            else:
-                access_token, refresh_token = self._exchange_real_tokens(authorization_code)
-            
-            return {
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-                "realm_id": realm_id,
-                "business_id": self.business_id,
-                "status": QBOIntegrationStatuses.CONNECTED,
-                "connected_at": datetime.utcnow().isoformat()
-            }
-            
-        except IntegrationError as e:
-            self.logger.error(f"Failed to complete QBO OAuth flow: {e}", exc_info=True)
-            raise IntegrationError("Failed to complete QBO connection", {"error": str(e)})
-    
-    def _exchange_mock_tokens(self, authorization_code: str) -> Tuple[str, str]:
-        """Exchange authorization code for mock tokens."""
-        self.logger.info("Exchanging mock QBO tokens")
-        
-        # Generate mock tokens
-        access_token = f"mock_access_token_{int(time.time())}"
-        refresh_token = f"mock_refresh_token_{int(time.time())}"
-        
-        return access_token, refresh_token
-    
-    def _exchange_real_tokens(self, authorization_code: str) -> Tuple[str, str]:
-        """Exchange authorization code for real QBO tokens."""
-        try:
-            from intuitlib.client import AuthClient
-            
-            auth_client = AuthClient(
-                client_id=qbo_config.client_id,
-                client_secret=qbo_config.client_secret,
-                environment=qbo_config.environment,
-                redirect_uri=qbo_config.redirect_uri
-            )
-            
-            auth_client.get_bearer_token(authorization_code)
-            
-            return auth_client.access_token, auth_client.refresh_token
-            
-        except ImportError:
-            self.logger.error("Intuit SDK not available for real QBO token exchange")
-            raise IntegrationError("QBO SDK not available", {"error": "Intuit SDK not installed"})
-        except IntegrationError as e:
-            self.logger.error(f"Failed to exchange real QBO tokens: {e}")
-            raise IntegrationError("Failed to exchange QBO tokens", {"error": str(e)})
     
     def get_valid_access_token(self) -> Optional[str]:
-        """
-        Get valid access token for QBO API calls.
-        
-        Returns:
-            Valid access token or None if not available
-        """
+        """Get valid access token for QBO API calls. Auto-refreshes if needed."""
         try:
-            # Load tokens from database (system tokens)
             tokens = self._load_system_tokens()
             if not tokens:
-                self.logger.warning("No system tokens found in database")
+                self.logger.warning("No system tokens found")
                 return None
             
             access_token = tokens.get('access_token')
@@ -191,7 +52,6 @@ class QBOAuthService:
             refresh_expires_at = tokens.get('refresh_expires_at')
             
             if not access_token:
-                self.logger.warning("No access token found")
                 return None
             
             # Check if access token is expired (with 5 minute buffer)
@@ -204,7 +64,6 @@ class QBOAuthService:
                 
                 if now >= access_expires_at - timedelta(minutes=5):
                     self.logger.info("Access token expired, attempting refresh")
-                    self.logger.info("Refresh token available for refresh")
                     if refresh_token and refresh_expires_at:
                         # Check if refresh token is still valid
                         if isinstance(refresh_expires_at, str):
@@ -215,15 +74,14 @@ class QBOAuthService:
                         if now < refresh_expires_at:
                             new_tokens = self._refresh_tokens(refresh_token)
                             if new_tokens:
-                                self.logger.info("Got new tokens from refresh")
                                 self._save_system_tokens(new_tokens)
                                 return new_tokens.get('access_token')
                         else:
-                            self.logger.error("Refresh token expired - manual OAuth flow required")
-                            self._prompt_manual_refresh()
+                            self.logger.error("Refresh token expired - manual OAuth required")
                             return None
                     else:
                         self.logger.warning("No refresh token available")
+            
             return access_token
             
         except Exception as e:
@@ -232,51 +90,16 @@ class QBOAuthService:
     
     def is_connected(self) -> bool:
         """Check if business has valid QBO connection."""
-        try:
-            # Check if we have a valid access token
-            access_token = self.get_valid_access_token()
-            return access_token is not None
-            
-        except Exception as e:
-            self.logger.error(f"Failed to check connection status: {e}")
-            return False
-    
-    def disconnect(self) -> bool:
-        """Disconnect QBO integration."""
-        try:
-            # Load existing data
-            data = {}
-            if os.path.exists(TOKEN_FILE):
-                with open(TOKEN_FILE, 'r') as f:
-                    data = json.load(f)
-            
-            # Remove tokens for this business
-            if self.business_id in data:
-                del data[self.business_id]
-                
-                # Save back to file
-                with open(TOKEN_FILE, 'w') as f:
-                    json.dump(data, f, indent=2)
-                
-                self.logger.info(f"Disconnected QBO for business {self.business_id}")
-            
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Failed to disconnect QBO: {e}")
-            return False
+        return self.get_valid_access_token() is not None
     
     def get_connection_status(self) -> Dict[str, Any]:
-        """Get detailed connection status with troubleshooting info."""
+        """Get detailed connection status."""
         try:
             connected = self.is_connected()
             tokens = self._load_system_tokens()
             
-            status = QBOIntegrationStatuses.CONNECTED if connected else QBOIntegrationStatuses.DISCONNECTED
-            
             result = {
                 "connected": connected,
-                "status": status,
                 "platform": "qbo",
                 "business_id": self.business_id,
                 "environment": self.environment.value
@@ -289,34 +112,19 @@ class QBOAuthService:
                     "external_id": tokens.get('external_id')
                 })
             
-            # Add troubleshooting info
-            if not connected:
-                result["troubleshooting"] = self._get_troubleshooting_info()
-            
             return result
             
         except Exception as e:
             self.logger.error(f"Failed to get connection status: {e}")
             return {
                 "connected": False,
-                "status": QBOIntegrationStatuses.ERROR,
                 "platform": "qbo",
                 "business_id": self.business_id,
-                "error": str(e),
-                "troubleshooting": self._get_troubleshooting_info()
+                "error": str(e)
             }
     
-    def _get_troubleshooting_info(self) -> Dict[str, str]:
-        """Get troubleshooting information for connection issues."""
-        return {
-            "no_tokens": "Run: poetry run python -c \"from mvp.infra.rails.qbo.auth import QBOAuthService, QBOEnvironment; QBOAuthService('system', QBOEnvironment.SANDBOX).initiate_system_oauth_flow()\"",
-            "expired_tokens": "Run the same command above to refresh tokens",
-            "api_errors": "Check QBO sandbox credentials in .env file",
-            "database_errors": "Check _clean/rowcol.db exists and is accessible"
-        }
-    
     def health_check(self) -> Dict[str, Any]:
-        """Perform comprehensive health check with actionable recommendations."""
+        """Perform health check with actionable recommendations."""
         try:
             # Check if we have tokens
             tokens = self._load_system_tokens()
@@ -324,8 +132,7 @@ class QBOAuthService:
                 return {
                     "status": "no_tokens",
                     "message": "No QBO tokens found in database",
-                    "action": "Run OAuth flow to get initial tokens",
-                    "command": "poetry run python -c \"from mvp.infra.rails.qbo.auth import QBOAuthService, QBOEnvironment; QBOAuthService('system', QBOEnvironment.SANDBOX).initiate_system_oauth_flow()\""
+                    "action": "Run OAuth flow to get initial tokens"
                 }
             
             # Check token expiration
@@ -343,8 +150,7 @@ class QBOAuthService:
                     return {
                         "status": "access_expired",
                         "message": "Access token expired - will auto-refresh",
-                        "action": "System will attempt auto-refresh",
-                        "command": "Check logs for refresh status"
+                        "action": "System will attempt auto-refresh"
                     }
             
             if refresh_expires:
@@ -357,8 +163,7 @@ class QBOAuthService:
                     return {
                         "status": "refresh_expired",
                         "message": "Refresh token expired - manual OAuth required",
-                        "action": "Run OAuth flow to get new tokens",
-                        "command": "poetry run python -c \"from mvp.infra.rails.qbo.auth import QBOAuthService, QBOEnvironment; QBOAuthService('system', QBOEnvironment.SANDBOX).initiate_system_oauth_flow()\""
+                        "action": "Run OAuth flow to get new tokens"
                     }
             
             # Test API connectivity
@@ -370,201 +175,25 @@ class QBOAuthService:
                     "status": "healthy",
                     "message": "QBO connection working properly",
                     "action": "No action needed",
-                    "company_name": response.get('QueryResponse', {}).get('CompanyInfo', [{}])[0].get('CompanyName', 'Unknown')
+                    "company_name": response.get('CompanyInfo', {}).get('CompanyName', 'Unknown')
                 }
             except Exception as e:
                 return {
                     "status": "api_error",
                     "message": f"QBO API call failed: {e}",
-                    "action": "Check QBO credentials and network connectivity",
-                    "command": "Verify QBO sandbox credentials in .env file"
+                    "action": "Check QBO credentials and network connectivity"
                 }
                 
         except Exception as e:
             return {
                 "status": "error",
                 "message": f"Health check failed: {e}",
-                "action": "Check system configuration",
-                "command": "Check database connectivity and configuration"
+                "action": "Check system configuration"
             }
-    
-    def _load_system_tokens(self) -> Optional[Dict[str, Any]]:
-        """Load system tokens from database using SQLAlchemy ORM."""
-        try:
-            from infra.db.session import SessionLocal
-            from infra.db.models import SystemIntegrationToken
-            
-            # Use SQLAlchemy ORM
-            with SessionLocal() as session:
-                token = session.query(SystemIntegrationToken).filter(
-                    SystemIntegrationToken.rail == 'qbo',
-                    SystemIntegrationToken.environment == 'sandbox',
-                    SystemIntegrationToken.status == 'active'
-                ).order_by(SystemIntegrationToken.updated_at.desc()).first()
-                
-                if token:
-                    return {
-                        'access_token': token.access_token,
-                        'refresh_token': token.refresh_token,
-                        'access_expires_at': token.access_expires_at,
-                        'refresh_expires_at': token.refresh_expires_at,
-                        'external_id': token.external_id
-                    }
-                return None
-                
-        except Exception as e:
-            self.logger.error(f"Failed to load system tokens: {e}")
-            return None
-
-    def _load_tokens(self) -> Optional[Dict[str, Any]]:
-        """Load tokens from storage file (legacy method)."""
-        try:
-            if not os.path.exists(TOKEN_FILE):
-                return None
-            
-            with open(TOKEN_FILE, 'r') as f:
-                data = json.load(f)
-                return data.get(self.business_id)
-                
-        except Exception as e:
-            self.logger.error(f"Failed to load tokens: {e}")
-            return None
-    
-    def _save_system_tokens(self, tokens: Dict[str, Any]) -> bool:
-        """Save system tokens to database using SQLAlchemy ORM."""
-        try:
-            from infra.db.session import SessionLocal
-            from infra.db.models import SystemIntegrationToken
-            
-            self.logger.info("Saving refreshed tokens to database")
-            
-            # Use SQLAlchemy ORM
-            with SessionLocal() as session:
-                # Check if record exists
-                existing = session.query(SystemIntegrationToken).filter(
-                    SystemIntegrationToken.rail == 'qbo',
-                    SystemIntegrationToken.environment == 'sandbox'
-                ).first()
-                
-                if existing:
-                    # Update existing system tokens
-                    existing.access_token = tokens.get('access_token')
-                    existing.refresh_token = tokens.get('refresh_token')
-                    existing.access_expires_at = tokens.get('access_expires_at')
-                    existing.refresh_expires_at = tokens.get('refresh_expires_at')
-                    existing.status = 'active'
-                    # updated_at will be automatically updated by onupdate=func.now()
-                else:
-                    # Insert new system tokens
-                    new_token = SystemIntegrationToken(
-                        rail='qbo',
-                        environment='sandbox',
-                        external_id=tokens.get('external_id', 'system'),
-                        access_token=tokens.get('access_token'),
-                        refresh_token=tokens.get('refresh_token'),
-                        access_expires_at=tokens.get('access_expires_at'),
-                        refresh_expires_at=tokens.get('refresh_expires_at'),
-                        status='active'
-                    )
-                    session.add(new_token)
-                
-                session.commit()
-                return True
-                
-        except Exception as e:
-            self.logger.error(f"Failed to save system tokens: {e}")
-            return False
-
-    def _save_tokens(self, tokens: Dict[str, Any]) -> bool:
-        """Save tokens to storage file (legacy method)."""
-        try:
-            # Load existing data
-            data = {}
-            if os.path.exists(TOKEN_FILE):
-                with open(TOKEN_FILE, 'r') as f:
-                    data = json.load(f)
-            
-            # Update with new tokens
-            data[self.business_id] = tokens
-            
-            # Save back to file
-            with open(TOKEN_FILE, 'w') as f:
-                json.dump(data, f, indent=2)
-            
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Failed to save tokens: {e}")
-            return False
-    
-    def _refresh_tokens(self, refresh_token: str) -> Optional[Dict[str, Any]]:
-        """Refresh access token using refresh token."""
-        try:
-            import requests
-            
-            # QBO token refresh endpoint
-            token_url = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
-            
-            # Prepare refresh request
-            data = {
-                'grant_type': 'refresh_token',
-                'refresh_token': refresh_token
-            }
-            
-            # Basic auth with client credentials
-            auth = (qbo_config.client_id, qbo_config.client_secret)
-            
-            # Make refresh request
-            response = requests.post(
-                token_url,
-                data=data,
-                auth=auth,
-                headers={'Accept': 'application/json'}
-            )
-            
-            if response.status_code == 200:
-                token_data = response.json()
-                self.logger.info("Token refresh successful - tokens obtained")
-                
-                # Calculate expiration times based on QBO docs
-                now = datetime.utcnow()
-                access_expires_at = now + timedelta(seconds=token_data.get('expires_in', 3600))
-                refresh_expires_at = now + timedelta(seconds=token_data.get('x_refresh_token_expires_in', 8726400))
-                
-                return {
-                    'access_token': token_data.get('access_token'),
-                    'refresh_token': token_data.get('refresh_token'),
-                    'access_expires_at': access_expires_at.isoformat(),
-                    'refresh_expires_at': refresh_expires_at.isoformat(),
-                    'business_id': self.business_id,
-                    'refreshed_at': now.isoformat()
-                }
-            else:
-                self.logger.error(f"Token refresh failed: {response.status_code} - {response.text}")
-                return None
-                
-        except Exception as e:
-            self.logger.error(f"Failed to refresh tokens: {e}")
-            return None
-
-    def _prompt_manual_refresh(self):
-        """Prompt user to manually refresh system tokens."""
-        print("\n" + "="*60)
-        print("🚨 QBO REFRESH TOKEN EXPIRED - MANUAL OAUTH REQUIRED")
-        print("="*60)
-        print("Run this command to refresh system tokens:")
-        print()
-        print("  poetry run python -c \"from mvp.infra.rails.qbo.auth import QBOAuthService, QBOEnvironment; QBOAuthService('system', QBOEnvironment.SANDBOX).initiate_system_oauth_flow()\"")
-        print()
-        print("="*60 + "\n")
     
     def initiate_system_oauth_flow(self) -> bool:
-        """
-        Initiate OAuth flow for system token setup.
-        This is a one-time setup for system QBO access.
-        """
+        """Initiate OAuth flow for system token setup."""
         try:
-            import webbrowser
             from intuitlib.client import AuthClient
             from intuitlib.enums import Scopes
             
@@ -590,25 +219,23 @@ class QBOAuthService:
             except:
                 print("Could not open browser automatically")
             
-            # Get authorization code from user
+            # Get authorization code and realm_id from user
+            print("After authorizing, you'll be redirected to a URL like:")
+            print("http://localhost:8001/callback?code=XXXXX&realmId=XXXXX&state=XXXXX")
+            print()
             auth_code = input("Enter the authorization code from the URL: ").strip()
+            realm_id = input("Enter the realmId from the URL: ").strip()
             
-            if not auth_code:
-                print("❌ Authorization code required")
+            if not auth_code or not realm_id:
+                print("❌ Authorization code and realmId required")
                 return False
             
             # Exchange code for tokens
-            print("Exchanging authorization code for tokens...")
+            print("🔄 Exchanging authorization code for tokens...")
             auth_client.get_bearer_token(auth_code)
             
             access_token = auth_client.access_token
             refresh_token = auth_client.refresh_token
-            
-            # Get realm_id from environment
-            realm_id = os.getenv('QBO_REALM_ID')
-            if not realm_id:
-                print("❌ QBO_REALM_ID not found in environment")
-                return False
             
             # Calculate expiration times
             now = datetime.now(timezone.utc)
@@ -619,15 +246,16 @@ class QBOAuthService:
             tokens = {
                 'access_token': access_token,
                 'refresh_token': refresh_token,
-                'access_expires_at': access_expires_at.isoformat(),
-                'refresh_expires_at': refresh_expires_at.isoformat()
+                'access_expires_at': access_expires_at,
+                'refresh_expires_at': refresh_expires_at,
+                'external_id': realm_id
             }
             
             if self._save_system_tokens(tokens):
                 print("✅ System tokens stored successfully!")
-                print(f"Realm ID: {realm_id}")
-                print(f"Access expires: {access_expires_at}")
-                print(f"Refresh expires: {refresh_expires_at}")
+                print(f"   Realm ID: {realm_id}")
+                print(f"   Access expires: {access_expires_at}")
+                print(f"   Refresh expires: {refresh_expires_at}")
                 return True
             else:
                 print("❌ Failed to store system tokens")
@@ -637,21 +265,130 @@ class QBOAuthService:
             print(f"❌ OAuth flow failed: {e}")
             return False
     
-    def store_tokens(self, access_token: str, refresh_token: str, expires_in: int = 3600) -> bool:
-        """Store tokens for this business."""
+    def _load_system_tokens(self) -> Optional[Dict[str, Any]]:
+        """Load system tokens from database."""
         try:
-            expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+            from infra.db.session import SessionLocal
+            from infra.db.models import SystemIntegrationToken
             
-            tokens = {
-                'access_token': access_token,
-                'refresh_token': refresh_token,
-                'expires_at': expires_at.isoformat(),
-                'business_id': self.business_id,
-                'stored_at': datetime.utcnow().isoformat()
+            with SessionLocal() as session:
+                token = session.query(SystemIntegrationToken).filter(
+                    SystemIntegrationToken.rail == 'qbo',
+                    SystemIntegrationToken.environment == 'sandbox',
+                    SystemIntegrationToken.status == 'active'
+                ).order_by(SystemIntegrationToken.updated_at.desc()).first()
+                
+                if token:
+                    return {
+                        'access_token': token.access_token,
+                        'refresh_token': token.refresh_token,
+                        'access_expires_at': token.access_expires_at,
+                        'refresh_expires_at': token.refresh_expires_at,
+                        'external_id': token.external_id
+                    }
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to load system tokens: {e}")
+            return None
+    
+    def _save_system_tokens(self, tokens: Dict[str, Any]) -> bool:
+        """Save system tokens to database."""
+        try:
+            from infra.db.session import SessionLocal
+            from infra.db.models import SystemIntegrationToken
+            
+            with SessionLocal() as session:
+                # Check if record exists
+                existing = session.query(SystemIntegrationToken).filter(
+                    SystemIntegrationToken.rail == 'qbo',
+                    SystemIntegrationToken.environment == 'sandbox'
+                ).first()
+                
+                if existing:
+                    # Update existing tokens
+                    existing.access_token = tokens.get('access_token')
+                    existing.refresh_token = tokens.get('refresh_token')
+                    existing.access_expires_at = tokens.get('access_expires_at')
+                    existing.refresh_expires_at = tokens.get('refresh_expires_at')
+                    existing.status = 'active'
+                else:
+                    # Insert new tokens
+                    new_token = SystemIntegrationToken(
+                        rail='qbo',
+                        environment='sandbox',
+                        external_id=tokens.get('external_id', 'system'),
+                        access_token=tokens.get('access_token'),
+                        refresh_token=tokens.get('refresh_token'),
+                        access_expires_at=tokens.get('access_expires_at'),
+                        refresh_expires_at=tokens.get('refresh_expires_at'),
+                        status='active'
+                    )
+                    session.add(new_token)
+                
+                session.commit()
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save system tokens: {type(e).__name__}: {str(e)}")
+            return False
+    
+    def _refresh_tokens(self, refresh_token: str) -> Optional[Dict[str, Any]]:
+        """Refresh access token using refresh token."""
+        try:
+            import requests
+            from tenacity import (
+                retry,
+                stop_after_attempt,
+                wait_exponential,
+                retry_if_exception_type,
+            )
+            from requests.exceptions import Timeout, ConnectionError
+            
+            token_url = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
+            
+            data = {
+                'grant_type': 'refresh_token',
+                'refresh_token': refresh_token
             }
             
-            return self._save_tokens(tokens)
+            auth = (qbo_config.client_id, qbo_config.client_secret)
             
+            @retry(
+                stop=stop_after_attempt(3),
+                wait=wait_exponential(multiplier=1, min=1, max=10),
+                retry=retry_if_exception_type((Timeout, ConnectionError)),
+            )
+            def _do_refresh():
+                return requests.post(
+                    token_url,
+                    data=data,
+                    auth=auth,
+                    headers={'Accept': 'application/json'},
+                    timeout=(5.0, 30.0),
+                )
+            
+            response = _do_refresh()
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                self.logger.info("Token refresh successful")
+                
+                now = datetime.utcnow()
+                access_expires_at = now + timedelta(seconds=token_data.get('expires_in', 3600))
+                refresh_expires_at = now + timedelta(seconds=token_data.get('x_refresh_token_expires_in', 8726400))
+                
+                return {
+                    'access_token': token_data.get('access_token'),
+                    'refresh_token': token_data.get('refresh_token'),
+                    'access_expires_at': access_expires_at,
+                    'refresh_expires_at': refresh_expires_at,
+                    'business_id': self.business_id,
+                }
+            else:
+                self.logger.error(f"Token refresh failed: {response.status_code} - {response.text}")
+                return None
+                
         except Exception as e:
-            self.logger.error(f"Failed to store tokens: {e}")
-            return False
+            self.logger.error(f"Failed to refresh tokens: {e}")
+            return None
