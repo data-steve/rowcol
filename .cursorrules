@@ -82,3 +82,26 @@ All changes must include tests that verify:
 
 ## MIGRATION MANIFEST
 Reference _clean/strangled_fig/migration_manifest.md for concrete porting instructions.
+
+## GIT COMMIT RULES
+- Always double-check git status before any commit
+- Keep commits atomic: commit only the files you touched and list each path explicitly
+- For tracked files run `git commit -m "<scoped message>" -- path/to/file1 path/to/file2`
+- Quote any git paths containing brackets or parentheses when staging or committing
+- Never amend commits unless you have explicit written approval in the task thread
+
+## FILE DELETION RULES
+- Delete unused or obsolete files when your changes make them irrelevant (refactors, feature removals, etc.)
+- Before attempting to delete a file to resolve a local type/lint failure, stop and ask the user
+- NEVER edit `.env` or any environment variable files—only the user may change them
+- Moving/renaming and restoring files is allowed
+
+## DESTRUCTIVE OPERATIONS
+- ABSOLUTELY NEVER run destructive git operations (e.g., `git reset --hard`, `rm`, `git checkout`/`git restore` to an older commit) unless the user gives an explicit, written instruction
+- Never use `git restore` to revert files you didn't author
+
+## CODE EDITING PREFERENCES
+- NEVER delete tests just because they are failing - always fix/cleanse instead
+- PREFER editing existing files rather than writing new files
+- Principle: CLEANSE AND FIX over DELETING
+- If a test is fundamentally wrong, discuss with user before deleting
