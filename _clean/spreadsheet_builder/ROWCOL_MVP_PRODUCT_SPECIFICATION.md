@@ -55,8 +55,8 @@
 //         → Store this learning per-client
 // 
 // Step 4: TEMPORAL BUCKET (which month does each appear?)
-//         → Invoice date + historical DSO → expected inflow month
-//         → Bill due date + payment policy → expected outflow month
+//         → Invoice due date + payment patterns → expected inflow month
+//         → Bill due date → expected outflow month
 //         → Payroll schedule → payment dates
 // 
 // Step 5: POPULATE TEMPLATE (write classified values to rows)
@@ -380,7 +380,11 @@ BEGINNING CASH (Row 2)
 **Client Overrides:**
 - Manual mapping for edge cases
 - Advisor approval/rejection loop
-- Continuous learning and improvement
+
+**Data Quality Adaptation:**
+- Quality score calculation (mapped_gl_count / total_tx_count)
+- "Pending" bucket for unmapped transactions requiring review
+- Manual override capability for edge cases
 
 ### Data Quality Adaptation Across Market Segments
 
@@ -848,6 +852,8 @@ cash_metrics:
 - **GL Learning**: Implement GL-based classification using existing QBO integration
 - **Excel Generation**: Add template renderer to existing runway orchestration
 - **Firm Console**: Enhance existing console service for multi-client management
+- **Override Persistence**: Store manual adjustments externally, survive regeneration
+- **Assumption Audit Trail**: JSON snapshot of assumptions used for each workbook generation
 
 ### Phase 1 → Phase 2 (Expanding Capabilities)
 - **Template Library**: Build comprehensive template library for different client types
@@ -865,6 +871,112 @@ cash_metrics:
 - **Multi-Firm Support**: Scale existing firm-first multi-tenancy
 - **Advanced Integrations**: Leverage existing Smart Sync pattern for new rails
 - **Enterprise Features**: Add SOC2 compliance and advanced RBAC
+
+## 🚀 Future Enhancements (Post-MVP)
+
+### Advanced Temporal Intelligence
+- **DSO Learning**: Per-customer payment pattern analysis (15-day vs 45-day payers)
+- **Payment Policy Configuration**: Pay on Tue/Thu, buffer guardrails, custom payment rules
+- **AR Realism Toggles**: Hide invoices >60d late, probability-weighted receipts
+- **Historical DSO Analysis**: Learn from 6+ months of payment data
+
+### Advanced Data Quality & Learning
+- **Variance Detection**: Flag deviations from prior period >X%
+- **Confidence Scoring**: Per-transaction confidence levels for AR/AP timing
+- **Anomaly Detection**: Identify unusual patterns requiring advisor review
+
+### Adaptive Learning System (Post-MVP)
+**The Challenge**: System generates cash forecast with "Pending" items that need advisor review. How do we learn from corrections without building a complex web UI?
+
+**The Solution**: "Spreadsheet with Macros" Learning Loop
+
+**How It Works**:
+1. **Generate Main Forecast**: System creates cash forecast with "Pending" row for unmapped items
+2. **Generate Review Spreadsheet**: Separate workbook with:
+   - List of all Pending transactions
+   - Suggested classifications (based on GL patterns)
+   - Checkboxes for advisor to approve/reject
+   - Dropdown menus for category selection
+3. **Advisor Review**: Advisor fills out Review spreadsheet (no web UI needed)
+4. **Import Corrections**: System reads Review spreadsheet and applies corrections
+5. **Regenerate Forecast**: Main forecast updates with learned classifications
+6. **Background Learning**: System improves suggestions over time using existing `suggestion.py` and `correction.py` models
+
+**Why This Works**:
+- Leverages existing learning code without frontend complexity
+- Advisor stays in familiar Excel environment
+- Learning happens transparently in background
+- Can evolve to web UI later when ready
+
+**Implementation**:
+- Use existing `suggestion.py` and `correction.py` models from ported code
+- Excel macros for easy advisor interaction
+- Background learning service processes corrections
+- Gradual improvement in classification accuracy
+
+### Assumption Audit Trail Implementation
+**The Challenge**: How to track and audit the assumptions used to generate each workbook without complex external systems?
+
+**The Solution**: Locked "Assumptions" Worksheet with Editable Copy
+
+**How It Works**:
+1. **Generate Assumptions Worksheet**: System creates locked "Assumptions" sheet with:
+   - Generated date and time
+   - Default DSO (Days Sales Outstanding) used
+   - Payment policy settings (pay on Tue/Thu, buffer days)
+   - Recurrence thresholds (3+ occurrences, ±10% variance)
+   - GL mapping ranges (4000-4999, 6000-6999, 60100-60199)
+   - Data quality score at generation time
+   - Client-specific overrides applied
+
+2. **Create Editable Copy**: System creates unlocked "Assumptions (Editable)" worksheet:
+   - Identical content to locked version
+   - Advisor can modify assumptions for next generation
+   - Changes are preserved for future runs
+   - Provides transparency and control
+
+3. **Audit Trail Benefits**:
+   - Complete reproducibility (know exactly what assumptions were used)
+   - Advisor can see and adjust assumptions easily
+   - No external JSON files or complex systems needed
+   - Everything contained within the Excel workbook
+   - Clear documentation of decision-making process
+
+**Code Implementation**:
+```python
+# Add "Assumptions" worksheet
+ws_assumptions = wb.create_sheet("Assumptions")
+ws_assumptions.protect()  # Lock it
+
+# Write assumptions table
+ws_assumptions['A1'] = "Generated Date"
+ws_assumptions['B1'] = "2025-01-15"
+ws_assumptions['A2'] = "Default DSO"
+ws_assumptions['B2'] = 30
+ws_assumptions['A3'] = "Payment Policy"
+ws_assumptions['B3'] = "Tuesday/Thursday"
+ws_assumptions['A4'] = "Recurrence Threshold"
+ws_assumptions['B4'] = "3+ occurrences, ±10%"
+ws_assumptions['A5'] = "Data Quality Score"
+ws_assumptions['B5'] = "87%"
+
+# Then create unlocked copy for advisor edits
+ws_assumptions_editable = wb.copy_worksheet(ws_assumptions)
+ws_assumptions_editable.title = "Assumptions (Editable)"
+# This one is unlocked
+```
+
+**Why This Works**:
+- Keeps everything in Excel (no external dependencies)
+- Provides complete audit trail and reproducibility
+- Allows advisor control and transparency
+- Simple to implement and understand
+- Scales to any number of clients
+
+### Enhanced Template Features
+- **Branded Output**: Firm logos, client names, run dates in workbooks
+- **Template Variants**: Cash Flow-Ops, Cash Flow wsavings, industry-specific layouts
+- **Assumption Audit Trail**: Locked "Assumptions" worksheet with editable copy for advisor review
 - **AI/ML Enhancement**: Build on existing learning system for advanced classification
 
 ---
