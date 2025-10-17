@@ -589,6 +589,34 @@ git commit -m "docs: verify Phase 0 porting complete and working"
 
 ---
 
+## **Sophisticated Capabilities Already Built**
+
+**Vendor Management (domains/ap/services/vendor.py):**
+- Comprehensive vendor lifecycle management
+- Payment method validation and W9 status tracking
+- Payment urgency calculation and statistics updates
+- Vendor normalization and matching with QBO
+- Critical vendor identification and payment history
+
+**Policy Engine (_parked/policy/):**
+- Rule-based transaction categorization with confidence scoring
+- Correction and suggestion models for learning loops
+- Policy profiles with vertical specializations
+- Vendor category fallback with sophisticated matching
+- Real business rules with priority and confidence computation
+
+**Payment Services (domains/ap/services/payment.py):**
+- Complete payment lifecycle from creation to reconciliation
+- Payment status tracking and retry logic
+- QBO synchronization and runway impact calculations
+- Provider pattern with mock and real implementations
+
+**Statement Reconciliation (domains/ap/services/statement_reconciliation.py):**
+- Bank statement reconciliation capabilities
+- Transaction matching and validation
+
+---
+
 ## **Success Criteria for Phase 0**
 
 - [ ] All 8 core models and services ported to `_clean/mvp/`
