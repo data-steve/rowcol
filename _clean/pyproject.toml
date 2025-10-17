@@ -1,42 +1,39 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "rowcol-mvp"
 version = "0.1.0"
 description = "RowCol MVP - QBO-only Financial Control Plane"
-authors = [
-    {name = "RowCol Team", email = "team@rowcol.com"}
-]
+authors = ["RowCol Team <team@rowcol.com>"]
 readme = "README.md"
-requires-python = ">=3.9"
-packages = [
-    {include = "mvp", from = "."},
-]
-dependencies = [
-    "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.24.0",
-    "pydantic>=2.5.0",
-    "sqlalchemy>=2.0.0",
-    "requests>=2.31.0",
-    "httpx>=0.25.0",
-    "python-multipart>=0.0.6",
-    "python-dotenv>=1.0.0",
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "intuit-oauth>=1.2.6",
-]
+packages = [{include = "mvp", from = "."}]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "httpx>=0.25.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "mypy>=1.7.0",
-]
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.104.0"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+pydantic = "^2.5.0"
+sqlalchemy = "^2.0.0"
+requests = "^2.31.0"
+httpx = "^0.25.0"
+python-multipart = "^0.0.6"
+python-dotenv = "^1.0.0"
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+intuit-oauth = "^1.2.6"
+tenacity = "^8.2.0"
+beautifulsoup4 = "^4.14.0"
+pandas = "^2.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+httpx = "^0.25.0"
+black = "^23.0.0"
+isort = "^5.12.0"
+mypy = "^1.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
