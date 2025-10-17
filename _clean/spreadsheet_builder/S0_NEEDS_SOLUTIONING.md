@@ -10,7 +10,7 @@
 // WE'RE SOLVING FOR UNIVERSAL:
 // - How to detect inflows/outflows for ANY client type
 // - How to detect recurrence/magnitude for ANY business model
-// - How to bucket transactions to months for ANY DSO pattern
+// - How to bucket transactions to months for ANY payment pattern
 // - How to store learning so each client improves over time
 // 
 // SOLUTIONING STRATEGY:
@@ -159,6 +159,8 @@ Design a multi-segment pilot strategy that validates:
 4. Market fit across CAS segments
 5. Data quality improvement mechanisms
 
+### **Next Task:** E1.5 - Multi-Client Pilot Validation (uses this strategy)
+
 ---
 
 ## **S0.2: Data Quality Metrics Framework**
@@ -261,6 +263,8 @@ Design a comprehensive data quality metrics framework that:
 4. Enables continuous improvement
 5. Integrates with API endpoints
 
+### **Next Task:** E1.4 - Create API Endpoints for Template Generation (needs these metrics)
+
 ---
 
 ## **S0.3: Learning Loop Integration (Fast Follow)**
@@ -346,6 +350,8 @@ Design a learning loop that:
 3. Refines vendor normalization
 4. Calibrates confidence scores
 5. Prevents regressions
+
+### **Next Task:** E2+ (Future phases - this is post-MVP enhancement)
 
 ---
 

@@ -33,7 +33,9 @@
 
 **Status:** Ready for Execution  
 **Phase:** Foundation (Weeks 1-2)  
-**Goal:** Leverage existing architecture and port selective components for template system
+**Goal:** Port GL-based classification infrastructure for template system  
+**Dependencies:** None  
+**Deliverable:** Working GL classification system ready for Phase 1 template rendering
 
 ---
 
@@ -142,6 +144,8 @@ git add _clean/mvp/domains/core/models/
 git commit -m "feat: port core models (business, transaction, audit_log) to MVP"
 ```
 
+### **Next Task:** E0.2 - Port AP Models (COA Templates, Vendor Categories)
+
 ---
 
 ## **E0.2: Port AP Models (COA Templates, Vendor Categories)**
@@ -203,6 +207,8 @@ git add _clean/mvp/domains/ap/models/
 git commit -m "feat: port AP models (COA templates, vendor categories) to MVP"
 ```
 
+### **Next Task:** E0.3 - Port Core Services (BusinessService)
+
 ---
 
 ## **E0.3: Port Core Services (BusinessService)**
@@ -257,6 +263,8 @@ git add _clean/mvp/domains/core/services/
 git commit -m "feat: port BusinessService to MVP"
 ```
 
+### **Next Task:** E0.4 - Port AP Services (VendorService)
+
 ---
 
 ## **E0.4: Port AP Services (VendorService)**
@@ -309,6 +317,8 @@ python -c "from _clean.mvp.domains.ap.services.vendor import VendorService; prin
 git add _clean/mvp/domains/ap/services/
 git commit -m "feat: port VendorService to MVP"
 ```
+
+### **Next Task:** E0.5 - Port Vendor Normalization (Selective from _parked)
 
 ---
 
@@ -364,6 +374,8 @@ python -c "from _clean.mvp.infra.vendor_normalization.services import VendorNorm
 git add _clean/mvp/infra/vendor_normalization/
 git commit -m "feat: port vendor normalization to MVP (selective)"
 ```
+
+### **Next Task:** E0.6 - Port Policy Engine (Selective from _parked)
 
 ---
 
@@ -425,6 +437,8 @@ python -c "from _clean.mvp.domains.policy.models.correction import Correction; p
 git add _clean/mvp/domains/policy/
 git commit -m "feat: port policy engine to MVP (selective, learning loop deferred)"
 ```
+
+### **Next Task:** E0.7 - Update All Imports Across MVP Codebase
 
 ---
 
@@ -509,6 +523,8 @@ git add _clean/mvp/
 git commit -m "feat: update all imports to use ported models and services"
 ```
 
+### **Next Task:** E0.8 - Verify Selective Porting Complete
+
 ---
 
 ## **E0.8: Verify Selective Porting Complete**
@@ -568,6 +584,8 @@ find _clean/mvp/domains/policy/ -type f -name "*.py" | wc -l
 git add .
 git commit -m "docs: verify Phase 0 porting complete and working"
 ```
+
+### **Next Task:** S0.2 - Data Quality Metrics Framework (BLOCKER for E1.4)
 
 ---
 

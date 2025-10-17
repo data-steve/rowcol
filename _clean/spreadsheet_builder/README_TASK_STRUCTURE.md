@@ -97,6 +97,48 @@ We've separated the monolithic `ROWCOL_MVP_BUILD_PLAN.md` into focused, executab
 
 ---
 
+## **Critical Execution Order (Dependencies)**
+
+### **Why Order Matters**
+Some tasks have dependencies that must be respected to avoid blockers and ensure smooth execution.
+
+### **Optimal Execution Sequence**
+```
+E0.1-E0.8 (Phase 0 porting) 
+    ↓
+S0.2 (Data Quality Metrics) - BLOCKER for E1.4
+    ↓  
+E1.1-E1.3 (Template system core)
+    ↓
+E1.4 (API endpoints) - now has data quality metrics
+    ↓
+S0.1 (Multi-client pilot strategy) - validate on new client
+    ↓
+E1.5 (Multi-client pilot validation) - now has strategy + metrics
+    ↓
+E2+ (Future phases with S0.3 learning loop)
+```
+
+### **Key Dependencies Explained**
+
+**S0.2 (Data Quality Metrics) is a BLOCKER for E1.4:**
+- E1.4 requires `/businesses/{business_id}/data-quality` endpoint
+- This endpoint needs specific metrics (total_transactions, matched_transactions, data_quality_score, etc.)
+- Without S0.2, we don't know what metrics to calculate or how to calculate them
+
+**S0.1 (Multi-Client Pilot Strategy) is needed for E1.5:**
+- E1.5 success criteria requires "Data quality metrics > 80% across segments"
+- S0.1 defines how to validate across different client types
+- Mission First is all nonprofit - we need strategy for testing other client types
+
+**S0.3 (Learning Loop) is correctly positioned post-MVP:**
+- This is the "Spreadsheet with Macros" learning loop
+- It's in Phase 3 of the Build Plan (Learning System Implementation)
+- Not a blocker to core execution tasks
+- Can be deferred until we have working template generation
+
+---
+
 ## **Document Size & Scope**
 
 ### **Why We Split the Documents**

@@ -16,7 +16,7 @@
 // - Rows 46-76: Payroll (GL 60100-60199, any client)
 // 
 // THE HARD PART IS NOT THE EXCEL:
-// - The hard part is temporal bucketing (invoice date + DSO → month)
+// - The hard part is temporal bucketing (invoice due date + payment patterns → month)
 // - The hard part is recurrence detection (3+ with ±10% variance)
 // - The hard part is storing per-client learning (overrides improve confidence)
 // - The hard part is making it work for nonprofit/agency/SaaS/professional services
@@ -45,9 +45,10 @@
 # RowCol MVP Phase 1 - Template System Implementation
 
 **Status:** Ready for Execution  
-**Phase:** Core Features (Weeks 3-6)  
+**Phase:** Template System (Weeks 3-6)  
 **Goal:** Build Excel template generation system with GL classification  
-**Dependencies:** Phase 0 complete  
+**Dependencies:** E0.1 through E0.8 complete (E0.1 through E0.8)  
+**Deliverable:** Config-driven template renderer with universal engine  
 
 ---
 
@@ -64,10 +65,11 @@
 - `_clean/spreadsheet_builder/E0_PHASE_0_PORTING_AND_INTEGRATION.md` - Completed porting tasks
 
 ### **Current Phase Context:**
-- **Goal:** Build template generation system using ported models/services
-- **Architecture:** Runway → Domain Gateways → Infra Services
-- **Leveraging:** BusinessService, VendorService, PolicyEngine, VendorNormalization
+- **Goal:** Build template generation system using ported models/services from Phase 0
+- **Architecture:** Runway → Domain Gateways → Infra Services → Template Renderer
+- **Leveraging:** BusinessService, VendorService, PolicyEngine, VendorNormalization (from E0)
 - **Testing:** Real QBO API, no mocking
+- **Dependencies:** All E0 tasks complete (E0.1 through E0.8)
 
 ---
 
@@ -76,7 +78,7 @@
 **Status:** `[ ]` Not started  
 **Priority:** P0 Critical  
 **Duration:** 2 days  
-**Dependencies:** Phase 0 complete
+**Dependencies:** E0.1 through E0.8 complete
 
 ### **Problem Statement**
 Existing QBO client in `_clean/mvp/infra/rails/qbo/` needs enhancement to support template-specific operations: industry detection, COA template retrieval, vendor category fetching, and transaction classification by GL.
@@ -145,6 +147,8 @@ git add _clean/mvp/infra/rails/qbo/
 git commit -m "feat: enhance QBO client with template-specific methods"
 ```
 
+### **Next Task:** E1.2 - Create Transaction Classification Service
+
 ---
 
 ## **E1.2: Create Transaction Classification Service**
@@ -152,7 +156,7 @@ git commit -m "feat: enhance QBO client with template-specific methods"
 **Status:** `[ ]` Not started  
 **Priority:** P0 Critical  
 **Duration:** 3 days  
-**Dependencies:** E1.1 complete, Phase 0 complete
+**Dependencies:** E1.1 complete
 
 ### **Problem Statement**
 Template system needs a service to classify transactions using:
@@ -257,6 +261,8 @@ git add _clean/mvp/infra/templates/
 git commit -m "feat: create transaction classification service with policy engine and vendor normalization"
 ```
 
+### **Next Task:** E1.3 - Create Excel Template Renderer (Config-Driven, Flexible Rows)
+
 ---
 
 ## **E1.3: Create Excel Template Renderer (Config-Driven, Flexible Rows)**
@@ -264,7 +270,7 @@ git commit -m "feat: create transaction classification service with policy engin
 **Status:** `[ ]` Not started  
 **Priority:** P0 Critical  
 **Duration:** 4 days  
-**Dependencies:** E1.1, E1.2 complete
+**Dependencies:** E1.2 complete
 
 ### **Problem Statement**
 
@@ -569,6 +575,7 @@ output2 = render_template_from_config(agency_config, classified_data, month_colu
 - [ ] No hardcoded row numbers in code (all from config)
 - [ ] Can be imported without errors
 - [ ] Renderer is **archetype-agnostic** (same code, different configs)
+- [ ] **Multi-Sheet Support**: Primary + hidden reference + summary with formula linking
 
 ### **Git Commit**
 
@@ -583,6 +590,8 @@ git commit -m "feat: config-driven template renderer with rolling-window row all
 - Generates multi-sheet workbooks with hidden reference variant
 - Same code works for all archetypes (config changes, not code)"
 ```
+
+### **Next Task:** E1.4 - Create API Endpoints for Template Generation
 
 ---
 
@@ -720,6 +729,8 @@ git add _clean/mvp/api/
 git commit -m "feat: add template system API endpoints (generate, data quality, COA, vendor categories)"
 ```
 
+### **Next Task:** S0.1 - Multi-Client Pilot Strategy (needed for E1.5)
+
 ---
 
 ## **E1.5: Multi-Client Pilot Validation**
@@ -781,19 +792,23 @@ git add .
 git commit -m "docs: complete Phase 1 pilot validation across multiple client types"
 ```
 
+### **Next Task:** E2+ (Future phases with S0.3 learning loop)
+
 ---
 
-## **Success Criteria for Phase 1**
+## **Success Criteria for Phase 1 (Template System)**
 
-- [ ] QBO client enhanced with template-specific methods
-- [ ] Transaction classification service working with policy engine + vendor normalization
-- [ ] Excel template renderer generating workbooks with COA integration
-- [ ] 4 API endpoints operational and tested
-- [ ] Multi-client pilots successful (3+ client types)
+- [ ] QBO client enhanced with template-specific methods (E1.1)
+- [ ] Transaction classification service working with policy engine + vendor normalization (E1.2)
+- [ ] Excel template renderer generating workbooks with YAML configs and rolling window algorithm (E1.3)
+- [ ] Multi-sheet Excel generation (primary + hidden + summary) working
+- [ ] Formula preservation system working correctly (write values only, never formulas)
+- [ ] 4 API endpoints operational and tested (E1.4)
+- [ ] Multi-client pilots successful (3+ client types) (E1.5)
 - [ ] Data quality metrics > 80% across segments
-- [ ] Template system ready for advanced features
+- [ ] Template system ready for Phase 2 (Firm Console & Advanced Templates)
 - [ ] All code imported without errors
-- [ ] Ready for Phase 2 (Advanced Features)
+- [ ] Archetype-agnostic renderer working (same code, different configs)
 
 ---
 
