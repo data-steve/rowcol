@@ -305,8 +305,260 @@ Template population (write to rows)
 - Thread is solving: "Which vendor, how often, when will they pay?"
 - Current is solving: "Which GL account, major or recurring?"
 
-**Hypothesis**: The shift from vendor-specific hardcoding (Mission First Operations LLC) to GL-based classification was correct, BUT it oversimplified the problem. The thread was actually solving a richer problem (vendor patterns + temporal bucketing), and we've backed it down to just GL classification.
+**FINALIZED UNDERSTANDING** (from end of thread, lines 2000-2242):
 
-The question is: **Is that intentional simplification for MVP, or did we lose the narrative?**
+The thread **DID** evolve to a GL-based approach, but it's more sophisticated than current docs suggest:
+
+### What the Thread Actually Concluded:
+1. **GL-Based Classification + Learning**: Use GL ranges (4000s, 6000s, 601xx) as foundation, BUT also learn recurring patterns from historical data
+2. **Hybrid Approach**: Combine pre-mapped GLs with learned vendor patterns (3+ occurrences, ±10% stability)
+3. **Data Quality Adaptation**: Handle incomplete GL mappings with "Pending" bucket and quality scoring
+4. **Client Overrides**: Store learned mappings in `client_gl_mappings.json` for advisor approval
+5. **Working Code Delivered**: Actual Python modules (`mapping_engine.py`, `renderer.py`) with FastAPI endpoint
+
+### The Thread's Final Architecture:
+```
+QBO Transactions
+    ↓
+GL Classification (4000s, 6000s, 601xx) + Thresholds (major vs recurring)
+    ↓
+Recurrence Learning (3+ occurrences, ±10% stability) 
+    ↓
+Client Override Storage (client_gl_mappings.json)
+    ↓
+Template Population (preserve formulas, add Pending row)
+    ↓
+Data Quality Flagging (mapped/total ratio)
+```
+
+### What's Missing from Current Docs:
+1. **Recurrence Learning Algorithm**: The thread delivered working code for learning vendor patterns from historical data
+2. **Client Override Storage**: `client_gl_mappings.json` for advisor-approved mappings
+3. **Data Quality Adaptation**: "Pending" bucket for unmapped transactions
+4. **Working Code Modules**: `mapping_engine.py`, `renderer.py`, FastAPI endpoint
+5. **Hybrid Learning**: Not just GL ranges, but GL + learned patterns
+
+**CONCLUSION**: The thread DID solve the vendor-specific hardcoding problem with GL-based classification, but it's more sophisticated than current docs show. The missing piece is the **learning/recurrence detection** layer that makes it truly universal.
+
+---
+
+## SPECIFIC LOCATIONS WHERE MISSING PIECES SHOULD BE ADDED
+
+### **1. E0_PHASE_0_PORTING_AND_INTEGRATION.md - MISSING ENTIRELY**
+
+**Current State**: No mention of recurrence learning, client overrides, or data quality adaptation
+**Should Add**: New task E0.6 for learning/recurrence detection
+
+**Specific Design Missing**:
+```python
+# E0.6: Implement Recurrence Learning Engine
+def detect_recurring_transactions(qbo_client, business_id, days_back=90):
+    """Learn recurring patterns from historical QBO data"""
+    transactions = qbo_client.get_transactions(business_id, days_back)
+    recurring_patterns = {}
+    
+    for tx in transactions:
+        vendor = tx.get("EntityRef", {}).get("name")
+        gl = tx.get("AccountRef", {}).get("value")
+        amount = float(tx.get("TotalAmt", 0))
+        date = tx.get("TxnDate")
+        
+        if vendor and gl:
+            key = (vendor, gl)
+            if key not in recurring_patterns:
+                recurring_patterns[key] = {"amounts": [], "dates": []}
+            recurring_patterns[key]["amounts"].append(amount)
+            recurring_patterns[key]["dates"].append(date)
+    
+    learned_mappings = {}
+    for (vendor, gl), data in recurring_patterns.items():
+        if len(data["dates"]) >= 3:
+            avg_amount = sum(data["amounts"]) / len(data["amounts"])
+            variance = max(data["amounts"]) - min(data["amounts"])
+            if variance / avg_amount <= 0.1:  # ±10% stability
+                learned_mappings[vendor] = {
+                    "gl": gl, 
+                    "frequency": "monthly", 
+                    "amount": avg_amount,
+                    "confidence": min(len(data["dates"]) / 3, 1.0)
+                }
+    
+    return learned_mappings
+
+# Store in client_gl_mappings.json
+def store_client_mappings(business_id, learned_mappings):
+    """Persist learned patterns for advisor approval"""
+    client_file = f"_clean/data/client_gl_mappings_{business_id}.json"
+    with open(client_file, 'w') as f:
+        json.dump(learned_mappings, f, indent=2)
+```
+
+**Location**: Add as E0.6 after E0.5, before Phase 1 dependencies
+
+---
+
+### **2. E1_PHASE_1_TEMPLATE_SYSTEM.md - PARTIALLY MISSING**
+
+**Current State**: Has template renderer but missing learning integration
+**Should Add**: Integration of learned mappings into template population
+
+**Specific Design Missing**:
+```python
+# E1.3.1: Integrate Learning with Template Population
+def populate_template_with_learning(template_path, business_id, qbo_data):
+    """Combine GL classification + learned patterns + client overrides"""
+    
+    # Step 1: GL Classification (existing)
+    gl_classified = classify_by_gl_ranges(qbo_data)
+    
+    # Step 2: Load learned patterns
+    learned_mappings = load_client_mappings(business_id)
+    
+    # Step 3: Load client overrides (advisor-approved)
+    client_overrides = load_client_overrides(business_id)
+    
+    # Step 4: Merge all three sources
+    final_classification = merge_classifications(
+        gl_classified,      # Universal GL ranges
+        learned_mappings,   # Historical patterns
+        client_overrides    # Advisor corrections
+    )
+    
+    # Step 5: Add "Pending" bucket for unmapped
+    pending_items = identify_unmapped_transactions(qbo_data, final_classification)
+    final_classification["pending"] = pending_items
+    
+    # Step 6: Calculate data quality score
+    quality_score = calculate_data_quality(final_classification, qbo_data)
+    
+    return final_classification, quality_score
+
+def merge_classifications(gl_classified, learned, overrides):
+    """Priority: Overrides > Learned > GL Classification"""
+    merged = gl_classified.copy()
+    
+    # Apply learned patterns (if not overridden)
+    for vendor, pattern in learned.items():
+        if vendor not in overrides:
+            merged[f"learned:{vendor}"] = pattern
+    
+    # Apply overrides (highest priority)
+    for vendor, override in overrides.items():
+        merged[f"override:{vendor}"] = override
+    
+    return merged
+```
+
+**Location**: Add as E1.3.1 before E1.3.2 (Template Renderer)
+
+---
+
+### **3. ROWCOL_MVP_PRODUCT_SPECIFICATION.md - MISSING IMPLEMENTATION DETAILS**
+
+**Current State**: Mentions learning but no specific implementation
+**Should Add**: Detailed learning algorithm specification
+
+**Specific Design Missing**:
+```yaml
+# Learning Algorithm Configuration
+learning_config:
+  recurrence_threshold: 3          # Minimum occurrences to detect pattern
+  stability_threshold: 0.1         # ±10% variance allowed
+  history_days: 90                 # Look back 90 days
+  confidence_weights:
+    frequency: 0.4                 # How often it occurs
+    stability: 0.3                 # Amount consistency  
+    recency: 0.3                   # How recent the pattern
+
+# Client Override Storage Schema
+client_gl_mappings_schema:
+  vendor_name:
+    gl: "string"                   # GL account code
+    frequency: "monthly|quarterly|one-time"
+    amount: number                 # Expected amount
+    confidence: number             # 0.0-1.0
+    last_updated: "ISO_date"
+    advisor_approved: boolean
+
+# Data Quality Metrics
+data_quality_metrics:
+  mapped_transactions: number      # Successfully classified
+  total_transactions: number       # Total from QBO
+  quality_score: number           # mapped/total ratio
+  pending_count: number           # Unmapped items
+  learning_confidence: number     # Average confidence of learned patterns
+```
+
+**Location**: Add after line 367 (current learning section)
+
+---
+
+### **4. ROWCOL_MVP_BUILD_PLAN.md - MISSING PHASE 0 LEARNING TASKS**
+
+**Current State**: Has data quality scoring but no learning implementation
+**Should Add**: Specific learning tasks in Phase 0
+
+**Specific Design Missing**:
+```python
+# Phase 0 Learning Tasks (add to existing Phase 0 section)
+
+## E0.6: Implement Recurrence Learning Engine
+- **Duration**: 3 days
+- **Dependencies**: E0.1-E0.5 complete
+- **Deliverable**: `mapping_engine.py` with learning capabilities
+
+## E0.7: Create Client Override Storage System  
+- **Duration**: 2 days
+- **Dependencies**: E0.6 complete
+- **Deliverable**: `client_gl_mappings.json` storage and retrieval
+
+## E0.8: Integrate Learning with GL Classification
+- **Duration**: 2 days  
+- **Dependencies**: E0.6, E0.7 complete
+- **Deliverable**: Hybrid classification system (GL + Learning + Overrides)
+```
+
+**Location**: Add after E0.5 in Phase 0 section
+
+---
+
+### **5. MISSING: Working Code Modules from Thread**
+
+**Thread Delivered**: Actual working `mapping_engine.py` and `renderer.py`
+**Current Docs**: No mention of these specific modules
+**Should Add**: Reference to these as starting point
+
+**Specific Design Missing**:
+```python
+# mapping_engine.py (from thread, lines 2108-2168)
+def detect_transactions():
+    """GL-based classification with learning integration"""
+    # Implementation from thread with working code
+    
+def detect_recurring_transactions():
+    """Learn patterns from 90-day history"""
+    # Implementation from thread with working code
+
+# renderer.py (from thread, lines 2146-2168)  
+def populate_excel(template_path, output_path, mappings, data_quality):
+    """Populate Excel with learned mappings and Pending bucket"""
+    # Implementation from thread with working code
+```
+
+**Location**: Add as reference in E0.6 and E1.3
+
+---
+
+## SUMMARY: WHAT'S ACTUALLY MISSING
+
+1. **E0.6**: Entire recurrence learning task (3 days)
+2. **E0.7**: Client override storage system (2 days)  
+3. **E1.3.1**: Learning integration with template population
+4. **Product Spec**: Detailed learning algorithm configuration
+5. **Build Plan**: Phase 0 learning tasks
+6. **Working Code**: Reference to thread's `mapping_engine.py` and `renderer.py`
+
+**Total Missing Effort**: ~7 days of development work
+**Impact**: Without these, system is just GL classification, not the hybrid learning system the thread concluded was necessary
 
 
